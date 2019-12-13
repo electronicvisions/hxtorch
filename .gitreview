@@ -1,0 +1,7 @@
+[gerrit]
+host=brainscales-r.kip.uni-heidelberg.de
+port=29418
+project=hxtorch
+defaultbranch=master
+defaultremote=review
+defaultrebase=0
