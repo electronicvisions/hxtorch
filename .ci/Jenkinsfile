@@ -1,0 +1,8 @@
+@Library("jenlib") _
+
+wafDefaultPipeline(projects: ["hxtorch"],
+                   moduleOptions: [modules: ["ppu-toolchain"]],
+                   container: [app: "dls-core"],
+                   testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+                   testOptions: "--test-execall -j1",
+                   notificationChannel: "#dls-software")
