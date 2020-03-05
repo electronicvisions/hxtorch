@@ -29,6 +29,15 @@ class TestHXMAC(unittest.TestCase):
         result = hxtorch.mac(data_in, weights_in)
         self.assertEqual(result.size(), torch.Size([3]))
 
+    def test_batch_input(self):
+        weights_in = torch.ones(5, 3)
+        weights_in.requires_grad = True
+        data_in = torch.ones(10, 5)
+        result = hxtorch.mac(data_in, weights_in)
+        self.assertEqual(result.size(), torch.Size([10, 3]))
+        loss = result.sum()
+        loss.backward()
+
 
 if __name__ == '__main__':
     unittest.main()

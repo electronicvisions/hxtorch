@@ -43,15 +43,23 @@ void release()
 	getConnection().reset();
 }
 
+/**
+ * Calculate forward-pass of multiply accumulate operation.
+ * Input dimensions supported are 1D or 2D, where in the latter the input plane is the highest
+ * dimension and the first dimension describes which input vector to choose.
+ * The multiply accumulate therefore multiplies the last input dimension with the first weights
+ * dimension like y = x^T W.
+ * @param x Input (1D or 2D)
+ * @param weights 2D weight matrix
+ * @param num_sends How often to send the (same) input vector
+ * @param wait_between_events How long to wait (in FPGA cycles) between events
+ * @return Resulting tensor
+ */
 torch::Tensor mac_forward(
     torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events)
 {
-	if (x.dim() != 1) {
-		throw std::runtime_error("HICANN-X only supports 1D input");
-	}
-
 	if (!x.is_contiguous()) {
-		throw std::runtime_error("HICANN-X only supports contiguous input vectors");
+		throw std::runtime_error("HICANN-X only supports contiguous inputs");
 	}
 
 	if (weights.dim() != 2) {
@@ -62,13 +70,20 @@ torch::Tensor mac_forward(
 		throw std::runtime_error("HICANN-X only supports contiguous weight matrices");
 	}
 
+	size_t const x_initial_dim = x.dim();
+	if (x.dim() == 1) {
+		x = x.unsqueeze(0);
+	} else if (x.dim() != 2) {
+		throw std::runtime_error("HICANN-X only supports 1D or 2D input");
+	}
+
 	// create vector
 	size_t const num_double_rows = weights.sizes().vec().at(0);
 	size_t const num_rows = 2 * num_double_rows;
 	size_t const num_cols = weights.sizes().vec().at(1);
 
-	if (static_cast<size_t>(x.sizes().vec().at(0)) != num_double_rows) {
-		throw std::runtime_error("HICANN-X only supports vector lengths that match the "
+	if (static_cast<size_t>(x.sizes().vec().back()) != num_double_rows) {
+		throw std::runtime_error("HICANN-X only supports input lengths that match the "
 		                         "corresponding weight matrix dim size");
 	}
 
@@ -85,17 +100,26 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	std::vector<grenade::vx::UInt5> xin(num_rows);
 	std::vector<haldls::vx::SynapseDriverConfig::RowMode> row_modes(num_rows);
-
-	// TODO: let's assume it's floats...
-	auto x_a = x.accessor<float, 1>();
 	for (size_t i = 0; i < num_double_rows; i++) {
-		// FIXME: some float to int conversion here
-		xin[2 * i] = grenade::vx::UInt5(x_a[i]);
-		xin[2 * i + 1] = grenade::vx::UInt5(x_a[i]);
 		row_modes[2 * i] = haldls::vx::SynapseDriverConfig::RowMode::excitatory;
 		row_modes[2 * i + 1] = haldls::vx::SynapseDriverConfig::RowMode::inhibitory;
+	}
+
+	size_t const num_inputs = x.sizes().vec().at(0);
+	std::vector<std::vector<grenade::vx::UInt5>> xin(num_inputs);
+	for (size_t input = 0; input < num_inputs; ++input) {
+		xin[input].resize(num_rows);
+	}
+
+	// TODO: let's assume it's floats...
+	auto x_a = x.accessor<float, 2>();
+	for (size_t input = 0; input < num_inputs; ++input) {
+		for (size_t i = 0; i < num_double_rows; i++) {
+			// FIXME: some float to int conversion here
+			xin[input][2 * i] = grenade::vx::UInt5(x_a[input][i]);
+			xin[input][2 * i + 1] = grenade::vx::UInt5(x_a[input][i]);
+		}
 	}
 
 	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, getChip(),
@@ -105,14 +129,18 @@ torch::Tensor mac_forward(
 	if (!getConnection()) {
 		throw std::runtime_error("No connection allocated.");
 	}
-	auto const results = mac.run({xin}, *getConnection()).at(0);
 
-	torch::Tensor ret = torch::zeros({static_cast<int>(results.size())});
-	auto ret_a = ret.accessor<float, 1>();
-	for (size_t i = 0; i < results.size(); i++) {
-		ret_a[i] = results[i];
+	auto ret = torch::zeros({static_cast<int64_t>(num_inputs), static_cast<int64_t>(num_cols)});
+	auto ret_a = ret.accessor<float, 2>();
+	auto const results = mac.run(xin, *getConnection());
+	for (size_t input = 0; input < num_inputs; ++input) {
+		for (size_t i = 0; i < results.at(0).size(); i++) {
+			ret_a[input][i] = results[input][i];
+		}
 	}
-
+	if (x_initial_dim == 1) {
+		ret.squeeze_(0);
+	}
 	return ret;
 }
 
