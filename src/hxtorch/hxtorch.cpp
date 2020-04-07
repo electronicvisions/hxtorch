@@ -63,6 +63,13 @@ SignedWeight convert_weight(float const value)
 	return ret;
 }
 
+grenade::vx::UInt5 convert_activation(float const value)
+{
+	return grenade::vx::UInt5(static_cast<grenade::vx::UInt5::value_type>(std::max(
+	    std::min(value, static_cast<float>(grenade::vx::UInt5::max)),
+	    static_cast<float>(grenade::vx::UInt5::min))));
+}
+
 /**
  * Calculate forward-pass of multiply accumulate operation.
  * Input dimensions supported are 1D or 2D, where in the latter the input plane is the highest
@@ -136,9 +143,9 @@ torch::Tensor mac_forward(
 	auto x_a = x.accessor<float, 2>();
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < num_double_rows; i++) {
-			// FIXME: some float to int conversion here
-			xin[input][2 * i] = grenade::vx::UInt5(x_a[input][i]);
-			xin[input][2 * i + 1] = grenade::vx::UInt5(x_a[input][i]);
+			auto const activation = convert_activation(x_a[input][i]);
+			xin[input][2 * i] = activation;
+			xin[input][2 * i + 1] = activation;
 		}
 	}
 
@@ -178,7 +185,6 @@ torch::autograd::variable_list mac_backward(
 	auto grad_weights = x.t().matmul(grad_output);
 	return {grad_x, grad_weights, {}, {}};
 }
-
 
 class MAC : public torch::autograd::Function<MAC>
 {
