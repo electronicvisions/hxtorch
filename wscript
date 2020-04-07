@@ -55,10 +55,15 @@ def build(bld):
     bld.env.DLSvx_HARDWARE_AVAILABLE = "cube" == os.environ.get("SLURM_JOB_PARTITION")
 
     bld(
+        target          = 'hxtorch_inc',
+        export_includes = 'include',
+    )
+
+    bld(
         features = 'cxx cxxshlib pyext pyembed',
-        source = bld.path.ant_glob('src/hxtorch/*.cpp'),
+        source = bld.path.ant_glob('src/hxtorch/**/*.cpp'),
         target = 'hxtorch',
-        use = ['haldls_vx', 'lola_vx', 'grenade_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
+        use = ['hxtorch_inc', 'haldls_vx', 'lola_vx', 'stadls_vx', 'grenade_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
         linkflags = '-Wl,-z,defs',
         defines = ['TORCH_EXTENSION_NAME=hxtorch'],
         install_path='${PREFIX}/lib',
