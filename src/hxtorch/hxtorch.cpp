@@ -85,16 +85,8 @@ grenade::vx::UInt5 convert_activation(float const value)
 torch::Tensor mac_forward(
     torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events)
 {
-	if (!x.is_contiguous()) {
-		throw std::runtime_error("HICANN-X only supports contiguous inputs");
-	}
-
 	if (weights.dim() != 2) {
 		throw std::runtime_error("HICANN-X only supports 2D weight matrices");
-	}
-
-	if (!weights.is_contiguous()) {
-		throw std::runtime_error("HICANN-X only supports contiguous weight matrices");
 	}
 
 	size_t const x_initial_dim = x.dim();
