@@ -43,6 +43,26 @@ void release()
 	getConnection().reset();
 }
 
+struct SignedWeight
+{
+	typedef haldls::vx::SynapseQuad::Weight weight_type;
+	weight_type positive;
+	weight_type negative;
+};
+
+SignedWeight convert_weight(float const value)
+{
+	SignedWeight ret;
+	if (value >= 0) {
+		ret.negative = SignedWeight::weight_type(0);
+		ret.positive = SignedWeight::weight_type(std::min(value, static_cast<float>(63.)));
+	} else {
+		ret.positive = SignedWeight::weight_type(0);
+		ret.negative = SignedWeight::weight_type(-std::max(value, static_cast<float>(-63.)));
+	}
+	return ret;
+}
+
 /**
  * Calculate forward-pass of multiply accumulate operation.
  * Input dimensions supported are 1D or 2D, where in the latter the input plane is the highest
@@ -94,9 +114,9 @@ torch::Tensor mac_forward(
 	auto weights_a = weights.accessor<float, 2>();
 	for (size_t i = 0; i < num_double_rows; i++) {
 		for (size_t j = 0; j < num_cols; j++) {
-			// FIXME: some float to int conversion here
-			size_t row = 2 * i + (weights_a[i][j] < 0);
-			m_weights[row][j] = haldls::vx::SynapseQuad::Weight(std::abs(weights_a[i][j]));
+			auto const signed_weight = convert_weight(weights_a[i][j]);
+			m_weights[2 * i][j] = signed_weight.positive;
+			m_weights[2 * i + 1][j] = signed_weight.negative;
 		}
 	}
 
