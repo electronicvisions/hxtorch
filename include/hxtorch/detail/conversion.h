@@ -3,6 +3,7 @@
 #include "grenade/vx/compute_single_mac.h"
 #include "grenade/vx/types.h"
 
+
 namespace hxtorch::detail {
 
 struct SignedWeight

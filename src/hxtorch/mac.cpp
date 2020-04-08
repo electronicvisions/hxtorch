@@ -7,8 +7,6 @@
 
 #include <torch/csrc/jit/runtime/custom_operator.h>
 #include <torch/csrc/jit/runtime/operator.h>
-#include <torch/custom_class.h>
-#include <torch/extension.h>
 #include <torch/script.h>
 
 namespace hxtorch {

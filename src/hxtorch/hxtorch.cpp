@@ -9,6 +9,8 @@
 #include <torch/extension.h>
 
 #include "hxtorch/connection.h"
+#include "hxtorch/conv.h"
+#include "hxtorch/detail/conv.h"
 #include "hxtorch/mac.h"
 #include "hxtorch/matmul.h"
 
@@ -78,5 +80,29 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    ":param wait_between_events: How long to wait (in FPGA cycles) between events\n"
 	    ":returns: Resulting tensor\n",
 	    pybind11::arg("input"), pybind11::arg("other"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+
+	typedef torch::Tensor (*single_stride_conv_type)(
+	    torch::Tensor const&, torch::Tensor const&, int64_t, int64_t, int64_t, bool);
+	typedef torch::Tensor (*conv1d_type)(
+	    torch::Tensor const&, torch::Tensor const&, std::array<int64_t, 1>, int64_t, int64_t, bool);
+	typedef torch::Tensor (*conv2d_type)(
+	    torch::Tensor const&, torch::Tensor const&, std::array<int64_t, 2>, int64_t, int64_t, bool);
+
+	m.def(
+	    "conv1d", (single_stride_conv_type) &hxtorch::conv1d, "", pybind11::arg("input"),
+	    pybind11::arg("weight"), pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+	m.def(
+	    "conv1d", (conv1d_type) &hxtorch::conv1d, "", pybind11::arg("input"),
+	    pybind11::arg("weight"), pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+	m.def(
+	    "conv2d", (single_stride_conv_type) &hxtorch::conv2d, "", pybind11::arg("input"),
+	    pybind11::arg("weight"), pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+	m.def(
+	    "conv2d", (conv2d_type) &hxtorch::conv2d, "", pybind11::arg("input"),
+	    pybind11::arg("weight"), pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 }

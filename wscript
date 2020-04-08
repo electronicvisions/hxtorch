@@ -1,4 +1,5 @@
 from waflib.extras.test_base import summary
+import copy
 import site
 import os
 import re
@@ -40,8 +41,20 @@ def configure(cfg):
     libpath_torch = [os.path.join(x, 'torch/lib') for x in site_packages]
     libnames = []
     for fn in os.listdir(libpath_torch[0]):
+        print(fn)
         res = re.match('^lib(.+)\.so$', fn)
         libnames.append(res.group(1))
+
+    libnames_cpp = copy.copy(libnames)
+    libnames_cpp.remove('torch_python')
+    cfg.check_cxx(fragment ='''
+                    #include <torch/torch.h>
+                    #include <torch/csrc/jit/runtime/custom_operator.h>
+                    int main() { return 0; }''',
+                  lib = libnames_cpp,
+                  libpath = libpath_torch,
+                  includes = includes_torch_csrc_api + includes_torch,
+                  uselib_store="TORCH_CPP")
 
     cfg.check_cxx(fragment ='''
                     #include <torch/torch.h>
@@ -62,10 +75,20 @@ def build(bld):
     )
 
     bld(
+        features = 'cxx cxxshlib pyembed',
+        source = bld.path.ant_glob('src/hxtorch/**/*.cpp', excl='src/hxtorch/hxtorch.cpp'),
+        target = 'hxtorch_cpp',
+        use = ['hxtorch_inc', 'grenade_vx', 'TORCH_CPP'],
+        install_path='${PREFIX}/lib',
+        uselib = 'HXTORCH_LIBRARIES',
+        rpath = bld.env.LIBPATH_TORCH,
+    )
+
+    bld(
         features = 'cxx cxxshlib pyext pyembed',
-        source = bld.path.ant_glob('src/hxtorch/**/*.cpp'),
+        source = 'src/hxtorch/hxtorch.cpp',
         target = 'hxtorch',
-        use = ['hxtorch_inc', 'grenade_vx', 'stadls_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
+        use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
         linkflags = '-Wl,-z,defs',
         defines = ['TORCH_EXTENSION_NAME=hxtorch'],
         install_path='${PREFIX}/lib',
@@ -84,5 +107,23 @@ def build(bld):
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
     )
 
-    # Create test summary (to stdout and XML file)
+    bld(
+        target='hxtorch_swtests',
+        tests=bld.path.ant_glob('tests/sw/*.py'),
+        features='use pytest',
+        use=['hxtorch'],
+        install_path='${PREFIX}/bin/tests/sw',
+    )
+
+    bld(
+        target = 'hxtorch_cpp_swtests',
+        features = 'gtest cxx cxxprogram pyembed',
+        source = bld.path.ant_glob('tests/sw/test-*.cpp'),
+        use = ['hxtorch_cpp', 'GTEST'],
+        linkflags = '-Wl,-z,defs',
+        rpath = bld.env.LIBPATH_TORCH,
+        install_path = '${PREFIX}/bin',
+    )
+
+# Create test summary (to stdout and XML file)
     bld.add_post_fun(summary)
