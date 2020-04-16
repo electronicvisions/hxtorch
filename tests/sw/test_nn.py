@@ -64,5 +64,52 @@ class TestNN(unittest.TestCase):
         self.assertRegex(repr(hxtorch_layer), r'Linear\(.*, num_sends=3, wait')
 
 
+    def test_conv1d(self):
+        """
+        Test the Conv1d layer.
+        """
+        def conv1d_side_effect(x, weights, bias, stride, **kwargs):
+            return torch.conv1d(x, weights, bias, stride)
+
+        torch_layer = torch.nn.Conv1d(
+            in_channels=1, out_channels=2, kernel_size=3, stride=2, padding=1)
+        hxtorch_layer = hxnn.Conv1d(
+            in_channels=1, out_channels=2, kernel_size=3, stride=2, padding=1)
+        hxtorch_layer._conv = Mock(side_effect=conv1d_side_effect)
+        x_in = torch.arange(-8., 11.).view(1, 1, -1)
+        x_out = torch_layer(x_in)
+        x_out_hx = hxtorch_layer(x_in)
+
+        self.assertSequenceEqual(x_out.shape, x_out_hx.shape)
+
+        # repr
+        self.assertRegex(repr(hxtorch_layer),
+                         r'Conv1d\(.*, num_sends=1, wait_between_events=25.*')
+
+    def test_conv2d(self):
+        """
+        Test the Conv2d layer.
+        """
+        def conv2d_side_effect(x, weights, bias, stride, **kwargs):
+            return torch.conv2d(x, weights, bias, stride)
+
+        torch_layer = torch.nn.Conv2d(
+            in_channels=1, out_channels=2, kernel_size=(3, 3),
+            stride=(2, 2), padding=2)
+        hxtorch_layer = hxnn.Conv2d(
+            in_channels=1, out_channels=2, kernel_size=(3, 3),
+            stride=(2, 2), padding=2, num_sends=6, wait_between_events=75)
+        hxtorch_layer._conv = Mock(side_effect=conv2d_side_effect)
+        x_in = torch.arange(-8., 11., .25).view(1, 1, 4, -1)
+        x_out = torch_layer(x_in)
+        x_out_hx = hxtorch_layer(x_in)
+
+        self.assertSequenceEqual(x_out.shape, x_out_hx.shape)
+
+        # repr
+        self.assertRegex(repr(hxtorch_layer),
+                         r'Conv2d\(.*, num_sends=6, wait_between_events=75.*')
+
+
 if __name__ == '__main__':
     unittest.main()
