@@ -135,5 +135,14 @@ def build(bld):
         install_path = '${PREFIX}/bin',
     )
 
+    bld(
+        name = 'mnist_model_state',
+        features = 'install_task',
+        install_to = '${PREFIX}/bin/tests/hw/',
+        install_from = bld.path.ant_glob('mnist_model_state.pkl'),
+        type = 'install_files',
+        relative_trick=True,
+    )
+
 # Create test summary (to stdout and XML file)
     bld.add_post_fun(summary)
