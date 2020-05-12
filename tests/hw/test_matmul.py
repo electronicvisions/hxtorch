@@ -164,5 +164,22 @@ class TestMatmulHX(TestMatmulPyTorch):
                             f"{grad}")
 
 
+class TestMatmulHXmock(TestMatmulPyTorch):
+    """
+    Tests the hxtorch matmul operation.
+    """
+    matmul: ClassVar = partial(hxtorch.matmul, mock=True)
+    noise_std: ClassVar[float] = 2.
+    gain: ClassVar[float] = 0.0012
+
+    @classmethod
+    def setUpClass(cls):
+        hxtorch.init_mock(noise_std=cls.noise_std, gain=cls.gain)
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+
 if __name__ == '__main__':
     unittest.main()

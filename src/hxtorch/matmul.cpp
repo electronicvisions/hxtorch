@@ -16,7 +16,8 @@ torch::Tensor matmul(
     torch::Tensor const& tensor1,
     torch::Tensor const& tensor2,
     int64_t const num_sends,
-    int64_t wait_between_events)
+    int64_t wait_between_events,
+    bool mock)
 {
 	size_t const dim1 = tensor1.dim();
 	size_t const dim2 = tensor2.dim();
@@ -31,7 +32,7 @@ torch::Tensor matmul(
 
 	torch::Tensor res;
 	if (dim1 <= 2 && dim2 <= 2) {
-		res = mac(t1, t2, num_sends, wait_between_events);
+		res = mac(t1, t2, num_sends, wait_between_events, mock);
 	} else if (dim1 >= 3 && dim2 <= 2) {
 		// fold tensor1's batch into its leading matrix dimension
 		auto size1 = t1.sizes();
@@ -42,7 +43,7 @@ torch::Tensor matmul(
 			output_size.push_back(size2[dim2 - 1]);
 		}
 		t1 = t1.reshape({-1, size1[size1.size() - 1]});
-		res = mac(t1, t2, num_sends, wait_between_events).view(output_size);
+		res = mac(t1, t2, num_sends, wait_between_events, mock).view(output_size);
 	} else {
 		// TODO: implement >2D weights
 		// TODO: implement batched mode

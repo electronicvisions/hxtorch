@@ -17,6 +17,7 @@
 #include <cereal/types/utility.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
+#include "hxtorch/detail/mock.h"
 
 namespace hxtorch {
 
@@ -63,6 +64,15 @@ void init(
 {
 	detail::getChip() = chip;
 	detail::getConnection() = std::move(connection);
+}
+
+void init_mock(float const noise_std, float const gain)
+{
+	if ((gain <= 0) || (gain > 1)) {
+		std::overflow_error("Gain of " + std::to_string(gain) + " is not in the interval (0, 1]");
+	}
+	getMockParameter().noise_std = noise_std;
+	getMockParameter().gain = gain;
 }
 
 void release()

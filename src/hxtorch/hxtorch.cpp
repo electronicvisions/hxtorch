@@ -62,8 +62,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release", &hxtorch::release);
 	m.def(
+	    "init_mock", &hxtorch::init_mock, "", pybind11::arg("noise_std") = 2.,
+	    pybind11::arg("gain") = 0.0012);
+	m.def(
 	    "mac", &hxtorch::mac, "", pybind11::arg("x"), pybind11::arg("weights"),
-	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 25);
+	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 25,
+	    pybind11::arg("mock") = false);
 	m.def(
 	    "matmul", &hxtorch::matmul,
 	    "Drop-in replacement for :meth:`torch.matmul` that uses HICANN-X.\n"
@@ -74,5 +78,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    ":param wait_between_events: How long to wait (in FPGA cycles) between events\n"
 	    ":returns: Resulting tensor\n",
 	    pybind11::arg("input"), pybind11::arg("other"), pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 25);
+	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 }

@@ -33,6 +33,13 @@ void init(
     grenade::vx::ChipConfig const& chip, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection);
 
 /**
+ * Initialize hardware mock configuration.
+ * @param noise_std Standard deviation of noise to add to membrane potentials
+ * @param gain Gain to assume for analog multiplication
+ */
+void init_mock(float noise_std = 2., float gain = 0.0012);
+
+/**
  * Release hardware resource.
  */
 void release();

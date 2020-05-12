@@ -1,3 +1,4 @@
+from functools import partial
 import unittest
 import torch
 import hxtorch
@@ -7,6 +8,8 @@ import pygrenade_vx as grenade
 logger.default_config(level=logger.LogLevel.INFO)
 
 class TestHXMAC(unittest.TestCase):
+    mac = hxtorch.mac
+
     @classmethod
     def setUpClass(cls):
         hxtorch.init()
@@ -19,22 +22,33 @@ class TestHXMAC(unittest.TestCase):
         data_in = torch.ones(5)
         weights_in = torch.empty(5, 3, 4)
         with self.assertRaises(RuntimeError):
-            hxtorch.mac(data_in, weights_in)
+            self.mac(data_in, weights_in)
 
         weights_in = torch.ones(5, 3)
         data_in = torch.ones(5)
-        result = hxtorch.mac(data_in, weights_in)
+        result = self.mac(data_in, weights_in)
         self.assertEqual(result.size(), torch.Size([3]))
 
     def test_batch_input(self):
         weights_in = torch.ones(5, 3)
         weights_in.requires_grad = True
         data_in = torch.ones(10, 5)
-        result = hxtorch.mac(data_in, weights_in)
+        result = self.mac(data_in, weights_in)
         self.assertEqual(result.size(), torch.Size([10, 3]))
         loss = result.sum()
         loss.backward()
 
+
+class TestHXMACmock(TestHXMAC):
+    mac = partial(hxtorch.mac, mock=True)
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

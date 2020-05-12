@@ -5,8 +5,58 @@
 #include "grenade/vx/event.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
+#include "hxtorch/detail/mock.h"
+
+#include "hate/timer.h"
 
 namespace hxtorch::detail {
+
+torch::Tensor mac_mock_forward(
+    torch::Tensor const& x, torch::Tensor const& weights, int64_t num_sends)
+{
+	if (weights.dim() != 2) {
+		throw std::runtime_error("HICANN-X only supports 2D weight matrices");
+	}
+	if (x.dim() != 1 && x.dim() != 2) {
+		throw std::runtime_error("HICANN-X only supports 1D or 2D input");
+	}
+
+	// quantize weights and inputs
+	auto const quantized_weights = weights.round().clamp(
+	    -static_cast<float>(haldls::vx::SynapseQuad::Weight::max),
+	    static_cast<float>(haldls::vx::SynapseQuad::Weight::max));
+	auto const quantized_inputs = x.floor().clamp(
+	    static_cast<float>(grenade::vx::UInt5::min), static_cast<float>(grenade::vx::UInt5::max));
+
+	// split one synram height from matrix
+	auto const rows_per_synram = halco::hicann_dls::vx::SynapseRowOnSynram::size /
+	                             halco::hicann_dls::vx::SynapseRowOnSynapseDriver::size;
+	auto const split_inputs = quantized_inputs.split(rows_per_synram, quantized_inputs.dim() - 1);
+	auto const split_weights = quantized_weights.split(rows_per_synram, 0);
+
+	size_t const num_cols = quantized_weights.sizes().vec().at(1);
+	auto output_sizes = quantized_inputs.sizes().vec();
+	output_sizes.back() = num_cols;
+	torch::Tensor results = torch::zeros(output_sizes);
+	for (size_t i = 0; i < split_inputs.size(); ++i) {
+		// perform matrix multiplication for one synram vertical split
+		auto local_results = split_inputs.at(i).matmul(split_weights.at(i));
+		// multiply with constant analog multiplication gain
+		local_results.mul_(static_cast<float>(num_sends) * getMockParameter().gain);
+		// add membrane noise
+		if (getMockParameter().noise_std > 0.) {
+			auto const noise = torch::normal(0., getMockParameter().noise_std, results.sizes());
+			local_results.add_(noise);
+		}
+		// digitize membrane potential
+		local_results.floor_().clamp_(-128., 127.);
+		// perform digital addition of synram vertical split
+		results.add_(local_results);
+	}
+	// restrict result to int8 range
+	results.clamp_(-128., 127.);
+	return results;
+}
 
 torch::Tensor mac_forward(
     torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events)
@@ -99,7 +149,7 @@ torch::autograd::variable_list mac_backward(
 		grad_output = grad_output.unsqueeze(0);
 	}
 	auto grad_weights = x.t().matmul(grad_output);
-	return {grad_x, grad_weights, {}, {}};
+	return {grad_x, grad_weights, {}, {}, {}};
 }
 
 } // namespace hxtorch::detail
