@@ -88,13 +88,23 @@ def build(bld):
         features = 'cxx cxxshlib pyext pyembed',
         source = 'src/hxtorch/hxtorch.cpp',
         target = 'hxtorch',
-        use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
+        use = ['hxtorch_cpp', 'hxtorch_pylibs', 'grenade_vx', 'stadls_vx', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
         linkflags = '-Wl,-z,defs',
         defines = ['TORCH_EXTENSION_NAME=hxtorch'],
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
         rpath = bld.env.LIBPATH_TORCH,
         cxxflags = ["-isystem" + e for e in bld.env.hxtorch_torch_includes],
+    )
+
+    bld(
+        target='hxtorch_pylibs',
+        features='py use',
+        use='dlens_vx',
+        relative_trick=True,
+        source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
+        install_path='${PREFIX}/lib/pyhxtorch',
+        install_from='src/pyhxtorch',
     )
 
     bld(

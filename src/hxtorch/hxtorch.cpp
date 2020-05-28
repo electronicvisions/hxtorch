@@ -113,4 +113,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+
+	pybind11::module::import("pyhxtorch.patch").attr("patch")(m);
 }
