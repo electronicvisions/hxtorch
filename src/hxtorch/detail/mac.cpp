@@ -125,7 +125,7 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	grenade::vx::ComputeSingleMAC mac{m_weights, static_cast<size_t>(num_sends),
+	grenade::vx::ComputeSingleMAC mac{std::move(m_weights), static_cast<size_t>(num_sends),
 	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
