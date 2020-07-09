@@ -16,6 +16,7 @@ namespace hxtorch {
 torch::Tensor conv(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     std::vector<int64_t> stride,
     int64_t const num_sends,
     int64_t const wait_between_events,
@@ -47,51 +48,59 @@ torch::Tensor conv(
 	result = hxtorch::detail::conv_unfold_output(
 	             result, hxtorch::detail::conv_num_outputs(input_size, kernel_size, stride))
 	             .contiguous();
+	if (bias) {
+		result = (dim == 1) ? result.add(bias.value().view({-1, 1}))
+		                    : result.add(bias.value().view({-1, 1, 1}));
+	}
 	return result;
 }
 
 torch::Tensor conv1d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     int64_t stride,
     int64_t num_sends,
     int64_t wait_between_events,
     bool mock)
 {
-	return conv(input, weight, {stride}, num_sends, wait_between_events, mock);
+	return conv(input, weight, bias, {stride}, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor conv1d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     std::array<int64_t, 1> stride,
     int64_t num_sends,
     int64_t wait_between_events,
     bool mock)
 {
-	return conv(input, weight, {stride[0]}, num_sends, wait_between_events, mock);
+	return conv(input, weight, bias, {stride[0]}, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor conv2d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     int64_t stride,
     int64_t num_sends,
     int64_t wait_between_events,
     bool mock)
 {
-	return conv(input, weight, {stride, stride}, num_sends, wait_between_events, mock);
+	return conv(input, weight, bias, {stride, stride}, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor conv2d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     std::array<int64_t, 2> stride,
     int64_t num_sends,
     int64_t wait_between_events,
     bool mock)
 {
-	return conv(input, weight, {stride[0], stride[1]}, num_sends, wait_between_events, mock);
+	return conv(input, weight, bias, {stride[0], stride[1]}, num_sends, wait_between_events, mock);
 }
 
 } // namespace hxtorch

@@ -6,6 +6,7 @@
 #include <pybind11/pybind11.h>
 #include <torch/csrc/jit/runtime/custom_operator.h>
 #include <torch/csrc/jit/runtime/operator.h>
+#include <torch/csrc/utils/pybind.h>
 #include <torch/extension.h>
 
 #include "hxtorch/connection.h"
@@ -83,26 +84,33 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 
 	typedef torch::Tensor (*single_stride_conv_type)(
-	    torch::Tensor const&, torch::Tensor const&, int64_t, int64_t, int64_t, bool);
+	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&, int64_t,
+	    int64_t, int64_t, bool);
 	typedef torch::Tensor (*conv1d_type)(
-	    torch::Tensor const&, torch::Tensor const&, std::array<int64_t, 1>, int64_t, int64_t, bool);
+	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&,
+	    std::array<int64_t, 1>, int64_t, int64_t, bool);
 	typedef torch::Tensor (*conv2d_type)(
-	    torch::Tensor const&, torch::Tensor const&, std::array<int64_t, 2>, int64_t, int64_t, bool);
+	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&,
+	    std::array<int64_t, 2>, int64_t, int64_t, bool);
 
 	m.def(
 	    "conv1d", (single_stride_conv_type) &hxtorch::conv1d, "", pybind11::arg("input"),
-	    pybind11::arg("weight"), pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
+	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
+	    pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 	m.def(
 	    "conv1d", (conv1d_type) &hxtorch::conv1d, "", pybind11::arg("input"),
-	    pybind11::arg("weight"), pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
+	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 	m.def(
 	    "conv2d", (single_stride_conv_type) &hxtorch::conv2d, "", pybind11::arg("input"),
-	    pybind11::arg("weight"), pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
+	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
+	    pybind11::arg("stride") = 1, pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 	m.def(
 	    "conv2d", (conv2d_type) &hxtorch::conv2d, "", pybind11::arg("input"),
-	    pybind11::arg("weight"), pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
+	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
 }

@@ -12,8 +12,8 @@ from hxtorch_shared_test_tools import rand_full
 logger.default_config(level=logger.LogLevel.INFO)
 
 
-class ConvInput(namedtuple('ConvInput', ["input", "weight", "stride"],
-                           defaults=[1])):
+class ConvInput(namedtuple('ConvInput', ["input", "weight", "bias", "stride"],
+                           defaults=[None, 1])):
     """
     An input to a convolution operation.
     """
@@ -100,7 +100,10 @@ class TestConv1d(TestConv):
                   stride=4),
         "batch2_outchannels4_inchannels3_kernel_smaller_stride":
         ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
-                  stride=4)
+                  stride=4),
+        "batch2_outchannels4_inchannels3_bias":
+        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+                  bias=torch.full((4,), 0.).requires_grad_(), stride=4),
     }
 
 
@@ -151,7 +154,10 @@ class TestConv2d(TestConv):
                   stride=(4, 8)),
         "batch2_outchannels4_inchannels3_kernel_smaller_stride":
         ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
-                  stride=(4, 8))
+                  stride=(4, 8)),
+        "batch2_outchannels4_inchannels3_kernel_smaller_stride":
+        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+                  bias=torch.full((4,), 0.).requires_grad_(), stride=(4, 8))
     }
 
 

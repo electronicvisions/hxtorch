@@ -7,7 +7,8 @@ namespace hxtorch {
 
 torch::Tensor conv(
     torch::Tensor const& input,
-    torch::Tensor const& weight,
+    torch::Tensor const& weights,
+    c10::optional<torch::Tensor> const& bias,
     std::vector<int64_t> stride,
     int64_t num_sends,
     int64_t wait_between_events,
@@ -16,6 +17,7 @@ torch::Tensor conv(
 torch::Tensor conv1d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     int64_t stride = 1,
     int64_t num_sends = 1,
     int64_t wait_between_events = 25,
@@ -24,6 +26,7 @@ torch::Tensor conv1d(
 torch::Tensor conv1d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     std::array<int64_t, 1> stride,
     int64_t num_sends = 1,
     int64_t wait_between_events = 25,
@@ -32,6 +35,7 @@ torch::Tensor conv1d(
 torch::Tensor conv2d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     int64_t stride = 1,
     int64_t num_sends = 1,
     int64_t wait_between_events = 25,
@@ -40,6 +44,7 @@ torch::Tensor conv2d(
 torch::Tensor conv2d(
     torch::Tensor const& input,
     torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
     std::array<int64_t, 2> stride,
     int64_t num_sends = 1,
     int64_t wait_between_events = 25,
