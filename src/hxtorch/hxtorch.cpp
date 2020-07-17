@@ -10,6 +10,7 @@
 
 #include "hxtorch/connection.h"
 #include "hxtorch/mac.h"
+#include "hxtorch/matmul.h"
 
 #include "grenade/vx/config.h"
 #include "pyhxcomm/vx/connection_handle.h"
@@ -63,4 +64,15 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "mac", &hxtorch::mac, "", pybind11::arg("x"), pybind11::arg("weights"),
 	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 25);
+	m.def(
+	    "matmul", &hxtorch::matmul,
+	    "Drop-in replacement for :meth:`torch.matmul` that uses HICANN-X.\n"
+	    "The current implementation only supports ``other`` to be 1D or 2D.\n\n"
+	    ":param input: First input tensor, allowed range [0, 31]\n"
+	    ":param other: Second input tensor, allowed range: [-63, 63]\n"
+	    ":param num_sends: How often to send the (same) input vector\n"
+	    ":param wait_between_events: How long to wait (in FPGA cycles) between events\n"
+	    ":returns: Resulting tensor\n",
+	    pybind11::arg("input"), pybind11::arg("other"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 25);
 }
