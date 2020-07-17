@@ -90,13 +90,12 @@ torch::Tensor mac_forward(
 torch::autograd::variable_list mac_backward(
     torch::Tensor grad_output, torch::Tensor x, torch::Tensor weights)
 {
-	// TODO: does this represent roughly our MAC?
 	auto grad_x = grad_output.matmul(weights.t());
 	if (x.dim() == 1) {
-		x = x.reshape({1, -1});
+		x = x.unsqueeze(0);
 	}
 	if (grad_output.dim() == 1) {
-		grad_output = grad_output.reshape({1, -1});
+		grad_output = grad_output.unsqueeze(0);
 	}
 	auto grad_weights = x.t().matmul(grad_output);
 	return {grad_x, grad_weights, {}, {}};

@@ -19,8 +19,8 @@ torch::autograd::variable_list MAC::forward(
     int64_t num_sends,
     int64_t wait_between_events)
 {
-	ctx->save_for_backward({x, weights});
 	auto ret = detail::mac_forward(x, weights, num_sends, wait_between_events);
+	ctx->save_for_backward({ret, x, weights});
 	return {ret};
 }
 
@@ -28,9 +28,24 @@ torch::autograd::variable_list MAC::backward(
     torch::autograd::AutogradContext* ctx, torch::autograd::variable_list grad_output)
 {
 	auto saved_variables = ctx->get_saved_variables();
-	auto x = saved_variables[0];
-	auto weights = saved_variables[1];
-	return detail::mac_backward(grad_output[0], x, weights);
+	auto x = saved_variables[1];
+	auto weights = saved_variables[2];
+
+	torch::Tensor gain;
+	// scale grad_output with the gain on a per-batch basis
+	auto forward_output = saved_variables[0];
+	auto torch_output = x.matmul(weights);
+	auto elementwise_gain = torch::div(forward_output, torch_output);
+	auto mask = torch::logical_or(elementwise_gain > 1, torch::isnan(elementwise_gain));
+	if (!mask.all().item().to<bool>()) {
+		elementwise_gain.index_put_({mask}, 0);
+		gain = elementwise_gain.sum() / torch::logical_not(mask).sum();
+		gain.clamp_(0);
+	} else {
+		// fallback
+		gain = torch::tensor(0.);
+	}
+	return detail::mac_backward(grad_output[0] * gain, x, weights);
 }
 
 torch::Tensor mac(
