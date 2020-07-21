@@ -79,7 +79,8 @@ def build(bld):
         tests=bld.path.ant_glob('tests/hw/*.py'),
         features='use pytest',
         use=['hxtorch', 'dlens_vx'],
-        install_path='${PREFIX}/bin',
+        install_path='${PREFIX}/bin/tests/hw',
+        test_timeout=300,
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
     )
 
