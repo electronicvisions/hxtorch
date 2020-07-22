@@ -24,6 +24,16 @@ class TestHXMAC(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.mac(data_in, weights_in)
 
+        data_in = torch.full((5,), -2.)
+        weights_in = torch.ones(5, 3)
+        with self.assertRaises(OverflowError):
+            self.mac(data_in, weights_in)
+
+        data_in = torch.ones(5)
+        weights_in = torch.full((5, 3), 65.)
+        with self.assertRaises(OverflowError):
+            self.mac(data_in, weights_in)
+
         weights_in = torch.ones(5, 3)
         data_in = torch.ones(5)
         result = self.mac(data_in, weights_in)

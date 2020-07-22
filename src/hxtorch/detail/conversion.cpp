@@ -8,19 +8,17 @@ SignedWeight convert_weight(float const value)
 	SignedWeight ret;
 	if (value >= 0) {
 		ret.negative = SignedWeight::weight_type(0);
-		ret.positive = SignedWeight::weight_type(std::min(value, static_cast<float>(63.)));
+		ret.positive = SignedWeight::weight_type(std::lround(value));
 	} else {
 		ret.positive = SignedWeight::weight_type(0);
-		ret.negative = SignedWeight::weight_type(-std::max(value, static_cast<float>(-63.)));
+		ret.negative = SignedWeight::weight_type(-std::lround(value));
 	}
 	return ret;
 }
 
 grenade::vx::UInt5 convert_activation(float const value)
 {
-	return grenade::vx::UInt5(std::max(
-	    std::min(value, static_cast<float>(grenade::vx::UInt5::max)),
-	    static_cast<float>(grenade::vx::UInt5::min)));
+	return grenade::vx::UInt5(std::lround(value));
 }
 
 float convert_membrane(int8_t const value)

@@ -22,11 +22,26 @@ torch::Tensor mac_mock_forward(
 	}
 
 	// quantize weights and inputs
-	auto const quantized_weights = weights.round().clamp(
-	    -static_cast<float>(haldls::vx::SynapseQuad::Weight::max),
-	    static_cast<float>(haldls::vx::SynapseQuad::Weight::max));
-	auto const quantized_inputs = x.floor().clamp(
-	    static_cast<float>(grenade::vx::UInt5::min), static_cast<float>(grenade::vx::UInt5::max));
+	auto const quantized_weights = weights.round();
+	auto const quantized_inputs = x.round();
+
+	if ((quantized_weights.min().item().to<float>() < -haldls::vx::SynapseQuad::Weight::max) ||
+	    (quantized_weights.max().item().to<float>() > haldls::vx::SynapseQuad::Weight::max)) {
+		throw std::overflow_error(
+		    "HICANN-X only supports weights between " +
+		    std::to_string(-haldls::vx::SynapseQuad::Weight::max) + " and " +
+		    std::to_string(haldls::vx::SynapseQuad::Weight::max) + ", got " +
+		    std::to_string(quantized_weights.min().item().to<float>()) + " (min), " +
+		    std::to_string(quantized_weights.max().item().to<float>()) + " (max)");
+	}
+	if ((quantized_inputs.min().item().to<float>() < static_cast<int>(grenade::vx::UInt5::min)) ||
+	    (quantized_inputs.max().item().to<float>() > static_cast<int>(grenade::vx::UInt5::max))) {
+		throw std::overflow_error(
+		    "HICANN-X only supports inputs between " + std::to_string(grenade::vx::UInt5::min) +
+		    " and " + std::to_string(grenade::vx::UInt5::max) + ", got " +
+		    std::to_string(quantized_inputs.min().item().to<float>()) + " (min), " +
+		    std::to_string(quantized_inputs.max().item().to<float>()) + " (max)");
+	}
 
 	// split one synram height from matrix
 	auto const rows_per_synram = halco::hicann_dls::vx::SynapseRowOnSynram::size /
