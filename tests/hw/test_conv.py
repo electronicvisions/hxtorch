@@ -1,193 +1,183 @@
+from abc import ABC, abstractmethod
+from collections import namedtuple
+from functools import partial
+from typing import ClassVar, Dict
 import unittest
 import torch
 import hxtorch
-import dlens_vx.hxcomm as hxcomm
-import dlens_vx.sta as sta
-import pyhaldls_vx as hal
-import pygrenade_vx as grenade
-import dlens_vx
+from dlens_vx import logger
 
-dlens_vx.logger.default_config(level=dlens_vx.logger.LogLevel.INFO)
+from hxtorch_shared_test_tools import rand_full
 
-class TestCaseConv(object):
-    def __init__(self, name, conv, weights, inputs, stride, size):
-        self.name = name
-        self.conv = conv
-        self.weights = weights
-        self.inputs = inputs
-        self.stride = stride
-        self.size = size
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __hash__(self):
-        return hash(self.name)
+logger.default_config(level=logger.LogLevel.INFO)
 
 
-class TestConv(unittest.TestCase):
-    TESTS = set()
+class ConvInput(namedtuple('ConvInput', ["input", "weight", "stride"],
+                           defaults=[1])):
+    """
+    An input to a convolution operation.
+    """
+    def duplicate(self):
+        return self._make(arg.data.clone().requires_grad_()
+                          if hasattr(arg, "requires_grad") else arg
+                          for arg in self)
+
+
+class TestConv(ABC, unittest.TestCase):
+    """
+    Tests a conv operation.
+    """
+
+    @abstractmethod
+    def conv(**kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def torch_conv(**kwargs):
+        raise NotImplementedError
+
+    test_inputs: ClassVar[Dict[str, ConvInput]]
+
+    def test_output_shape_gradient(self):
+        """
+        Compares the output shape and gradients of the operation to the output
+        of the torch implementation for different input arguments.
+        """
+        log = logger.get(self.__class__.__name__)
+
+        for mode in self.test_inputs:
+            with self.subTest(mode=mode):
+                conv_input = self.test_inputs[mode].duplicate()
+                result = self.conv(**conv_input._asdict())
+                log.info(f"Mean output: {result.mean():.1f}")
+
+                self.assertTrue(result.is_contiguous())
+
+                conv_input_torch = conv_input.duplicate()
+                result_torch = self.torch_conv(**conv_input_torch._asdict())
+                self.assertEqual(result.size(), result_torch.size())
+
+                # compute gradients
+                gain = torch.mean((result / result_torch)).item()
+                log.info(f"Gain: {gain:.5f} (mean)")
+                result.backward(torch.ones_like(result))
+                result_torch.backward(torch.ones_like(result_torch))
+
+                for name, arg in conv_input._asdict().items():
+                    if hasattr(arg, "grad"):
+                        grad = arg.grad
+                        grad_torch = getattr(conv_input_torch, name).grad
+                        if name != "bias":
+                            grad_torch *= gain
+                        self.assertTrue(
+                            torch.allclose(grad, grad_torch, rtol=2),
+                            f"{name.capitalize()} gradient does not match:\n"
+                            f"{grad}\n!=\n{grad_torch}")
+
+
+class TestConv1d(TestConv):
+    """
+    Tests the conv1d operation.
+    """
+    conv = torch.conv1d
+    torch_conv = torch.conv1d
+
+    test_inputs = {
+        "batch1_outchannels1_inchannels1_kernel_larger_stride":
+        ConvInput(rand_full((3, 1, 30), 20.), rand_full((1, 1, 5), 50.),
+                  stride=7),
+        "batch2_outchannels1_inchannels3_kernel_larger_stride":
+        ConvInput(rand_full((2, 3, 30), 20.), rand_full((1, 3, 5), 50.),
+                  stride=7),
+        "batch2_outchannels4_inchannels3_kernel_larger_stride":
+        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+                  stride=7),
+        "batch1_outchannels1_inchannels1_kernel_smaller_stride":
+        ConvInput(rand_full((3, 1, 30), 20.), rand_full((1, 1, 5), 50.),
+                  stride=4),
+        "batch2_outchannels1_inchannels3_kernel_smaller_stride":
+        ConvInput(rand_full((2, 3, 30), 20.), rand_full((1, 3, 5), 50.),
+                  stride=4),
+        "batch2_outchannels4_inchannels3_kernel_smaller_stride":
+        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+                  stride=4)
+    }
+
+
+class TestConv1dHX(TestConv1d):
+    """
+    Tests the conv1d operation on HX.
+    """
+    conv = partial(hxtorch.conv1d, num_sends=5, wait_between_events=10)
 
     @classmethod
     def setUpClass(cls):
-        with hxcomm.ManagedConnection() as connection:
-            sta.run(connection, sta.generate(sta.ExperimentInit())[0].done())
-            chip = grenade.ChipConfig()
-            hxtorch.init(chip, connection)
+        hxtorch.init()
 
     @classmethod
     def tearDownClass(cls):
         hxtorch.release()
 
+
+class TestConv1dHXmock(TestConv1d):
+    """
+    Tests the mocked conv1d operation.
+    """
+    conv = partial(hxtorch.conv1d, num_sends=5, mock=True)
+
+
+class TestConv2d(TestConv):
+    """
+    Tests the conv2d operation.
+    """
+    conv = torch.conv2d
+    torch_conv = torch.conv2d
+
+    test_inputs = {
+        "batch1_outchannels1_inchannels1_kernel_larger_stride":
+        ConvInput(rand_full((1, 1, 30, 60), 20), rand_full((1, 1, 5, 10), 20),
+                  stride=(7, 14)),
+        "batch2_outchannels1_inchannels3_kernel_larger_stride":
+        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((1, 3, 5, 10), 20),
+                  stride=(7, 14)),
+        "batch2_outchannels4_inchannels3_kernel_larger_stride":
+        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+                  stride=(7, 14)),
+        "batch1_outchannels1_inchannels1_kernel_smaller_stride":
+        ConvInput(rand_full((1, 1, 30, 60), 20), rand_full((1, 1, 5, 10), 20),
+                  stride=(4, 8)),
+        "batch2_outchannels1_inchannels3_kernel_smaller_stride":
+        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((1, 3, 5, 10), 20),
+                  stride=(4, 8)),
+        "batch2_outchannels4_inchannels3_kernel_smaller_stride":
+        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+                  stride=(4, 8))
+    }
+
+
+class TestConv2dHX(TestConv2d):
+    """
+    Tests the conv2d operation on HX.
+    """
+    conv = partial(hxtorch.conv2d, num_sends=1, wait_between_events=10)
+
     @classmethod
-    def generate_cases(cls):
-        for test in cls.TESTS:
-            def generate_test(case):
-                def test_invocation(self):
-                    result = case.conv(case.inputs, case.weights, stride=case.stride)
-                    self.assertEqual(result.size(), torch.Size(case.size))
-                    self.assertTrue(result.is_contiguous())
-                return test_invocation
+    def setUpClass(cls):
+        hxtorch.init()
 
-            test_method = generate_test(test)
-            test_method.__name__ = 'test_' + test.name
-            setattr(TestConv, test_method.__name__, test_method)
-
-    def test_conv1d_construction(self):
-        # data shape not matching conv1d
-        with self.assertRaises(RuntimeError):
-            data_in = torch.ones(5)
-            weights_in = torch.empty((7, 1, 1))
-            hxtorch.conv1d(data_in, weights_in, 2)
-
-        # weights shape not matching conv1d
-        with self.assertRaises(RuntimeError):
-            data_in = torch.ones((5, 2, 1))
-            weights_in = torch.empty((7, 1))
-            hxtorch.conv1d(data_in, weights_in, 3)
-
-        # in_channels not matching
-        with self.assertRaises(RuntimeError):
-            data_in = torch.ones((5, 2, 1))
-            weights_in = torch.empty((7, 1, 1))
-            hxtorch.conv1d(data_in, weights_in, 3)
-
-        # match with in_channels = 2, out_channels = 3, N = 2, kernel_size = 5
-        weights = torch.tensor([
-            [[1,2,3,4,5], [6,7,8,9,10]],
-            [[11,12,13,14,15], [16,17,18,19,20]],
-            [[21,22,23,24,25], [26,27,28,29,30]]
-        ], dtype=torch.float)
-        inputs = torch.tensor([
-            [[i for i in range(30)], [i + 30 for i in range(30)]],
-            [[i for i in range(30)], [i + 30 for i in range(30)]]
-        ], dtype=torch.float)
-        result = hxtorch.conv1d(inputs, weights, 4)
-        self.assertEqual(result.size(), torch.Size([2, 3, 7]))
-
-    def test_conv1d_backward(self):
-        weights_in = torch.ones((3, 2, 5))
-        weights_in.requires_grad = True
-        data_in = torch.ones((1, 2, 30))
-        result = hxtorch.conv1d(data_in, weights_in, 4)
-        self.assertEqual(result.size(), torch.Size([1, 3, 7]))
-        loss = result.sum()
-        loss.backward()
-
-    def test_conv2d_backward(self):
-        weights_in = torch.ones((3, 2, 5, 10))
-        weights_in.requires_grad = True
-        data_in = torch.ones((1, 2, 30, 60))
-        result = hxtorch.conv2d(data_in, weights_in, [4, 8])
-        self.assertEqual(result.size(), torch.Size([1, 3, 7, 7]))
-        loss = result.sum()
-        loss.backward()
+    @classmethod
+    def tearDownClass(cls):
+        hxtorch.release()
 
 
-def add_cases_conv1d(weights, inputs, stride, size, postfix=''):
-    TestConv.TESTS.update({
-        TestCaseConv('conv1d_torch' + postfix, torch.conv1d, weights, inputs, stride, size),
-        TestCaseConv('conv1d_hxtorch' + postfix, hxtorch.conv1d, weights, inputs, stride, size)})
-
-add_cases_conv1d(torch.rand((1, 1, 5), dtype=torch.float),
-              torch.rand((1, 1, 30), dtype=torch.float),
-              4,
-              [1, 1, 7],
-              '_batch1_outchannels1_inchannels1_kernel_larger_stride')
-
-add_cases_conv1d(torch.rand((1, 3, 5), dtype=torch.float),
-              torch.rand((2, 3, 30), dtype=torch.float),
-              4,
-              [2, 1, 7],
-              '_batch2_outchannels1_inchannels3_kernel_larger_stride')
-
-add_cases_conv1d(torch.rand((4, 3, 5), dtype=torch.float),
-              torch.rand((2, 3, 30), dtype=torch.float),
-              4,
-              [2, 4, 7],
-              '_batch2_outchannels4_inchannels3_kernel_larger_stride')
-
-add_cases_conv1d(torch.rand((1, 1, 5), dtype=torch.float),
-              torch.rand((1, 1, 30), dtype=torch.float),
-              7,
-              [1, 1, 4],
-              '_batch1_outchannels1_inchannels1_kernel_smaller_stride')
-
-add_cases_conv1d(torch.rand((1, 3, 5), dtype=torch.float),
-              torch.rand((2, 3, 30), dtype=torch.float),
-              7,
-              [2, 1, 4],
-              '_batch2_outchannels1_inchannels3_kernel_smaller_stride')
-
-add_cases_conv1d(torch.rand((4, 3, 5), dtype=torch.float),
-              torch.rand((2, 3, 30), dtype=torch.float),
-              7,
-              [2, 4, 4],
-              '_batch2_outchannels4_inchannels3_kernel_smaller_stride')
-
-def add_cases_conv2d(weights, inputs, stride, size, postfix=''):
-    TestConv.TESTS.update({
-        TestCaseConv('conv2d_torch' + postfix, torch.conv2d, weights, inputs, stride, size),
-        TestCaseConv('conv2d_hxtorch' + postfix, hxtorch.conv2d, weights, inputs, stride, size)})
-
-add_cases_conv2d(torch.rand((1, 1, 5, 10), dtype=torch.float),
-              torch.rand((1, 1, 30, 60), dtype=torch.float),
-              [4, 8],
-              [1, 1, 7, 7],
-              '_batch1_outchannels1_inchannels1_kernel_larger_stride')
-
-add_cases_conv2d(torch.rand((1, 3, 5, 10), dtype=torch.float),
-              torch.rand((2, 3, 30, 60), dtype=torch.float),
-              [4, 8],
-              [2, 1, 7, 7],
-              '_batch2_outchannels1_inchannels3_kernel_larger_stride')
-
-add_cases_conv2d(torch.rand((4, 3, 5, 10), dtype=torch.float),
-              torch.rand((2, 3, 30, 60), dtype=torch.float),
-              [4, 8],
-              [2, 4, 7, 7],
-              '_batch2_outchannels4_inchannels3_kernel_larger_stride')
-
-add_cases_conv2d(torch.rand((1, 1, 5, 10), dtype=torch.float),
-              torch.rand((1, 1, 30, 60), dtype=torch.float),
-              [7, 14],
-              [1, 1, 4, 4],
-              '_batch1_outchannels1_inchannels1_kernel_smaller_stride')
-
-add_cases_conv2d(torch.rand((1, 3, 5, 10), dtype=torch.float),
-              torch.rand((2, 3, 30, 60), dtype=torch.float),
-              [7, 14],
-              [2, 1, 4, 4],
-              '_batch2_outchannels1_inchannels3_kernel_smaller_stride')
-
-add_cases_conv2d(torch.rand((4, 3, 5, 10), dtype=torch.float),
-              torch.rand((2, 3, 30, 60), dtype=torch.float),
-              [7, 14],
-              [2, 4, 4, 4],
-              '_batch2_outchannels4_inchannels3_kernel_smaller_stride')
-
-TestConv.generate_cases()
+class TestConv2dHXmock(TestConv2d):
+    """
+    Tests the mocked conv2d operation.
+    """
+    conv = partial(hxtorch.conv2d, num_sends=1, mock=True)
 
 
-if __name__ == '__main__':
+del TestConv  # remove abstract base class from tests
+
+if __name__ == "__main__":
     unittest.main()
