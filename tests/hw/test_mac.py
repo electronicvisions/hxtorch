@@ -19,9 +19,9 @@ class TestHXMAC(unittest.TestCase):
         hxtorch.release()
 
     def test_construction(self):
+        data_in = torch.ones(5)
+        weights_in = torch.empty(5, 3, 4)
         with self.assertRaises(RuntimeError):
-            data_in = torch.ones(5)
-            weights_in = torch.empty(5, 3, 4)
             hxtorch.mac(data_in, weights_in)
 
         weights_in = torch.ones(5, 3)

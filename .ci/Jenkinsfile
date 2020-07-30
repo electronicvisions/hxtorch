@@ -1,8 +1,22 @@
 @Library("jenlib") _
 
-wafDefaultPipeline(projects: ["hxtorch"],
-                   moduleOptions: [modules: ["ppu-toolchain"]],
-                   container: [app: "dls-core"],
-                   testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
-                   testOptions: "--test-execall -j1",
-                   notificationChannel: "#dls-software")
+boolean executeHwTests = [
+               !isTriggeredByGerrit(),
+               env.GERRIT_PROJECT == "hxtorch"
+].any({ it })
+
+Map<String, Object> pipelineOptions = [
+		projects: ["hxtorch"],
+		container: [app: "dls-core"],
+		notificationChannel: "#dls-software"
+]
+
+if (executeHwTests) {
+	pipelineOptions << [
+			testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+			preTestHook: { configureHxCubeBitfile() },
+			testOptions: "--test-execall -j1",
+	]
+}
+
+wafDefaultPipeline(pipelineOptions)
