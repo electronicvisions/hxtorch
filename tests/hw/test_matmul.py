@@ -141,6 +141,38 @@ class TestMatmulHX(TestMatmulPyTorch):
     def tearDownClass(cls):
         hxtorch.release_hardware()
 
+    def test_diagonal(self):
+        """
+        Test that for a layer of a single chip size, each quadrant correctly
+        associates a diagonal weight matrix, i.e. the column and row ordering
+        is correct.
+        """
+        inputs = torch.eye(128, dtype=torch.float) * 31.
+        # for each quadrant test diagonal
+        weight_test_values = {
+            "quadrant 0": torch.cat((torch.eye(128), torch.zeros((128,384))),
+                                     dim=1),
+            "quadrant 1": torch.cat((torch.zeros((128,128)),
+                                     torch.eye(128), torch.zeros((128,256))),
+                                     dim=1),
+            "quadrant 2": torch.cat((torch.zeros((128,256)), torch.eye(128),
+                                     torch.zeros((128,128))), dim=1),
+            "quadrant 3": torch.cat((torch.zeros((128,384)), torch.eye(128)),
+                                     dim=1)
+        }
+
+        for sign in [1.,-1.]:
+            for name, values in weight_test_values.items():
+                with self.subTest(name=name, sign=sign):
+                    weights = values * 63. * sign
+                    expectation = values.bool()
+                    output = self.matmul(inputs, weights, num_sends=40,
+                                         wait_between_events=2)
+                    torch.set_printoptions(profile="full")
+                    self.assertTrue(
+                        torch.equal((output * sign) > 40, expectation),
+                        f"Diagonal not matching:\n{output}")
+
 
 class TestMatmulHXmock(TestMatmulPyTorch):
     """
