@@ -2,6 +2,7 @@
 
 #include "grenade/vx/compute_single_mac.h"
 #include "grenade/vx/config.h"
+#include "grenade/vx/event.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 
@@ -31,8 +32,8 @@ torch::Tensor mac_forward(
 		                         "corresponding weight matrix dim size");
 	}
 
-	std::vector<std::vector<haldls::vx::SynapseQuad::Weight>> m_weights{
-	    num_rows, std::vector<haldls::vx::SynapseQuad::Weight>{num_cols}};
+	grenade::vx::ComputeSingleMAC::Weights m_weights{
+	    num_rows, grenade::vx::ComputeSingleMAC::Weights::value_type{num_cols}};
 
 	// TODO: let's assume it's floats...
 	auto weights_a = weights.accessor<float, 2>();
@@ -44,10 +45,10 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	std::vector<haldls::vx::SynapseDriverConfig::RowMode> row_modes(num_rows);
+	grenade::vx::ComputeSingleMAC::RowModes row_modes(num_rows);
 	for (size_t i = 0; i < num_double_rows; i++) {
-		row_modes[2 * i] = haldls::vx::SynapseDriverConfig::RowMode::excitatory;
-		row_modes[2 * i + 1] = haldls::vx::SynapseDriverConfig::RowMode::inhibitory;
+		row_modes[2 * i] = grenade::vx::ComputeSingleMAC::RowModes::value_type::excitatory;
+		row_modes[2 * i + 1] = grenade::vx::ComputeSingleMAC::RowModes::value_type::inhibitory;
 	}
 
 	size_t const num_inputs = x.sizes().vec().at(0);
@@ -68,7 +69,7 @@ torch::Tensor mac_forward(
 
 	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, hxtorch::detail::getChip(),
 	                                  static_cast<size_t>(num_sends),
-	                                  haldls::vx::Timer::Value(wait_between_events)};
+	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

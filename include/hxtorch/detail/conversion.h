@@ -1,13 +1,13 @@
 #pragma once
 
+#include "grenade/vx/compute_single_mac.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/synapse.h"
 
 namespace hxtorch::detail {
 
 struct SignedWeight
 {
-	typedef haldls::vx::SynapseQuad::Weight weight_type;
+	typedef grenade::vx::ComputeSingleMAC::Weights::value_type::value_type weight_type;
 	weight_type positive;
 	weight_type negative;
 };
