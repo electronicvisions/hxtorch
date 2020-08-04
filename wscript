@@ -4,6 +4,7 @@ import os
 import re
 
 def depends(dep):
+    dep('hxcomm')
     dep('haldls')
     dep('grenade')
 
