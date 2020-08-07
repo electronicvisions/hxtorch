@@ -34,6 +34,11 @@ struct InitUnrollPyBind11Helper<std::variant<T, Ts...>>
 			hxtorch::init(
 			    chip, std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
 		});
+		m.def("init", [](std::string const& calibration_path, T& conn) {
+			hxtorch::init(
+			    calibration_path,
+			    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
+		});
 	}
 };
 
@@ -48,6 +53,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	[[maybe_unused]] hxtorch::detail::InitUnrollPyBind11Helper<
 	    std::remove_cvref_t<pyhxcomm::vx::ConnectionHandle>>
 	    helper(m);
+	m.def(
+	    "init",
+	    [](std::optional<std::string> const& hwdb_path = std::nullopt) {
+		    hxtorch::init(hwdb_path);
+	    },
+	    pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release", &hxtorch::release);
 	m.def(
 	    "mac", &hxtorch::mac, "", pybind11::arg("x"), pybind11::arg("weights"),

@@ -9,10 +9,7 @@ logger.default_config(level=logger.LogLevel.INFO)
 class TestHXMAC(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with hxcomm.ManagedConnection() as connection:
-            sta.run(connection, sta.generate(sta.DigitalInit())[0].done())
-            chip = grenade.ChipConfig()
-            hxtorch.init(chip, connection)
+        hxtorch.init()
 
     @classmethod
     def tearDownClass(cls):
