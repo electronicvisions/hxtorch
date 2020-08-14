@@ -68,9 +68,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    helper(m);
 	m.def(
 	    "init",
-	    [](std::optional<std::string> const& hwdb_path = std::nullopt) {
-		    hxtorch::init(hwdb_path);
+	    [](std::string calibration_version = "stable/latest",
+	       std::optional<std::string> const& hwdb_path = std::nullopt) {
+		    hxtorch::init(calibration_version, hwdb_path);
 	    },
+	    pybind11::arg("calibration_version") = "stable/latest",
 	    pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release", &hxtorch::release);
 	m.def(

@@ -12,9 +12,12 @@ namespace hxtorch {
 
 /**
  * Initialize automatically from the environment.
+ * @param calibration_version Calibration version to load
  * @param hwdb_path Optional path to the hwdb to use
  */
-void init(std::optional<std::string> const& hwdb_path = std::nullopt);
+void init(
+    std::string calibration_version = "stable/latest",
+    std::optional<std::string> const& hwdb_path = std::nullopt);
 
 /**
  * Initialize with hardware connection and calibration path.
