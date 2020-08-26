@@ -15,6 +15,7 @@
 #include "hxtorch/mac.h"
 #include "hxtorch/matmul.h"
 #include "hxtorch/mock.h"
+#include "hxtorch/relu.h"
 
 #include "grenade/vx/config.h"
 #include "pyhxcomm/vx/connection_handle.h"
@@ -79,6 +80,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    "mac", &hxtorch::mac, "", pybind11::arg("x"), pybind11::arg("weights"),
 	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 25,
 	    pybind11::arg("mock") = false);
+	m.def("relu", &hxtorch::relu, "", pybind11::arg("input"), pybind11::arg("mock") = false);
 	m.def(
 	    "matmul", &hxtorch::matmul,
 	    "Drop-in replacement for :meth:`torch.matmul` that uses HICANN-X.\n"
