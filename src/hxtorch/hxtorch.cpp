@@ -82,6 +82,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("mock") = false);
 	m.def("relu", &hxtorch::relu, "", pybind11::arg("input"), pybind11::arg("mock") = false);
 	m.def(
+	    "converting_relu", &hxtorch::converting_relu, "", pybind11::arg("input"),
+	    pybind11::arg("shift") = 2, pybind11::arg("mock") = false);
+	m.def(
 	    "matmul", &hxtorch::matmul,
 	    "Drop-in replacement for :meth:`torch.matmul` that uses HICANN-X.\n"
 	    "The current implementation only supports ``other`` to be 1D or 2D.\n\n"
