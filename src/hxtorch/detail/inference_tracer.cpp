@@ -49,4 +49,13 @@ void tracer_update_output(torch::Tensor const& value)
 	}
 }
 
+void tracer_add(std::string const& name, grenade::vx::ComputeSequence::Entry&& op)
+{
+	for (auto& tracer : getInferenceTracer()) {
+		assert(tracer);
+		tracer->operation_names.push_back(name);
+		tracer->ops.data.push_back(std::move(op));
+	}
+}
+
 } // namespace hxtorch::detail

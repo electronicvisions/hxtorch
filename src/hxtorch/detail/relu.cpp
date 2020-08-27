@@ -2,6 +2,7 @@
 
 #include "grenade/vx/compute_single_converting_relu.h"
 #include "grenade/vx/compute_single_relu.h"
+#include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
@@ -61,12 +62,6 @@ torch::Tensor relu_forward(torch::Tensor const& input)
 {
 	auto const [input_in, sizes_2d] = convert_relu_input(input);
 
-	// only add name of operation
-	for (auto& tracer : detail::getInferenceTracer()) {
-		assert(tracer);
-		tracer->operation_names.push_back("relu");
-	}
-
 	grenade::vx::ComputeSingleReLU relu(sizes_2d.at(1));
 
 	if (!hxtorch::detail::getConnection()) {
@@ -74,7 +69,7 @@ torch::Tensor relu_forward(torch::Tensor const& input)
 	}
 	auto const results =
 	    relu.run(input_in, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
-
+	tracer_add("relu", std::move(relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }
 
@@ -99,12 +94,6 @@ torch::Tensor converting_relu_forward(torch::Tensor const& input, int64_t const 
 
 	auto const [input_in, sizes_2d] = convert_relu_input(input);
 
-	// only add name of operation
-	for (auto& tracer : detail::getInferenceTracer()) {
-		assert(tracer);
-		tracer->operation_names.push_back("converting_relu");
-	}
-
 	grenade::vx::ComputeSingleConvertingReLU converting_relu(sizes_2d.at(1), shift);
 
 	if (!hxtorch::detail::getConnection()) {
@@ -112,7 +101,7 @@ torch::Tensor converting_relu_forward(torch::Tensor const& input, int64_t const 
 	}
 	auto const results = converting_relu.run(
 	    input_in, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
-
+	tracer_add("converting_relu", std::move(converting_relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }
 

@@ -125,12 +125,6 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	// only add name of operation
-	for (auto& tracer : detail::getInferenceTracer()) {
-		assert(tracer);
-		tracer->operation_names.push_back("mac");
-	}
-
 	grenade::vx::ComputeSingleMAC mac{m_weights, static_cast<size_t>(num_sends),
 	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
 
@@ -141,6 +135,7 @@ torch::Tensor mac_forward(
 	auto ret_a = ret.accessor<float, 2>();
 	auto const results =
 	    mac.run(xin, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
+	tracer_add("mac", std::move(mac));
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < results.at(0).size(); i++) {
 			ret_a[input][i] = convert_membrane(results[input][i]);

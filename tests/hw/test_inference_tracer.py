@@ -20,10 +20,8 @@ class TestInferenceTracer(unittest.TestCase):
             tracer = hxtorch.InferenceTracer(path)
             tracer.start()
             expectation = func()
-            tracer.stop()
-            with os.fdopen(fd, 'r') as tmp:
-                lines = tmp.readlines()
-                self.assertEqual(lines, expectation)
+            names = tracer.stop()
+            self.assertEqual(names, expectation)
         finally:
             os.remove(path)
 
@@ -42,7 +40,7 @@ class TestInferenceTracer(unittest.TestCase):
         weights_2 = torch.zeros((512,123))
         r4 = hxtorch.mac(r3, weights_2)
         hxtorch.relu(r4)
-        return ["mac\n", "relu\n", "converting_relu\n", "mac\n", "relu\n"]
+        return ["mac", "relu", "converting_relu", "mac", "relu"]
 
     @staticmethod
     def wrong_sequence():
@@ -83,23 +81,36 @@ class TestInferenceTracer(unittest.TestCase):
             nested_tracer.start()
             r2 = hxtorch.relu(r1)
             r3 = hxtorch.converting_relu(r2)
-            nested_tracer.stop()
+            nested_names = nested_tracer.stop()
             r4 = hxtorch.mac(r3, weights_2)
             hxtorch.relu(r4)
-            tracer.stop()
+            names = tracer.stop()
 
-            expectation = ["mac\n", "relu\n", "converting_relu\n", "mac\n",
-                "relu\n"]
-            nested_expectation = ["relu\n", "converting_relu\n"]
-            with os.fdopen(fd, 'r') as tmp:
-                lines = tmp.readlines()
-                self.assertEqual(lines, expectation)
-            with os.fdopen(nested_fd, 'r') as tmp:
-                lines = tmp.readlines()
-                self.assertEqual(lines, nested_expectation)
+            expectation = ["mac", "relu", "converting_relu", "mac", "relu"]
+            nested_expectation = ["relu", "converting_relu"]
+            self.assertEqual(names, expectation)
+            self.assertEqual(nested_names, nested_expectation)
         finally:
             os.remove(path)
             os.remove(nested_path)
+
+    def test_single_relu_inference_trace(self):
+        fd, path = tempfile.mkstemp()
+        try:
+            inputs = torch.arange(-128., 127.)
+
+            tracer = hxtorch.InferenceTracer(path)
+            tracer.start()
+            res = hxtorch.relu(inputs)
+            names = tracer.stop()
+
+            expectation = ["relu"]
+            self.assertEqual(names, expectation)
+
+            traced_res = hxtorch.inference_trace(inputs, path)
+            self.assertTrue(torch.equal(traced_res, res))
+        finally:
+            os.remove(path)
 
 
 if __name__ == '__main__':

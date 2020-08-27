@@ -10,8 +10,7 @@ struct InferenceTracer;
 
 /**
  * Inference tracer for a linear sequence of operations.
- * For each traced operation, its name is added to a list of names and saved in the end.
- * TODO: The traced operations' state shall be saved as a grenade::ComputeSequence, which can be
+ * The traced operations' state is saved as a grenade::ComputeSequence, which can be
  * executed as a single operation without transformation to and from PyTorch tensors.
  * It is ensured, that no untraced modifications are made in-between traced operations by comparing
  * the last traced operation's output with the currently traced operation's input value.
@@ -32,12 +31,21 @@ public:
 
 	/**
 	 * Stop tracing operations by deregistering tracer and save traced operations to given file.
+	 * @return List of traced operation names
 	 */
-	void stop();
+	std::vector<std::string> stop();
 
 private:
 	std::string m_filename;
 	std::shared_ptr<detail::InferenceTracer> m_impl;
 };
+
+
+/**
+ * Execute inference of stored trace.
+ * @param input Input data to use
+ * @param filename Filename to serialized operation trace
+ */
+torch::Tensor inference_trace(torch::Tensor const& input, std::string const& filename);
 
 } // namespace hxtorch
