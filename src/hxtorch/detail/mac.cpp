@@ -141,8 +141,7 @@ torch::Tensor mac_forward(
 		tracer->operation_names.push_back("mac");
 	}
 
-	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, hxtorch::detail::getChip(),
-	                                  static_cast<size_t>(num_sends),
+	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, static_cast<size_t>(num_sends),
 	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
@@ -150,7 +149,8 @@ torch::Tensor mac_forward(
 	}
 	auto ret = torch::zeros({static_cast<int64_t>(num_inputs), static_cast<int64_t>(num_cols)});
 	auto ret_a = ret.accessor<float, 2>();
-	auto const results = mac.run(xin, *hxtorch::detail::getConnection());
+	auto const results =
+	    mac.run(xin, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < results.at(0).size(); i++) {
 			ret_a[input][i] = convert_membrane(results[input][i]);
