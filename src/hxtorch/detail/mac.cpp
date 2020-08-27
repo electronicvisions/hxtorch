@@ -5,6 +5,7 @@
 #include "grenade/vx/event.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
+#include "hxtorch/detail/inference_tracer.h"
 #include "hxtorch/detail/mock.h"
 
 #include "hate/timer.h"
@@ -76,6 +77,8 @@ torch::Tensor mac_mock_forward(
 torch::Tensor mac_forward(
     torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events)
 {
+	detail::tracer_check_input(x);
+
 	if (weights.dim() != 2) {
 		throw std::runtime_error("HICANN-X only supports 2D weight matrices");
 	}
@@ -132,6 +135,12 @@ torch::Tensor mac_forward(
 		}
 	}
 
+	// only add name of operation
+	for (auto& tracer : detail::getInferenceTracer()) {
+		assert(tracer);
+		tracer->operation_names.push_back("mac");
+	}
+
 	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, hxtorch::detail::getChip(),
 	                                  static_cast<size_t>(num_sends),
 	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
@@ -150,6 +159,7 @@ torch::Tensor mac_forward(
 	if (x_initial_dim == 1) {
 		ret.squeeze_(0);
 	}
+	detail::tracer_update_output(ret);
 	return ret;
 }
 

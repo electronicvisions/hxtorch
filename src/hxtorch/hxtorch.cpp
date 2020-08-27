@@ -12,6 +12,7 @@
 #include "hxtorch/connection.h"
 #include "hxtorch/conv.h"
 #include "hxtorch/detail/conv.h"
+#include "hxtorch/inference_tracer.h"
 #include "hxtorch/mac.h"
 #include "hxtorch/matmul.h"
 #include "hxtorch/mock.h"
@@ -56,7 +57,6 @@ struct InitUnrollPyBind11Helper<std::variant<T, Ts...>>
 };
 
 } // namespace hxtorch::detail
-
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -131,4 +131,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(pybind11::init<float, float>(), pybind11::arg("noise_std"), pybind11::arg("gain"))
 	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
 	    .def_readwrite("gain", &hxtorch::MockParameter::gain);
+
+	pybind11::class_<hxtorch::InferenceTracer>(m, "InferenceTracer")
+	    .def(pybind11::init<std::string const&>(), pybind11::arg("filename"))
+	    .def("stop", &hxtorch::InferenceTracer::stop)
+	    .def("start", &hxtorch::InferenceTracer::start);
 }
