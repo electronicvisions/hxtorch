@@ -91,11 +91,10 @@ torch::Tensor mac_forward(
 	}
 
 	// create vector
-	size_t const num_double_rows = weights.sizes().vec().at(0);
-	size_t const num_rows = 2 * num_double_rows;
+	size_t const num_rows = weights.sizes().vec().at(0);
 	size_t const num_cols = weights.sizes().vec().at(1);
 
-	if (static_cast<size_t>(x.sizes().vec().back()) != num_double_rows) {
+	if (static_cast<size_t>(x.sizes().vec().back()) != num_rows) {
 		throw std::runtime_error("HICANN-X only supports input lengths that match the "
 		                         "corresponding weight matrix dim size");
 	}
@@ -105,18 +104,10 @@ torch::Tensor mac_forward(
 
 	// TODO: let's assume it's floats...
 	auto weights_a = weights.accessor<float, 2>();
-	for (size_t i = 0; i < num_double_rows; i++) {
+	for (size_t i = 0; i < num_rows; i++) {
 		for (size_t j = 0; j < num_cols; j++) {
-			auto const signed_weight = convert_weight(weights_a[i][j]);
-			m_weights[2 * i][j] = signed_weight.positive;
-			m_weights[2 * i + 1][j] = signed_weight.negative;
+			m_weights[i][j] = convert_weight(weights_a[i][j]);
 		}
-	}
-
-	grenade::vx::ComputeSingleMAC::RowModes row_modes(num_rows);
-	for (size_t i = 0; i < num_double_rows; i++) {
-		row_modes[2 * i] = grenade::vx::ComputeSingleMAC::RowModes::value_type::excitatory;
-		row_modes[2 * i + 1] = grenade::vx::ComputeSingleMAC::RowModes::value_type::inhibitory;
 	}
 
 	size_t const num_inputs = x.sizes().vec().at(0);
@@ -128,10 +119,9 @@ torch::Tensor mac_forward(
 	// TODO: let's assume it's floats...
 	auto x_a = x.accessor<float, 2>();
 	for (size_t input = 0; input < num_inputs; ++input) {
-		for (size_t i = 0; i < num_double_rows; i++) {
+		for (size_t i = 0; i < num_rows; i++) {
 			auto const activation = convert_activation(x_a[input][i]);
-			xin[input][2 * i] = activation;
-			xin[input][2 * i + 1] = activation;
+			xin[input][i] = activation;
 		}
 	}
 
@@ -141,7 +131,7 @@ torch::Tensor mac_forward(
 		tracer->operation_names.push_back("mac");
 	}
 
-	grenade::vx::ComputeSingleMAC mac{m_weights, row_modes, static_cast<size_t>(num_sends),
+	grenade::vx::ComputeSingleMAC mac{m_weights, static_cast<size_t>(num_sends),
 	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {

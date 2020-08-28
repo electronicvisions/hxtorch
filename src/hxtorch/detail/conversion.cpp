@@ -3,17 +3,9 @@
 
 namespace hxtorch::detail {
 
-SignedWeight convert_weight(float const value)
+grenade::vx::ComputeSingleMAC::Weight convert_weight(float const value)
 {
-	SignedWeight ret;
-	if (value >= 0) {
-		ret.negative = SignedWeight::weight_type(0);
-		ret.positive = SignedWeight::weight_type(std::lround(value));
-	} else {
-		ret.positive = SignedWeight::weight_type(0);
-		ret.negative = SignedWeight::weight_type(-std::lround(value));
-	}
-	return ret;
+	return grenade::vx::ComputeSingleMAC::Weight(std::lround(value));
 }
 
 grenade::vx::UInt5 convert_activation(float const value)

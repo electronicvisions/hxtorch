@@ -6,14 +6,7 @@
 
 namespace hxtorch::detail {
 
-struct SignedWeight
-{
-	typedef grenade::vx::ComputeSingleMAC::Weights::value_type::value_type weight_type;
-	weight_type positive;
-	weight_type negative;
-};
-
-SignedWeight convert_weight(float value);
+grenade::vx::ComputeSingleMAC::Weight convert_weight(float value);
 
 grenade::vx::UInt5 convert_activation(float value);
 
