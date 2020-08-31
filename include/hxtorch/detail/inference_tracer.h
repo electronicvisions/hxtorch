@@ -48,6 +48,12 @@ private:
 std::unordered_set<std::shared_ptr<InferenceTracer>>& getInferenceTracer();
 
 /**
+ * Check whether inference tracers are registered.
+ * @return Boolean value
+ */
+bool has_tracer();
+
+/**
  * Check all tracers for equality of the output of the last traced operation with the given value.
  * @throws std::runtime_error On this operations input being unequal to last operations output
  * @param value Value to check

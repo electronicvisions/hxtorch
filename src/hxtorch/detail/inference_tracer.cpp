@@ -33,6 +33,11 @@ std::unordered_set<std::shared_ptr<InferenceTracer>>& getInferenceTracer()
 	return storage;
 }
 
+bool has_tracer()
+{
+	return !getInferenceTracer().empty();
+}
+
 void tracer_check_input(torch::Tensor const& value)
 {
 	for (auto const& tracer : getInferenceTracer()) {

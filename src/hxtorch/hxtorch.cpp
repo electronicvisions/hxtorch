@@ -9,6 +9,7 @@
 #include <torch/csrc/utils/pybind.h>
 #include <torch/extension.h>
 
+#include "hxtorch/argmax.h"
 #include "hxtorch/connection.h"
 #include "hxtorch/conv.h"
 #include "hxtorch/detail/conv.h"
@@ -89,6 +90,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "inference_trace", &hxtorch::inference_trace, "", pybind11::arg("input"),
 	    pybind11::arg("filename"));
+	m.def(
+	    "argmax", &hxtorch::argmax, "", pybind11::arg("input"),
+	    pybind11::arg("dim") = c10::optional<int64_t>(), pybind11::arg("keepdim") = false,
+	    pybind11::arg("mock") = false);
 	m.def(
 	    "matmul", &hxtorch::matmul,
 	    "Drop-in replacement for :meth:`torch.matmul` that uses HICANN-X.\n"
