@@ -6,6 +6,7 @@
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
+#include "hxtorch/detail/util.h"
 
 namespace hxtorch::detail {
 
@@ -28,13 +29,7 @@ std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> co
 	auto const sizes_2d = input_2d.sizes();
 
 	auto const input_a = input_2d.accessor<float, 2>();
-	std::vector<std::vector<grenade::vx::Int8>> input_in(sizes_2d.at(0));
-	for (int64_t i = 0; i < sizes_2d.at(0); ++i) {
-		input_in[i].resize(sizes_2d.at(1));
-		for (int64_t j = 0; j < sizes_2d.at(1); ++j) {
-			input_in[i][j] = grenade::vx::Int8(input_a[i][j]);
-		}
-	}
+	auto const input_in = hxtorch::convert_to_vector<grenade::vx::Int8>(input_a);
 	return {input_in, sizes_2d.vec()};
 }
 
