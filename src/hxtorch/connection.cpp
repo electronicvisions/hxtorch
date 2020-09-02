@@ -71,13 +71,13 @@ void init(
 	detail::getConnection() = std::move(connection);
 }
 
-void init_mock(float const noise_std, float const gain)
+void init(MockParameter const& parameter)
 {
-	if ((gain <= 0) || (gain > 1)) {
-		std::overflow_error("Gain of " + std::to_string(gain) + " is not in the interval (0, 1]");
+	if ((parameter.gain <= 0) || (parameter.gain > 1)) {
+		std::overflow_error(
+		    "Gain of " + std::to_string(parameter.gain) + " is not in the interval (0, 1]");
 	}
-	getMockParameter().noise_std = noise_std;
-	getMockParameter().gain = gain;
+	detail::getMockParameter() = parameter;
 }
 
 void release()

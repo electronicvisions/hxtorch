@@ -14,6 +14,7 @@
 #include "hxtorch/detail/conv.h"
 #include "hxtorch/mac.h"
 #include "hxtorch/matmul.h"
+#include "hxtorch/mock.h"
 
 #include "grenade/vx/config.h"
 #include "pyhxcomm/vx/connection_handle.h"
@@ -65,8 +66,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release", &hxtorch::release);
 	m.def(
-	    "init_mock", &hxtorch::init_mock, "", pybind11::arg("noise_std") = 2.,
-	    pybind11::arg("gain") = 0.0012);
+	    "init", (void (*)(hxtorch::MockParameter const&)) & hxtorch::init, "",
+	    pybind11::arg("parameter"));
 	m.def(
 	    "mac", &hxtorch::mac, "", pybind11::arg("x"), pybind11::arg("weights"),
 	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 25,
@@ -113,6 +114,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 25, pybind11::arg("mock") = false);
+	pybind11::class_<hxtorch::MockParameter>(m, "MockParameter")
+	    .def(pybind11::init<>())
+	    .def(pybind11::init<float, float>(), pybind11::arg("noise_std"), pybind11::arg("gain"))
+	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
+	    .def_readwrite("gain", &hxtorch::MockParameter::gain);
 
 	pybind11::module::import("pyhxtorch.patch").attr("patch")(m);
 }

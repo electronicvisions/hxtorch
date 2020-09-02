@@ -36,7 +36,7 @@ torch::autograd::variable_list MAC::backward(
 
 	torch::Tensor gain;
 	if (mock) {
-		gain = torch::tensor(getMockParameter().gain * num_sends);
+		gain = torch::tensor(detail::getMockParameter().gain * num_sends);
 	} else {
 		// scale grad_output with the gain on a per-batch basis
 		auto forward_output = saved_variables[0];

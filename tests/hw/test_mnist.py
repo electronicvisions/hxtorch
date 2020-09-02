@@ -132,7 +132,7 @@ class MNISTTestMock(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init_mock(noise_std=2., gain=0.0015)
+        hxtorch.init(hxtorch.MockParameter(noise_std=2., gain=0.0015))
 
 
 class MNISTTestMockWithoutNoise(MNISTTest):
@@ -144,7 +144,7 @@ class MNISTTestMockWithoutNoise(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init_mock(noise_std=0, gain=0.0012)
+        hxtorch.init(hxtorch.MockParameter(noise_std=0, gain=0.0012))
 
 
 class MNISTTestPyTorch(MNISTTest):

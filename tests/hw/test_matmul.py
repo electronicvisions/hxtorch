@@ -174,7 +174,8 @@ class TestMatmulHXmock(TestMatmulPyTorch):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_mock(noise_std=cls.noise_std, gain=cls.gain)
+        hxtorch.init(hxtorch.MockParameter(
+            noise_std=cls.noise_std, gain=cls.gain))
 
     @classmethod
     def tearDownClass(cls):

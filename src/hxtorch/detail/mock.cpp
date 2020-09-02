@@ -1,11 +1,11 @@
 #include "hxtorch/detail/mock.h"
 
-namespace hxtorch {
+namespace hxtorch::detail {
 
 MockParameter& getMockParameter()
 {
-	static MockParameter mock_parameter{2., 0.0012};
+	static MockParameter mock_parameter{};
 	return mock_parameter;
 }
 
-} // namespace hxtorch
+} // namespace hxtorch::detail

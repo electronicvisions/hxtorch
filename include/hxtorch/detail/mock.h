@@ -1,13 +1,8 @@
 #pragma once
+#include "hxtorch/mock.h"
 
-namespace hxtorch {
-
-struct MockParameter
-{
-	float noise_std;
-	float gain;
-};
+namespace hxtorch::detail {
 
 MockParameter& getMockParameter();
 
-} // namespace hxtorch
+} // namespace hxtorch::detail
