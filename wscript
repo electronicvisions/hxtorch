@@ -41,7 +41,6 @@ def configure(cfg):
     libpath_torch = [os.path.join(x, 'torch/lib') for x in site_packages]
     libnames = []
     for fn in os.listdir(libpath_torch[0]):
-        print(fn)
         res = re.match('^lib(.+)\.so$', fn)
         libnames.append(res.group(1))
 
