@@ -5,15 +5,6 @@
 
 namespace hxtorch {
 
-torch::Tensor conv(
-    torch::Tensor const& input,
-    torch::Tensor const& weights,
-    c10::optional<torch::Tensor> const& bias,
-    std::vector<int64_t> stride,
-    int64_t num_sends,
-    int64_t wait_between_events,
-    bool mock);
-
 torch::Tensor conv1d(
     torch::Tensor const& input,
     torch::Tensor const& weight,

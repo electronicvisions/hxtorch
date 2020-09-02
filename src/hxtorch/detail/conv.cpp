@@ -4,6 +4,7 @@
 #include "hxtorch/detail/iterator.h"
 #include "hxtorch/detail/mac.h"
 #include "hxtorch/detail/narrow.h"
+#include "hxtorch/matmul.h"
 
 #include <torch/torch.h>
 
@@ -215,6 +216,48 @@ torch::Tensor conv_fold_output(torch::Tensor const& value)
 	sizes.resize(sizes.size() - kernel_dim + 1);
 	sizes.back() = output_linear_size;
 	return value.reshape(sizes);
+}
+
+torch::Tensor conv(
+    torch::Tensor const& input,
+    torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
+    std::vector<int64_t> const& stride,
+    int64_t const num_sends,
+    int64_t const wait_between_events,
+    bool const mock)
+{
+	int64_t const dim = stride.size();
+	if (weight.dim() != 2 + dim) {
+		throw std::runtime_error(
+		    "conv expects a weight shape of (out_channels, in_channels, **kernel_shape).");
+	}
+	if (input.dim() != 2 + dim) {
+		throw std::runtime_error(
+		    "conv expects a input shape of (minibatches, in_channels, **single_input_shape).");
+	}
+	if (weight.sizes().vec().at(1) != input.sizes().vec().at(1)) {
+		throw std::runtime_error("conv expects matching in_channels in input and weight.");
+	}
+
+	auto const weight_sizes = weight.sizes().vec();
+	std::vector<int64_t> kernel_size(weight_sizes.begin() + 2, weight_sizes.end());
+	auto const input_folded = hxtorch::detail::conv_fold_input(input, kernel_size, stride);
+	auto const weight_folded = hxtorch::detail::conv_fold_kernel(weight);
+
+	auto result = matmul(input_folded, weight_folded, num_sends, wait_between_events, mock);
+	result = hxtorch::detail::conv_permute_output(result);
+	auto input_sizes = input.sizes().vec();
+	std::vector<int64_t> input_size(dim);
+	std::copy(input_sizes.begin() + 2, input_sizes.end(), input_size.begin());
+	result = hxtorch::detail::conv_unfold_output(
+	             result, hxtorch::detail::conv_num_outputs(input_size, kernel_size, stride))
+	             .contiguous();
+	if (bias) {
+		result = (dim == 1) ? result.add(bias.value().view({-1, 1}))
+		                    : result.add(bias.value().view({-1, 1, 1}));
+	}
+	return result;
 }
 
 } // namespace hxtorch::detail

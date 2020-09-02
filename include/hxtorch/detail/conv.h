@@ -31,4 +31,13 @@ torch::Tensor conv_unfold_output(torch::Tensor const& value, std::vector<int64_t
 
 torch::Tensor conv_fold_output(torch::Tensor const& value);
 
+torch::Tensor conv(
+    torch::Tensor const& input,
+    torch::Tensor const& weights,
+    c10::optional<torch::Tensor> const& bias,
+    std::vector<int64_t> const& stride,
+    int64_t num_sends,
+    int64_t wait_between_events,
+    bool mock);
+
 } // namespace hxtorch::detail
