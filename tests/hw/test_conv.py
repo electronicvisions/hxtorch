@@ -5,7 +5,7 @@ from typing import ClassVar, Dict
 import unittest
 import torch
 import hxtorch
-from dlens_vx import logger
+from dlens_vx_v1 import logger
 
 from hxtorch_shared_test_tools import rand_full
 

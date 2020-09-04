@@ -2,7 +2,7 @@ from functools import partial
 import unittest
 import torch
 import hxtorch
-from dlens_vx import hxcomm, sta, logger
+from dlens_vx_v1 import hxcomm, sta, logger
 import pygrenade_vx as grenade
 
 logger.default_config(level=logger.LogLevel.INFO)

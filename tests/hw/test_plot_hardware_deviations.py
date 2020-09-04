@@ -4,7 +4,7 @@ import unittest
 import matplotlib.pyplot as plt
 import torch
 import hxtorch
-from dlens_vx import logger
+from dlens_vx_v1 import logger
 
 logger.default_config(level=logger.LogLevel.INFO)
 

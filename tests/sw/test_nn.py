@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock
 import torch
 from torch.autograd import gradcheck
-from dlens_vx import hal
+from dlens_vx_v1 import hal
 from hxtorch import nn  as hxnn
 
 

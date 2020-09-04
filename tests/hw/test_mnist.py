@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 import hxtorch
-from dlens_vx import logger
+from dlens_vx_v1 import logger
 
 logger.reset()
 logger.default_config(level=logger.LogLevel.INFO)
