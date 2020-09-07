@@ -8,6 +8,7 @@ boolean executeHwTests = [
 Map<String, Object> pipelineOptions = [
 		projects: ["hxtorch"],
 		container: [app: "dls-core"],
+		moduleOptions: [modules: ["ppu-toolchain"]],
 		notificationChannel: "#dls-software"
 ]
 
