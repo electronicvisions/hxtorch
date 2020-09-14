@@ -15,7 +15,7 @@ Map<String, Object> pipelineOptions = [
 
 if (executeHwTests) {
 	pipelineOptions << [
-			testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+			testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0, reservation: "pdauer_33"],
 			preTestHook: { configureHxCubeBitfile() },
 			testOptions: "--test-execall -j1",
 			postTestHook: { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },

@@ -87,7 +87,7 @@ def build(bld):
         features = 'cxx cxxshlib pyext pyembed',
         source = 'src/hxtorch/hxtorch.cpp',
         target = 'hxtorch',
-        use = ['hxtorch_cpp', 'hxtorch_pylibs', 'grenade_vx', 'stadls_vx_v1', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
+        use = ['hxtorch_cpp', 'hxtorch_pylibs', 'grenade_vx', 'stadls_vx_v2', 'pyhxcomm_vx', 'pygrenade_vx', 'PYBIND11HXTORCH', 'TORCH'],
         linkflags = '-Wl,-z,defs',
         defines = ['TORCH_EXTENSION_NAME=hxtorch'],
         install_path='${PREFIX}/lib',
@@ -99,7 +99,7 @@ def build(bld):
     bld(
         target='hxtorch_pylibs',
         features='py use',
-        use='dlens_vx_v1',
+        use='dlens_vx_v2',
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path='${PREFIX}/lib/pyhxtorch',
@@ -110,7 +110,7 @@ def build(bld):
         target='hxtorch_hwtests',
         tests=bld.path.ant_glob('tests/hw/*.py'),
         features='use pytest',
-        use=['hxtorch', 'dlens_vx_v1'],
+        use=['hxtorch', 'dlens_vx_v2'],
         install_path='${PREFIX}/bin/tests/hw',
         test_timeout=300,
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE

@@ -5,10 +5,10 @@
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/detail/connection.h"
 #include "lola/vx/cerealization.h"
-#include "stadls/vx/v1/dumper.h"
-#include "stadls/vx/v1/init_generator.h"
-#include "stadls/vx/v1/playback_program_builder.h"
-#include "stadls/vx/v1/run.h"
+#include "stadls/vx/v2/dumper.h"
+#include "stadls/vx/v2/init_generator.h"
+#include "stadls/vx/v2/playback_program_builder.h"
+#include "stadls/vx/v2/run.h"
 
 #include <fstream>
 #include <cereal/archives/binary.hpp>
@@ -32,8 +32,8 @@ void init(std::optional<std::string> const& hwdb_path)
 	        [hwdb_path](auto const& c) { return c.get_unique_identifier(hwdb_path); }, connection) +
 	    "/stable/latest/hagen_cocolist.bin"s;
 
-	stadls::vx::v1::run(
-	    connection, stadls::vx::v1::generate(stadls::vx::v1::ExperimentInit()).builder.done());
+	stadls::vx::v2::run(
+	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
 
 	init(calibration_path, std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection)));
 }
@@ -41,7 +41,7 @@ void init(std::optional<std::string> const& hwdb_path)
 void init(
     std::string const& calibration_path, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection)
 {
-	stadls::vx::v1::Dumper::done_type cocos;
+	stadls::vx::v2::Dumper::done_type cocos;
 	{
 		std::ifstream calibration(calibration_path);
 		{
@@ -55,7 +55,7 @@ void init(
 	if (!connection) {
 		throw std::runtime_error("No connection allocated.");
 	}
-	stadls::vx::v1::run(*connection, stadls::vx::v1::convert_to_builder(cocos).done());
+	stadls::vx::v2::run(*connection, stadls::vx::v2::convert_to_builder(cocos).done());
 
 	init(chip, std::move(connection));
 }

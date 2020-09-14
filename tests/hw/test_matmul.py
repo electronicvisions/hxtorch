@@ -4,7 +4,7 @@ from typing import ClassVar
 import unittest
 import torch
 import hxtorch
-from dlens_vx_v1 import logger
+from dlens_vx_v2 import logger
 
 from hxtorch_shared_test_tools import rand_full
 

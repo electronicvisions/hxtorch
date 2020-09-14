@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Tuple, Union
 import torch
-from dlens_vx_v1 import hal, logger
+from dlens_vx_v2 import hal, logger
 
 
 def scale_input(x_in: torch.Tensor) -> torch.Tensor:
