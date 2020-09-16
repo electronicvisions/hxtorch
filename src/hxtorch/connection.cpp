@@ -44,6 +44,10 @@ void init(
 	stadls::vx::v2::Dumper::done_type cocos;
 	{
 		std::ifstream calibration(calibration_path);
+		if (!calibration.is_open()) {
+			throw std::runtime_error(
+			    std::string("Failed to open calibration at ") + calibration_path + ".");
+		}
 		{
 			cereal::BinaryInputArchive ia(calibration);
 			ia(cocos);
