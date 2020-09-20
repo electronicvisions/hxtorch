@@ -68,6 +68,9 @@ export PYTHONPATH=`pwd`/lib:$PYTHONPATH
   * Make sure to run **step 7)** within a respective slurm allocation: Prefix `srun -p compile -c8`; depending on your shell, you might need to roll out the `c`-alias.
   * Replace **step 8)** by `module load localdir`.
 
+## First steps
+Check out our [examples](./src/pyhxtorch/hxtorch/examples/) and/or the [unit tests](./tests/hw/)!
+
 ## License
 ```
 hxtorch: PyTorch for BrainScaleS-2 ('hxtorch')
