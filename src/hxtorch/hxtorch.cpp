@@ -35,15 +35,22 @@ struct InitUnrollPyBind11Helper<std::variant<T, Ts...>>
 
 	InitUnrollPyBind11Helper(pybind11::module& m) : parent_t(m)
 	{
-		m.def("init", [](grenade::vx::ChipConfig const& chip, T& conn) {
-			hxtorch::init(
-			    chip, std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
-		});
-		m.def("init", [](std::string const& calibration_path, T& conn) {
-			hxtorch::init(
-			    calibration_path,
-			    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
-		});
+		m.def(
+		    "init",
+		    [](grenade::vx::ChipConfig const& chip, T& conn) {
+			    hxtorch::init(
+			        chip,
+			        std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
+		    },
+		    pybind11::arg("chip"), pybind11::arg("connection"));
+		m.def(
+		    "init",
+		    [](std::string const& calibration_path, T& conn) {
+			    hxtorch::init(
+			        calibration_path,
+			        std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
+		    },
+		    pybind11::arg("calibration_path"), pybind11::arg("connection"));
 	}
 };
 
