@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Tuple, Union
 import torch
+import hxtorch_
 from dlens_vx_v2 import hal, logger
 
 
@@ -101,8 +102,7 @@ class Linear(Layer, torch.nn.Linear):
         Layer.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        import hxtorch
-        self._matmul = hxtorch.matmul
+        self._matmul = hxtorch_.matmul
 
     def forward(self, input):  # pylint: disable=redefined-builtin
         log = logger.get(__name__)
@@ -220,8 +220,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         ConvNd.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        import hxtorch
-        self._conv = hxtorch.conv1d
+        self._conv = hxtorch_.conv1d
 
 
 class Conv2d(ConvNd, torch.nn.Conv2d):
@@ -274,5 +273,4 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
         ConvNd.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        import hxtorch
-        self._conv = hxtorch.conv2d
+        self._conv = hxtorch_.conv2d

@@ -119,6 +119,4 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(pybind11::init<float, float>(), pybind11::arg("noise_std"), pybind11::arg("gain"))
 	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
 	    .def_readwrite("gain", &hxtorch::MockParameter::gain);
-
-	pybind11::module::import("pyhxtorch.patch").attr("patch")(m);
 }
