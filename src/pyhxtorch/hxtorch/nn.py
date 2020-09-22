@@ -274,3 +274,44 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
         self._conv = hxtorch_.conv2d
+
+
+class ReLU(torch.nn.ReLU):
+    """
+    Applies a rectified linear unit to the input.
+    """
+
+    def __init__(self, mock: bool = False):
+        """
+        :param mock: Enable mock mode
+        """
+        super().__init__()
+        self.mock = mock
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return hxtorch_.relu(input, mock=self.mock)
+
+    def extra_repr(self) -> str:
+        return f"mock={self.mock}"
+
+
+class ConvertingReLU(ReLU):
+    """
+    Applies a rectified linear unit to the input, shifts and clips to the
+    input range of the chip.
+    """
+
+    def __init__(self, shift: int = 2, mock: bool = False):
+        """
+        :param shift: Number of bits the result is shifted by
+        :param mock: Enable mock mode
+        """
+        super().__init__(mock)
+        self.shift = shift
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return hxtorch_.converting_relu(
+            input, shift=self.shift, mock=self.mock)
+
+    def extra_repr(self) -> str:
+        return f"shift={self.shift}, {super().extra_repr()}"
