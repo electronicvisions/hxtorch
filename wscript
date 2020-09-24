@@ -37,7 +37,6 @@ def configure(cfg):
     assert isinstance(site_packages, list) and len(site_packages) == 1
     includes_torch = [os.path.join(x, 'torch/include') for x in site_packages]
     includes_torch_csrc_api = [os.path.join(x, 'torch/include/torch/csrc/api/include') for x in site_packages]
-    cfg.env.hxtorch_torch_includes = includes_torch + includes_torch_csrc_api
     libpath_torch = [os.path.join(x, 'torch/lib') for x in site_packages]
     libnames = []
     for fn in os.listdir(libpath_torch[0]):
@@ -52,8 +51,10 @@ def configure(cfg):
                     int main() { return 0; }''',
                   lib = libnames_cpp,
                   libpath = libpath_torch,
-                  includes = includes_torch_csrc_api + includes_torch,
+                  cxxflags = map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch)),
                   uselib_store="TORCH_CPP")
+    # manually add the torch includes as system includes
+    cfg.env['CXXFLAGS_TORCH_CPP'] += map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch))
 
     cfg.check_cxx(fragment ='''
                     #include <torch/torch.h>
@@ -61,8 +62,10 @@ def configure(cfg):
                     int main() { return 0; }''',
                   lib = libnames,
                   libpath = libpath_torch,
-                  includes = includes_torch_csrc_api + includes_torch,
+                  cxxflags = map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch)),
                   uselib_store="TORCH")
+    # manually add the torch includes as system includes
+    cfg.env['CXXFLAGS_TORCH'] += map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch))
 
 
 def build(bld):
@@ -93,7 +96,6 @@ def build(bld):
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
         rpath = bld.env.LIBPATH_TORCH,
-        cxxflags = ["-isystem" + e for e in bld.env.hxtorch_torch_includes],
     )
 
     bld(
