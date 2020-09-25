@@ -3,7 +3,6 @@ import unittest
 import torch
 import hxtorch
 from dlens_vx_v2 import hxcomm, sta, logger
-import pygrenade_vx as grenade
 
 logger.default_config(level=logger.LogLevel.INFO)
 

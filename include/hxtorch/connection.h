@@ -1,39 +1,43 @@
 #pragma once
-#include <memory>
 #include <optional>
 #include <string>
-#include "hxcomm/vx/connection_variant.h"
-
-namespace grenade::vx {
-class ChipConfig;
-} // namespace grenade::vx
 
 namespace hxtorch {
+
+/**
+ * Path to a hardware database.
+ */
+struct HWDBPath
+{
+	std::string path;
+	std::string version;
+	explicit HWDBPath(std::string path, std::string version = "stable/latest") :
+	    path(path), version(version)
+	{}
+};
 
 /**
  * Initialize automatically from the environment.
  * @param calibration_version Calibration version to load
  * @param hwdb_path Optional path to the hwdb to use
  */
-void init(
-    std::string calibration_version = "stable/latest",
-    std::optional<std::string> const& hwdb_path = std::nullopt);
+void init(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
+
+/**
+ * Path to a calibration.
+ */
+struct CalibrationPath
+{
+	std::string value;
+	explicit CalibrationPath(std::string value) : value(value) {}
+};
 
 /**
  * Initialize with hardware connection and calibration path.
  * @param calibration_path Calibration path to load from
  * @param connection Connection to use
  */
-void init(
-    std::string const& calibration_path, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection);
-
-/**
- * Initialize with hardware connection and configuration.
- * @param chip Chip configuration to use
- * @param connection Connection to use
- */
-void init(
-    grenade::vx::ChipConfig const& chip, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection);
+void init(CalibrationPath const& calibration_path);
 
 struct MockParameter;
 

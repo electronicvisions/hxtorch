@@ -21,25 +21,10 @@
 
 namespace hxtorch {
 
-void init(std::string calibration_version, std::optional<std::string> const& hwdb_path)
-{
-	auto connection = hxcomm::vx::get_connection_from_env();
+namespace {
 
-	using namespace std::string_literals;
-	auto const calibration_path =
-	    "/wang/data/calibration/hicann-dls-sr-hx/"s +
-	    std::visit(
-	        [hwdb_path](auto const& c) { return c.get_unique_identifier(hwdb_path); }, connection) +
-	    "/" + calibration_version + "/hagen_cocolist.bin"s;
-
-	stadls::vx::v2::run(
-	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
-
-	init(calibration_path, std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection)));
-}
-
-void init(
-    std::string const& calibration_path, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection)
+grenade::vx::ChipConfig load_and_apply_calibration(
+    std::string calibration_path, hxcomm::vx::ConnectionVariant& connection)
 {
 	stadls::vx::v2::Dumper::done_type cocos;
 	{
@@ -54,21 +39,49 @@ void init(
 		}
 	}
 	auto const chip = grenade::vx::convert_to_chip(cocos);
-
-	// apply calibration
-	if (!connection) {
-		throw std::runtime_error("No connection allocated.");
-	}
-	stadls::vx::v2::run(*connection, stadls::vx::v2::convert_to_builder(cocos).done());
-
-	init(chip, std::move(connection));
+	stadls::vx::v2::run(connection, stadls::vx::v2::convert_to_builder(cocos).done());
+	return chip;
 }
 
-void init(
-    grenade::vx::ChipConfig const& chip, std::unique_ptr<hxcomm::vx::ConnectionVariant> connection)
+} // namespace
+
+void init(std::optional<HWDBPath> const& hwdb_path)
 {
+	auto connection = hxcomm::vx::get_connection_from_env();
+
+	std::optional<std::string> hwdb_path_value;
+	std::string version = "stable/latest";
+	if (hwdb_path) {
+		hwdb_path_value = hwdb_path->path;
+		version = hwdb_path->version;
+	}
+	using namespace std::string_literals;
+	auto const calibration_path =
+	    "/wang/data/calibration/hicann-dls-sr-hx/"s +
+	    std::visit(
+	        [hwdb_path_value](auto const& c) { return c.get_unique_identifier(hwdb_path_value); },
+	        connection) +
+	    "/"s + version + "/hagen_cocolist.bin"s;
+
+	stadls::vx::v2::run(
+	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
+
+	auto const chip = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
-	detail::getConnection() = std::move(connection);
+	detail::getConnection() =
+	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+}
+
+void init(CalibrationPath const& calibration_path)
+{
+	auto connection = hxcomm::vx::get_connection_from_env();
+	stadls::vx::v2::run(
+	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
+
+	auto const chip = load_and_apply_calibration(calibration_path.value, connection);
+	detail::getChip() = chip;
+	detail::getConnection() =
+	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
 }
 
 void init(MockParameter const& parameter)

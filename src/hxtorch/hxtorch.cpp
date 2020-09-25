@@ -20,62 +20,14 @@
 #include "hxtorch/mock.h"
 #include "hxtorch/relu.h"
 
-#include "grenade/vx/config.h"
-#include "pyhxcomm/vx/connection_handle.h"
-
-namespace hxtorch::detail {
-
-template <typename... Ts>
-struct InitUnrollPyBind11Helper
-{
-	InitUnrollPyBind11Helper(pybind11::module&){};
-};
-
-template <typename T, typename... Ts>
-struct InitUnrollPyBind11Helper<std::variant<T, Ts...>>
-    : InitUnrollPyBind11Helper<std::variant<Ts...>>
-{
-	using parent_t = InitUnrollPyBind11Helper<std::variant<Ts...>>;
-
-	InitUnrollPyBind11Helper(pybind11::module& m) : parent_t(m)
-	{
-		m.def(
-		    "init",
-		    [](grenade::vx::ChipConfig const& chip, T& conn) {
-			    hxtorch::init(
-			        chip,
-			        std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
-		    },
-		    pybind11::arg("chip"), pybind11::arg("connection"));
-		m.def(
-		    "init",
-		    [](std::string const& calibration_path, T& conn) {
-			    hxtorch::init(
-			        calibration_path,
-			        std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(*conn.release())));
-		    },
-		    pybind11::arg("calibration_path"), pybind11::arg("connection"));
-	}
-};
-
-} // namespace hxtorch::detail
-
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
-	pybind11::module::import("pygrenade_vx");
-	pybind11::module::import("pyhxcomm_vx");
-
-	[[maybe_unused]] hxtorch::detail::InitUnrollPyBind11Helper<
-	    std::remove_cvref_t<pyhxcomm::vx::ConnectionHandle>>
-	    helper(m);
 	m.def(
-	    "init",
-	    [](std::string calibration_version = "stable/latest",
-	       std::optional<std::string> const& hwdb_path = std::nullopt) {
-		    hxtorch::init(calibration_version, hwdb_path);
-	    },
-	    pybind11::arg("calibration_version") = "stable/latest",
+	    "init", (void (*)(std::optional<hxtorch::HWDBPath> const&)) & hxtorch::init,
 	    pybind11::arg("hwdb_path") = std::nullopt);
+	m.def(
+	    "init", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init,
+	    pybind11::arg("calibration_path"));
 	m.def("release", &hxtorch::release);
 	m.def(
 	    "init", (void (*)(hxtorch::MockParameter const&)) & hxtorch::init, "",
@@ -150,4 +102,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(pybind11::init<std::string const&>(), pybind11::arg("filename"))
 	    .def("stop", &hxtorch::InferenceTracer::stop)
 	    .def("start", &hxtorch::InferenceTracer::start);
+
+	pybind11::class_<hxtorch::HWDBPath>(m, "HWDBPath")
+	    .def(
+	        pybind11::init<std::string, std::string>(), pybind11::arg("path"),
+	        pybind11::arg("version") = "stable/latest");
+	pybind11::class_<hxtorch::CalibrationPath>(m, "CalibrationPath")
+	    .def(pybind11::init<std::string>());
 }
