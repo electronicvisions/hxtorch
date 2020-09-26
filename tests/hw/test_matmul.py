@@ -86,7 +86,6 @@ class TestMatmulPyTorch(unittest.TestCase):
                 self.assertEqual(result.size(), result_torch.size())
 
                 # compute gradients
-                gain = torch.mean((result / result_torch)).item()
                 result.backward(torch.ones_like(result))
                 result_torch.backward(torch.ones_like(result_torch))
 
@@ -94,9 +93,9 @@ class TestMatmulPyTorch(unittest.TestCase):
                     if hasattr(arg, "grad"):
                         grad = arg.grad
                         grad_torch = getattr(matmul_input_torch, name).grad \
-                            * gain
+                            * self.gain
                         self.assertTrue(
-                            torch.allclose(grad, grad_torch, rtol=.1),
+                            torch.allclose(grad, grad_torch, rtol=.001),
                             f"{name.capitalize()} gradient does not match:\n"
                             f"{grad}\n!=\n{grad_torch}")
 
@@ -141,29 +140,6 @@ class TestMatmulHX(TestMatmulPyTorch):
     @classmethod
     def tearDownClass(cls):
         hxtorch.release_hardware()
-
-    def test_gradient_zeros(self):
-        test_inputs = {
-            "input zeros":
-            MatmulInput(rand_full((3, 128), 0.), rand_full((128, 5), 25.)),
-            "weight zeros":
-            MatmulInput(rand_full((3, 128), 20.), rand_full((128, 5), 0.)),
-            "input + weight zeros":
-            MatmulInput(rand_full((3, 128), 0.), rand_full((128, 5), 0.))
-        }
-
-        for mode, matmul_input in test_inputs.items():
-            with self.subTest(mode=mode):
-                result = self.matmul(**matmul_input._asdict())
-                result.backward(torch.ones_like(result))
-
-                for name, arg in matmul_input._asdict().items():
-                    if hasattr(arg, "grad"):
-                        grad = arg.grad
-                        self.assertTrue(
-                            torch.allclose(grad, torch.zeros_like(grad)),
-                            f"{name.capitalize()} gradient is not zero: "
-                            f"{grad}")
 
 
 class TestMatmulHXmock(TestMatmulPyTorch):

@@ -28,6 +28,7 @@ class TestConv(ABC, unittest.TestCase):
     """
     Tests a conv operation.
     """
+    gain: ClassVar[float] = 1.
 
     @abstractmethod
     def conv(**kwargs):
@@ -59,8 +60,6 @@ class TestConv(ABC, unittest.TestCase):
                 self.assertEqual(result.size(), result_torch.size())
 
                 # compute gradients
-                gain = torch.mean((result / result_torch)).item()
-                log.info(f"Gain: {gain:.5f} (mean)")
                 result.backward(torch.ones_like(result))
                 result_torch.backward(torch.ones_like(result_torch))
 
@@ -69,9 +68,9 @@ class TestConv(ABC, unittest.TestCase):
                         grad = arg.grad
                         grad_torch = getattr(conv_input_torch, name).grad
                         if name != "bias":
-                            grad_torch *= gain
+                            grad_torch *= self.gain
                         self.assertTrue(
-                            torch.allclose(grad, grad_torch, rtol=.2),
+                            torch.allclose(grad, grad_torch, rtol=.001),
                             f"{name.capitalize()} gradient does not match:\n"
                             f"{grad}\n!=\n{grad_torch}")
 
@@ -117,6 +116,9 @@ class TestConv1dHX(TestConv1d):
     @classmethod
     def setUpClass(cls):
         hxtorch.init_hardware()
+        mock_parameter = hxtorch.measure_mock_parameter()
+        hxtorch.set_mock_parameter(mock_parameter)
+        cls.gain = mock_parameter.gain
 
     @classmethod
     def tearDownClass(cls):
@@ -128,6 +130,12 @@ class TestConv1dHXmock(TestConv1d):
     Tests the mocked conv1d operation.
     """
     conv = partial(hxtorch.conv1d, mock=True)
+
+    @classmethod
+    def setUpClass(cls):
+        mock_parameter = hxtorch.MockParameter()
+        hxtorch.set_mock_parameter(mock_parameter)
+        cls.gain = mock_parameter.gain
 
 
 class TestConv2d(TestConv):
@@ -171,6 +179,9 @@ class TestConv2dHX(TestConv2d):
     @classmethod
     def setUpClass(cls):
         hxtorch.init_hardware()
+        mock_parameter = hxtorch.measure_mock_parameter()
+        hxtorch.set_mock_parameter(cls.mock_parameter)
+        cls.gain = mock_parameter.gain
 
     @classmethod
     def tearDownClass(cls):
@@ -182,6 +193,12 @@ class TestConv2dHXmock(TestConv2d):
     Tests the mocked conv2d operation.
     """
     conv = partial(hxtorch.conv2d, mock=True)
+
+    @classmethod
+    def setUpClass(cls):
+        mock_parameter = hxtorch.MockParameter()
+        hxtorch.set_mock_parameter(mock_parameter)
+        cls.gain = mock_parameter.gain
 
 
 del TestConv  # remove abstract base class from tests
