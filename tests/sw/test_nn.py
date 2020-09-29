@@ -43,7 +43,7 @@ class TestNN(unittest.TestCase):
 
         torch_layer = torch.nn.Linear(19, 2)
         hxtorch_layer = hxnn.Linear(
-            19, 2, num_sends=3, wait_between_events=10,
+            19, 2, num_sends=3, wait_between_events=10, mock=True,
             input_transform=lambda x: x,
             weight_transform=lambda w: torch.ones_like(w))
         hxtorch_layer._matmul = Mock(side_effect=matmul_side_effect)
@@ -58,7 +58,7 @@ class TestNN(unittest.TestCase):
                              torch.ones((19, 2)).tolist())
         self.assertEqual(call_kwargs["num_sends"], 3)
         self.assertEqual(call_kwargs["wait_between_events"], 10)
-        self.assertEqual(call_kwargs["mock"], False)
+        self.assertEqual(call_kwargs["mock"], True)
 
         # repr
         self.assertRegex(repr(hxtorch_layer), r'Linear\(.*, num_sends=3, wait')

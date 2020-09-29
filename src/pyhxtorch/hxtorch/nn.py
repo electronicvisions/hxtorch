@@ -118,7 +118,7 @@ class Linear(Layer, torch.nn.Linear):
                   f"out.shape {output.shape}\tout.max {output.max()}")
         torch.set_printoptions(profile="default")
         if self.bias is not None:
-            output = output + self.bias
+            output = hxtorch_.add(output, self.bias, mock=self.mock)
         return output
 
 
