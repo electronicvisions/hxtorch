@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, Optional
 import torch
 import hxtorch_
 from dlens_vx_v2 import hal, logger
@@ -30,10 +30,10 @@ class Layer:
 
     def __init__(self, num_sends: int = 1, wait_between_events: int = 25,
                  mock: bool = False, *,
-                 input_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_input,
-                 weight_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_weight):
+                 input_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = None,
+                 weight_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = scale_weight):
         """
         :param num_sends: Number of sends of the input. Values greater than 1
             result in higher output to the neurons and increases the s/n ratio.
@@ -57,11 +57,13 @@ class Layer:
         repr_str = f"{self.__class__.__name__}("
         if hasattr(self, "extra_repr"):
             repr_str += f"{self.extra_repr()}, "
+        if self.input_transform:
+            repr_str += f"input_transform={self.input_transform}, "
+        if self.weight_transform:
+            repr_str += f"weight_transform={self.weight_transform}, "
         repr_str += f"num_sends={self.num_sends}, "
-        repr_str += f"wait_between_events={self.wait_between_events},"
-        repr_str += f"mock={self.mock},"
-        repr_str += f"input_transform={self.weight_transform},"
-        repr_str += f"weight_transform={self.weight_transform})"
+        repr_str += f"wait_between_events={self.wait_between_events}, "
+        repr_str += f"mock={self.mock})"
         return repr_str
 
 
@@ -73,10 +75,10 @@ class Linear(Layer, torch.nn.Linear):
     def __init__(self, in_features: int, out_features: int, bias: bool = True,
                  num_sends: int = 1, wait_between_events: int = 25,
                  mock: bool = False, *,
-                 input_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_input,
-                 weight_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_weight):
+                 input_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = None,
+                 weight_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = scale_weight):
         """
         :param in_features: Size of each input sample
         :param out_features: Size of each output sample
@@ -108,8 +110,12 @@ class Linear(Layer, torch.nn.Linear):
         log = logger.get(__name__)
         log.debug(f"linear.forward:\tinput.shape {input.shape}\t"
                   f"weight.shape {self.weight.shape}")
-        output = self._matmul(self.input_transform(input),
-                              self.weight_transform(self.weight.t()),
+        weight, bias = self.weight, self.bias
+        if self.weight_transform is not None:
+            weight = self.weight_transform(weight)
+        if self.input_transform is not None:
+            input = self.input_transform(input)
+        output = self._matmul(input, weight.t(),
                               num_sends=self.num_sends,
                               wait_between_events=self.wait_between_events,
                               mock=self.mock)
@@ -117,8 +123,8 @@ class Linear(Layer, torch.nn.Linear):
         log.debug(f"out:\n{output.to(int)}\n"
                   f"out.shape {output.shape}\tout.max {output.max()}")
         torch.set_printoptions(profile="default")
-        if self.bias is not None:
-            output = hxtorch_.add(output, self.bias, mock=self.mock)
+        if bias is not None:
+            output = hxtorch_.add(output, bias, mock=self.mock)
         return output
 
 
@@ -157,8 +163,12 @@ class ConvNd(Layer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protected
         log = logger.get(__name__)
         log.debug(f"ConvNd.forward:\tinput.shape {input.shape}\t"
                   f"weight.shape {self.weight.shape}")
-        output = self._conv(self.input_transform(input),
-                            self.weight_transform(self.weight), self.bias,
+        weight, bias = self.weight, self.bias
+        if self.weight_transform is not None:
+            weight = self.weight_transform(weight)
+        if self.input_transform is not None:
+            input = self.input_transform(input)
+        output = self._conv(input, weight, bias,
                             self.stride, num_sends=self.num_sends,
                             wait_between_events=self.wait_between_events,
                             mock=self.mock)
@@ -182,10 +192,10 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
                  bias: bool = True, padding_mode: str = 'zeros',
                  num_sends: int = 1, wait_between_events: int = 25,
                  mock: bool = False, *,
-                 input_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_input,
-                 weight_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_weight):
+                 input_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = None,
+                 weight_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = scale_weight):
         """
         :param in_channels: Number of channels in the input
         :param out_channels: Number of channels produced by the convolution
@@ -235,10 +245,10 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
                  dilation: int = 1, groups: int = 1, bias: bool = True,
                  padding_mode: str = 'zeros', num_sends: int = 1,
                  wait_between_events: int = 25, mock: bool = False, *,
-                 input_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_input,
-                 weight_transform: Callable[[torch.Tensor], torch.Tensor]
-                 = scale_weight):
+                 input_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = None,
+                 weight_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = scale_weight):
         """
         :param in_channels: Number of channels in the input
         :param out_channels: Number of channels produced by the convolution

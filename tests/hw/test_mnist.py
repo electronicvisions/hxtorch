@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 
 import hxtorch
+from hxtorch.nn import scale_input
 from dlens_vx_v2 import logger
 
 logger.reset()
@@ -30,12 +31,15 @@ class HXTorchModel(torch.nn.Module):
         self.conv2d = hxtorch.nn.Conv2d(
             1, out_channels=20, kernel_size=(10, 10), stride=(5, 5),
             bias=False, padding=1,
+            input_transform=scale_input,
             num_sends=6, wait_between_events=8, mock=mock)
         self.fc1 = hxtorch.nn.Linear(
             5 * 5 * 20, 128, bias=False,
+            input_transform=scale_input,
             num_sends=6, wait_between_events=8, mock=mock)
         self.fc2 = hxtorch.nn.Linear(
             128, 10, bias=False,
+            input_transform=scale_input,
             num_sends=6, wait_between_events=8, mock=mock)
 
     def forward(self, *input):  # pylint: disable=redefined-builtin
