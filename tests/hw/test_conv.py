@@ -104,6 +104,12 @@ class TestConv1d(TestConv):
         "batch2_outchannels4_inchannels3_bias":
         ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
                   bias=torch.full((4,), 0.).requires_grad_(), stride=4),
+        "expanded_full_synram":
+        ConvInput(rand_full((2, 1, 128), 10.), rand_full((14, 1, 43), 15.),
+                  bias=torch.full((14,), 1.).requires_grad_(), stride=5),
+        "expanded_overfull_synram":
+        ConvInput(rand_full((2, 1, 138), 10.), rand_full((14, 1, 43), 15.),
+                  bias=torch.full((14,), 1.).requires_grad_(), stride=5),
     }
 
 
@@ -136,6 +142,39 @@ class TestConv1dHXmock(TestConv1d):
         mock_parameter = hxtorch.MockParameter()
         hxtorch.set_mock_parameter(mock_parameter)
         cls.gain = mock_parameter.gain
+
+
+class TestExpandedConv1d(TestConv1d):
+    """
+    Tests the conv1d operation.
+    """
+    conv = partial(
+        hxtorch.expanded_conv1d, num_expansions=18, num_sends=4, mock=True)
+
+    @classmethod
+    def setUpClass(cls):
+        mock_parameter = hxtorch.MockParameter(gain=0.0015, noise_std=0)
+        hxtorch.set_mock_parameter(mock_parameter)
+        cls.gain = mock_parameter.gain * 4
+
+    def test_compare_outputs(self):
+        """
+        Compares the outputs of the expanded conv1d operation to the outputs
+        of the normal conv1d operation.
+        """
+        for mode in self.test_inputs:
+            with self.subTest(mode=mode):
+                conv_input = self.test_inputs[mode].duplicate()
+                result_expanded = self.conv(**conv_input._asdict())
+                result = hxtorch.conv1d(
+                    num_sends=4, mock=True, **conv_input._asdict())
+
+                self.assertTrue(
+                    torch.allclose(result_expanded, result, rtol=.05),
+                    "Results do not match:\n"
+                    f"{result_expanded}\n!=\n{result}")
+
+
 
 
 class TestConv2d(TestConv):

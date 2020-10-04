@@ -81,6 +81,26 @@ to the input range of BrainScaleS-2.
 @param shift Amount of bits to shift before clipping
 @param mock Enable mock mode)doc";
 
+static const char* __doc_hxtorch_expanded_conv1d =
+    R"doc(1D convolution operation that unrolls the weight matrix for execution
+on hardware. This maximizes the use of the synapses array.
+
+@note
+Fixed-pattern noise cannot be individually compensated for during
+training, because the same weights are used at different locations!
+
+@param input Input tensor of shape (minibatch, in_channels, *iW*)
+@param weight Filters of shape (out_channels, in_channels / groups, *kW*)
+@param bias Optional bias of shape (out_channels)
+@param stride Stride of the convolving kernel
+@param num_expansions Number of enrolled kernels that will be placed side
+                      by side in a single operation
+@param num_sends How often to send the (same) input vector
+@param wait_between_events How long to wait (in FPGA cycles) between events
+@param mock Enable mock mode)doc";
+
+static const char* __doc_hxtorch_expanded_conv1d_2 = R"doc()doc";
+
 static const char* __doc_hxtorch_get_mock_parameter =
     R"doc(Returns the current mock parameters.)doc";
 

@@ -286,6 +286,76 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         self._conv = _hxtorch.conv1d
 
 
+class ExpandedConv1d(Conv1d):
+    """
+    Unrolls the weight matrix for execution on hardware.
+    This maximizes the use of the synapses array.
+
+    Caveat:
+    Fixed-pattern noise cannot be individually compensated for during
+    training, because the same weights are used at different locations!
+    """
+
+    def __init__(self, in_channels: int, out_channels: int,
+                 kernel_size: Union[int, Tuple[int]],
+                 stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
+                 dilation: Union[int, Tuple] = 1, groups: int = 1,
+                 bias: bool = True, padding_mode: str = 'zeros',
+                 num_sends: Optional[int] = None,
+                 wait_between_events: int = 5, mock: bool = False, *,
+                 input_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = None,
+                 weight_transform: Optional[Callable[[
+                     torch.Tensor], torch.Tensor]] = clamp_weight_,
+                 num_expansions: Optional[int] = None):
+        """
+        :param in_channels: Number of channels in the input
+        :param out_channels: Number of channels produced by the convolution
+        :param kernel_size: Size of the convolving kernel
+        :param stride: Stride of the convolution
+        :param padding: Zero-padding added to both sides of the input
+        :param padding_mode: 'zeros', 'reflect', 'replicate' or 'circular'
+        :param dilation: Spacing between kernel elements
+        :param groups: Number of blocked connections from input channels to
+            output channels
+        :param bias: If ``True``, adds a learnable bias to the output
+        :param num_sends: Number of sends of the input. Values greater than 1
+            result in higher output to the neurons and increases the s/n ratio.
+            For ``None`` this is automatically adjusted during initialization.
+        :param wait_between_events: Wait time between two successive vector
+            inputs, in FPGA clock cycles. Defaults to ``5``.
+            Shorter wait time can lead to saturation of the synaptic input.
+        :param mock: Enable mock mode.
+        :param input_transform: Function that receives the input and returns
+            a tensor to be used as input to the chip.
+        :param weight_transform: Function that receives the weight and returns
+            a tensor to be used as weight matrix on the chip.
+        :param num_expansions: Number of enrolled kernels in a single operation
+        """
+        Conv1d.__init__(self, in_channels, out_channels, kernel_size, stride,
+                        padding, dilation, groups, bias, padding_mode,
+                        num_sends, wait_between_events, mock,
+                        input_transform=input_transform,
+                        weight_transform=weight_transform)
+
+        if num_expansions is not None:
+            self.num_expansions = num_expansions
+        else:
+            max_out_channels = _hxtorch.constants.hardware_matrix_width
+            max_kernel_size = _hxtorch.constants.hardware_matrix_height
+            max_num_width = max_out_channels // self.out_channels
+            max_num_height = (max_kernel_size - self.kernel_size[0]) \
+                             // self.stride[0] + 1
+            self.num_expansions = min(max_num_width, max_num_height)
+
+    def _conv(self, *args, **kwargs) -> torch.Tensor:
+        return _hxtorch.expanded_conv1d(*args, **kwargs,
+                                        num_expansions=self.num_expansions)
+
+    def extra_repr(self) -> str:
+        return f"num_expansions={self.num_expansions}, {super().extra_repr()}"
+
+
 class Conv2d(ConvNd, torch.nn.Conv2d):
     """
     Applies a 2D convolution over an input image composed of several input

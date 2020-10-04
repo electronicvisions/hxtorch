@@ -77,6 +77,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	typedef torch::Tensor (*conv2d_type)(
 	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&,
 	    std::array<int64_t, 2>, int64_t, int64_t, bool);
+	typedef torch::Tensor (*single_stride_expanded_conv1d_type)(
+	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&, int64_t,
+	    int64_t, int64_t, int64_t, bool);
+	typedef torch::Tensor (*expanded_conv1d_type)(
+	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&,
+	    std::array<int64_t, 1>, int64_t, int64_t, int64_t, bool);
 
 	m.def(
 	    "conv1d", (single_stride_conv_type) &hxtorch::conv1d, __doc_hxtorch_conv1d,
@@ -88,6 +94,18 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    "conv1d", (conv1d_type) &hxtorch::conv1d, __doc_hxtorch_conv1d_2, pybind11::arg("input"),
 	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	m.def(
+	    "expanded_conv1d", (single_stride_expanded_conv1d_type) &hxtorch::expanded_conv1d,
+	    __doc_hxtorch_expanded_conv1d, pybind11::arg("input"), pybind11::arg("weight"),
+	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride") = 1,
+	    pybind11::arg("num_expansions") = 1, pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	m.def(
+	    "expanded_conv1d", (expanded_conv1d_type) &hxtorch::expanded_conv1d,
+	    __doc_hxtorch_expanded_conv1d_2, pybind11::arg("input"), pybind11::arg("weight"),
+	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride"),
+	    pybind11::arg("num_expansions") = 1, pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
 	m.def(
 	    "conv2d", (single_stride_conv_type) &hxtorch::conv2d, __doc_hxtorch_conv2d,

@@ -1,6 +1,7 @@
 #include "hxtorch/conv.h"
 
 #include "hxtorch/detail/conv.h"
+#include "hxtorch/detail/conv1d.h"
 
 #include <torch/torch.h>
 
@@ -34,6 +35,34 @@ torch::Tensor conv1d(
     bool const mock)
 {
 	return detail::conv(input, weight, bias, {stride[0]}, num_sends, wait_between_events, mock);
+}
+
+torch::Tensor expanded_conv1d(
+    torch::Tensor const& input,
+    torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
+    int64_t const stride,
+    int64_t const num_expansions,
+    int64_t const num_sends,
+    int64_t const wait_between_events,
+    bool const mock)
+{
+	return detail::expanded_conv1d(
+	    input, weight, bias, stride, num_expansions, num_sends, wait_between_events, mock);
+}
+
+torch::Tensor expanded_conv1d(
+    torch::Tensor const& input,
+    torch::Tensor const& weight,
+    c10::optional<torch::Tensor> const& bias,
+    std::array<int64_t, 1> const stride,
+    int64_t const num_expansions,
+    int64_t const num_sends,
+    int64_t const wait_between_events,
+    bool const mock)
+{
+	return detail::expanded_conv1d(
+	    input, weight, bias, stride[0], num_expansions, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor conv2d(

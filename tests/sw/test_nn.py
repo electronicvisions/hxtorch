@@ -87,6 +87,17 @@ class TestNN(unittest.TestCase):
         self.assertRegex(repr(hxtorch_layer),
                          r'Conv1d\(.*, num_sends=39, wait_between_events=4.*')
 
+    def test_expanded_conv1d(self):
+        """
+        Test the ExpandedConv1d layer.
+        """
+        hxtorch_layer = hxnn.ExpandedConv1d(
+            in_channels=1, out_channels=14, kernel_size=43, stride=2)
+        self.assertEqual(hxtorch_layer.num_expansions, 18)
+
+        self.assertRegex(repr(hxtorch_layer),
+                         r'ExpandedConv1d\(.*num_expansions=18.*\)')
+
     def test_conv2d(self):
         """
         Test the Conv2d layer.
