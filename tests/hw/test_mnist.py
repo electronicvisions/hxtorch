@@ -13,6 +13,7 @@ from dlens_vx_v2 import logger
 logger.reset()
 logger.default_config(level=logger.LogLevel.INFO)
 logger.set_loglevel(logger.get('grenade'), logger.LogLevel.WARN)
+torch.set_num_threads(1)
 
 
 class HXTorchModel(torch.nn.Module):
