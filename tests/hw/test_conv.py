@@ -70,7 +70,7 @@ class TestConv(ABC, unittest.TestCase):
                         if name != "bias":
                             grad_torch *= gain
                         self.assertTrue(
-                            torch.allclose(grad, grad_torch, rtol=2),
+                            torch.allclose(grad, grad_torch, rtol=.1),
                             f"{name.capitalize()} gradient does not match:\n"
                             f"{grad}\n!=\n{grad_torch}")
 
