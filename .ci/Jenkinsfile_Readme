@@ -1,0 +1,25 @@
+@Library("jenlib") _
+
+import static java.util.UUID.randomUUID
+
+try {
+	runOnSlave(label: "frontend") {
+		String tempDirPath = "${pwd(tmp: true)}/${randomUUID().toString()}"
+
+		dir(tempDirPath) {
+			stage("Checkout") {
+				checkout scm
+			}
+		}
+
+		pipelineFromMarkdown(markdownFilePath: "${tempDirPath}/README.md",
+		                     blockType: "shell")
+	}
+} catch (Throwable t) {
+	notifyFailure(mattermostChannel: "#dls-software")
+	throw t
+}
+
+if (currentBuild.currentResult != "SUCCESS") {
+	notifyFailure(mattermostChannel: "#dls-software")
+}
