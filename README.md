@@ -43,15 +43,18 @@ ln -s symwaf2ic/waf
 # 5) Setup your workspace and clone all dependencies (--clone-depth=1 to skip history)
 c ./waf setup --repo-db-url=https://github.com/electronicvisions/projects --project=hxtorch
 
-# 6) Build the project
+# 6) Load PPU cross-compiler toolchain (or build https://github.com/electronicvisions/oppulance)
+module load ppu-toolchain
+
+# 7) Build the project
 #    Adjust -j1 to your own needs, beware that high parallelism will increase memory consumption!
 c ./waf configure
 c ./waf build -j1
 
-# 7) Install the project to ./bin and ./lib
+# 8) Install the project to ./bin and ./lib
 c ./waf install
 
-# 8) If you run programs outside waf, you'll need to add ./lib and ./bin to your path specifications
+# 9) If you run programs outside waf, you'll need to add ./lib and ./bin to your path specifications
 export SINGULARITYENV_PREPEND_PATH=`pwd`/bin:$SINGULARITYENV_PREPEND_PATH
 export SINGULARITYENV_LD_LIBRARY_PATH=`pwd`/lib:$SINGULARITYENV_LD_LIBRARY_PATH
 export PYTHONPATH=`pwd`/lib:$PYTHONPATH
