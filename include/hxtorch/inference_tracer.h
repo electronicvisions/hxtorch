@@ -10,7 +10,7 @@ struct InferenceTracer;
 
 /**
  * Inference tracer for a linear sequence of operations.
- * The traced operations' state is saved as a grenade::ComputeSequence, which can be
+ * The traced operations' state is saved as a grenade::compute::Sequence, which can be
  * executed as a single operation without transformation to and from PyTorch tensors.
  * It is ensured, that no untraced modifications are made in-between traced operations by comparing
  * the last traced operation's output with the currently traced operation's input value.

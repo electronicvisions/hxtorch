@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 
-#include "grenade/vx/compute_single_addition.h"
+#include "grenade/vx/compute/addition.h"
 #include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
@@ -80,7 +80,7 @@ torch::Tensor add_forward(torch::Tensor const& input, torch::Tensor const& other
 	auto const other_in = convert_add_other(inputs.at(1));
 	auto const [input_in, sizes_2d] = convert_add_input(inputs.at(0), other_in.size());
 
-	grenade::vx::ComputeSingleAddition add(other_in);
+	grenade::vx::compute::Addition add(other_in);
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

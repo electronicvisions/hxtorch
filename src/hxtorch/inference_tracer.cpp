@@ -99,7 +99,7 @@ torch::Tensor convert_inference_trace_output(
 
 torch::Tensor inference_trace(torch::Tensor const& input, std::string const& filename)
 {
-	grenade::vx::ComputeSequence ops;
+	grenade::vx::compute::Sequence ops;
 	{
 		std::ifstream file(filename);
 		{
@@ -114,7 +114,7 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 
 	grenade::vx::IODataList::Entry input_variant;
 	std::vector<int64_t> sizes_2d;
-	if (std::holds_alternative<grenade::vx::ComputeSingleMAC>(ops.data.front())) {
+	if (std::holds_alternative<grenade::vx::compute::MAC>(ops.data.front())) {
 		auto const [i, s] = convert_inference_trace_input<grenade::vx::UInt5>(input);
 		input_variant = i;
 		sizes_2d = s;
@@ -131,7 +131,7 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 	    ops.run(input_variant, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
 
 	torch::Tensor ret;
-	if (std::holds_alternative<grenade::vx::ComputeSingleConvertingReLU>(ops.data.front())) {
+	if (std::holds_alternative<grenade::vx::compute::ConvertingReLU>(ops.data.front())) {
 		ret = convert_inference_trace_output(
 		    std::get<std::vector<std::vector<grenade::vx::UInt5>>>(result_variant), sizes_2d,
 		    input.sizes().vec());

@@ -1,7 +1,7 @@
 #include <torch/torch.h>
 
-#include "grenade/vx/compute_single_converting_relu.h"
-#include "grenade/vx/compute_single_relu.h"
+#include "grenade/vx/compute/converting_relu.h"
+#include "grenade/vx/compute/relu.h"
 #include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
@@ -62,7 +62,7 @@ torch::Tensor relu_forward(torch::Tensor const& input)
 {
 	auto const [input_in, sizes_2d] = convert_relu_input(input);
 
-	grenade::vx::ComputeSingleReLU relu(sizes_2d.at(1));
+	grenade::vx::compute::ReLU relu(sizes_2d.at(1));
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");
@@ -94,7 +94,7 @@ torch::Tensor converting_relu_forward(torch::Tensor const& input, int64_t const 
 
 	auto const [input_in, sizes_2d] = convert_relu_input(input);
 
-	grenade::vx::ComputeSingleConvertingReLU converting_relu(sizes_2d.at(1), shift);
+	grenade::vx::compute::ConvertingReLU converting_relu(sizes_2d.at(1), shift);
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

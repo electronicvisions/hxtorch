@@ -1,6 +1,6 @@
 #include "hxtorch/detail/mac.h"
 
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "hxtorch/detail/connection.h"
@@ -99,8 +99,8 @@ torch::Tensor mac_forward(
 		                         "corresponding weight matrix dim size");
 	}
 
-	grenade::vx::ComputeSingleMAC::Weights m_weights{
-	    num_rows, grenade::vx::ComputeSingleMAC::Weights::value_type{num_cols}};
+	grenade::vx::compute::MAC::Weights m_weights{
+	    num_rows, grenade::vx::compute::MAC::Weights::value_type{num_cols}};
 
 	// TODO: let's assume it's floats...
 	auto weights_a = weights.accessor<float, 2>();
@@ -125,8 +125,8 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	grenade::vx::ComputeSingleMAC mac{std::move(m_weights), static_cast<size_t>(num_sends),
-	                                  grenade::vx::TimedSpike::Time(wait_between_events)};
+	grenade::vx::compute::MAC mac{std::move(m_weights), static_cast<size_t>(num_sends),
+	                              grenade::vx::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

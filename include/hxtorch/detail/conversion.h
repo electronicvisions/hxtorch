@@ -1,12 +1,12 @@
 #pragma once
 
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
 
 
 namespace hxtorch::detail {
 
-grenade::vx::ComputeSingleMAC::Weight convert_weight(float value);
+grenade::vx::compute::MAC::Weight convert_weight(float value);
 
 grenade::vx::UInt5 convert_activation(float value);
 

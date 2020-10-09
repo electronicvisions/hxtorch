@@ -1,6 +1,6 @@
 #include "hxtorch/detail/argmax.h"
 
-#include "grenade/vx/compute_single_argmax.h"
+#include "grenade/vx/compute/argmax.h"
 #include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
@@ -91,7 +91,7 @@ torch::Tensor argmax(torch::Tensor const& input, c10::optional<int64_t> const di
 	tracer_check_input(input);
 	auto const [input_in, sizes_2d] = convert_argmax_input(input, dim);
 
-	grenade::vx::ComputeSingleArgMax kernel(sizes_2d.at(1));
+	grenade::vx::compute::ArgMax kernel(sizes_2d.at(1));
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");
 	}

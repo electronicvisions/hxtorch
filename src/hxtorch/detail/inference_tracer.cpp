@@ -54,7 +54,7 @@ void tracer_update_output(torch::Tensor const& value)
 	}
 }
 
-void tracer_add(std::string const& name, grenade::vx::ComputeSequence::Entry&& op)
+void tracer_add(std::string const& name, grenade::vx::compute::Sequence::Entry&& op)
 {
 	for (auto& tracer : getInferenceTracer()) {
 		assert(tracer);

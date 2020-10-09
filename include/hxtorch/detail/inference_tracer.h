@@ -6,7 +6,7 @@
 #include <vector>
 #include <torch/torch.h>
 
-#include "grenade/vx/compute_sequence.h"
+#include "grenade/vx/compute/sequence.h"
 
 namespace hxtorch::detail {
 
@@ -17,7 +17,7 @@ namespace hxtorch::detail {
 struct InferenceTracer
 {
 	std::vector<std::string> operation_names;
-	grenade::vx::ComputeSequence ops;
+	grenade::vx::compute::Sequence ops;
 
 	/**
 	 * Check input is equal to saved output.
@@ -71,6 +71,6 @@ void tracer_update_output(torch::Tensor const& value);
  * @param name Name to use
  * @param op Operation to add
  */
-void tracer_add(std::string const& name, grenade::vx::ComputeSequence::Entry&& op);
+void tracer_add(std::string const& name, grenade::vx::compute::Sequence::Entry&& op);
 
 } // namespace hxtorch::detail

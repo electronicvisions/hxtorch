@@ -3,9 +3,9 @@
 
 namespace hxtorch::detail {
 
-grenade::vx::ComputeSingleMAC::Weight convert_weight(float const value)
+grenade::vx::compute::MAC::Weight convert_weight(float const value)
 {
-	return grenade::vx::ComputeSingleMAC::Weight(std::lround(value));
+	return grenade::vx::compute::MAC::Weight(std::lround(value));
 }
 
 grenade::vx::UInt5 convert_activation(float const value)
