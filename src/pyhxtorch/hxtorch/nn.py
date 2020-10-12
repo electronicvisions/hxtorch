@@ -6,6 +6,7 @@ BrainScaleS-2 accelerator. Additional digital operations are performed
 in the SIMD processors of BSS-2.
 """
 from abc import abstractmethod
+import math
 from typing import Callable, Tuple, Union, Optional
 import torch
 import _hxtorch
@@ -31,21 +32,51 @@ def scale_weight(weight: torch.Tensor) -> torch.Tensor:
     return weight * factor
 
 
+def clamp_weight_(weight: torch.Tensor) -> torch.Tensor:
+    """
+    Clamps all elements of the weight in-place into the maximal weight range
+    of BrainScaleS-2.
+    """
+    max_weight = hal.SynapseQuad.Weight.max
+    with torch.no_grad():
+        torch.clamp(weight, -max_weight, max_weight, out=weight)
+    return weight
+
+
 class Layer:
     """
     Base class of all layers in :mod:`hxtorch.nn`.
     """
 
-    def __init__(self, num_sends: int = 1, wait_between_events: int = 5,
-                 mock: bool = False, *,
+    def __init__(self, mock: bool = False):
+        """
+        :param mock: Enable mock mode.
+        """
+        self.mock = mock
+
+    def __repr__(self):
+        repr_str = f"{self.__class__.__name__}("
+        if hasattr(self, "extra_repr"):
+            repr_str += f"{self.extra_repr()}, "
+        repr_str += f"mock={self.mock})"
+        return repr_str
+
+
+class MACLayer(Layer):
+    """
+    Layer that performs a multiply accumulate operation.
+    """
+
+    def __init__(self, num_sends: Optional[int] = None,
+                 wait_between_events: int = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
-                     torch.Tensor], torch.Tensor]] = scale_weight):
+                     torch.Tensor], torch.Tensor]] = clamp_weight_):
         """
         :param num_sends: Number of sends of the input. Values greater than 1
             result in higher output to the neurons and increases the s/n ratio.
-            Defaults to ``1``.
+            For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
             inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
@@ -55,45 +86,80 @@ class Layer:
         :param weight_transform: Function that receives the weight and returns
             a tensor to be used as weight matrix on the chip.
         """
+        super().__init__(mock=mock)
         self.num_sends = num_sends
         self.wait_between_events = wait_between_events
-        self.mock = mock
         self.input_transform = input_transform
         self.weight_transform = weight_transform
 
     def __repr__(self):
-        repr_str = f"{self.__class__.__name__}("
-        if hasattr(self, "extra_repr"):
-            repr_str += f"{self.extra_repr()}, "
+        repr_str = f"{Layer.__repr__(self)[:-1]}, "
         if self.input_transform:
             repr_str += f"input_transform={self.input_transform}, "
         if self.weight_transform:
             repr_str += f"weight_transform={self.weight_transform}, "
         repr_str += f"num_sends={self.num_sends}, "
-        repr_str += f"wait_between_events={self.wait_between_events}, "
-        repr_str += f"mock={self.mock})"
+        repr_str += f"wait_between_events={self.wait_between_events})"
         return repr_str
 
+    def reset_parameters(self, weight_mean: float = 0.,
+                         relu_shift: int = 1) -> None:
+        """
+        Reset parameters to reasonable initialization values. Method based on
+        *Delving deep into rectifiers: Surpassing human-level performance on
+        ImageNet classification* - He, K. et al. (2015)
 
-class Linear(Layer, torch.nn.Linear):
+        :param weight_mean: Mean value of the weight distribution
+        :param relu_shift: Bit shift assumed in subsequent ConvertingReLU
+        """
+        fan_in = self.weight[0].numel()
+
+        gain_relu = math.sqrt(2)
+        gain_mac = _hxtorch.get_mock_parameter().gain
+        gain_scale = pow(2, relu_shift)
+        gain_tot = gain_scale * gain_relu / gain_mac
+        std = gain_tot / math.sqrt(fan_in)
+
+        if self.num_sends is None:
+            self.num_sends = int(
+                math.ceil(std / (hal.SynapseQuad.Weight.max / 3)))
+        std /= self.num_sends
+
+        torch.nn.init.trunc_normal_(
+            self.weight,
+            mean=weight_mean,
+            std=std,
+            a=-hal.SynapseQuad.Weight.max,
+            b=hal.SynapseQuad.Weight.max
+        )
+
+        if self.bias is not None:
+            # estimated standard deviation of the input
+            std_in = hal.PADIEvent.HagenActivation.max / math.sqrt(3.)
+            bound = gain_tot / math.sqrt(fan_in) / std_in
+            with torch.no_grad():
+                self.bias.uniform_(-bound, bound)
+
+
+class Linear(MACLayer, torch.nn.Linear):
     """
     Applies a linear transformation to the incoming data on Hicann-X.
     """
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True,
-                 num_sends: int = 1, wait_between_events: int = 5,
-                 mock: bool = False, *,
+                 num_sends: Optional[int] = None,
+                 wait_between_events: int = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
-                     torch.Tensor], torch.Tensor]] = scale_weight):
+                     torch.Tensor], torch.Tensor]] = clamp_weight_):
         """
         :param in_features: Size of each input sample
         :param out_features: Size of each output sample
         :param bias: If set to `True`, the layer will learn an additive bias.
         :param num_sends: Number of sends of the input. Values greater than 1
             result in higher output to the neurons and increases the s/n ratio.
-            Defaults to ``1``.
+            For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
             inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
@@ -108,10 +174,12 @@ class Linear(Layer, torch.nn.Linear):
                 "The bias will not be scaled along with the output, "
                 "this may lead to unexpected results.")
 
-        torch.nn.Linear.__init__(self, in_features, out_features, bias)
-        Layer.__init__(
+        # super().__init__() would be nicer, but impossible due to different
+        # parameters
+        MACLayer.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
+        torch.nn.Linear.__init__(self, in_features, out_features, bias)
         self._matmul = _hxtorch.matmul
 
     def forward(self, input):  # pylint: disable=redefined-builtin
@@ -136,7 +204,7 @@ class Linear(Layer, torch.nn.Linear):
         return output
 
 
-class ConvNd(Layer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protected-access
+class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protected-access
     """
     Base class for n-dimensional convolution.
     """
@@ -198,12 +266,12 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
                  stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: Union[int, Tuple] = 1, groups: int = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
-                 num_sends: int = 1, wait_between_events: int = 5,
-                 mock: bool = False, *,
+                 num_sends: Optional[int] = None,
+                 wait_between_events: int = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
-                     torch.Tensor], torch.Tensor]] = scale_weight):
+                     torch.Tensor], torch.Tensor]] = clamp_weight_):
         """
         :param in_channels: Number of channels in the input
         :param out_channels: Number of channels produced by the convolution
@@ -217,7 +285,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         :param bias: If ``True``, adds a learnable bias to the output
         :param num_sends: Number of sends of the input. Values greater than 1
             result in higher output to the neurons and increases the s/n ratio.
-            Defaults to ``1``.
+            For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
             inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
@@ -232,12 +300,14 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
                 "The bias will not be scaled along with the output, "
                 "this may lead to unexpected results.")
 
-        torch.nn.Conv1d.__init__(self, in_channels, out_channels, kernel_size,
-                                 stride, padding, dilation, groups, bias,
-                                 padding_mode)
-        ConvNd.__init__(
+        # super().__init__() would be nicer, but impossible due to different
+        # parameters
+        MACLayer.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
+        torch.nn.Conv1d.__init__(
+            self, in_channels, out_channels, kernel_size, stride, padding,
+            dilation, groups, bias, padding_mode)
         self._conv = _hxtorch.conv1d
 
 
@@ -251,12 +321,12 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
                  kernel_size: Union[int, Tuple[int, int]],
                  stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: int = 1, groups: int = 1, bias: bool = True,
-                 padding_mode: str = 'zeros', num_sends: int = 1,
+                 padding_mode: str = 'zeros', num_sends: Optional[int] = None,
                  wait_between_events: int = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
-                     torch.Tensor], torch.Tensor]] = scale_weight):
+                     torch.Tensor], torch.Tensor]] = clamp_weight_):
         """
         :param in_channels: Number of channels in the input
         :param out_channels: Number of channels produced by the convolution
@@ -270,7 +340,7 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
         :param bias: If ``True``, adds a learnable bias to the output
         :param num_sends: Number of sends of the input. Values greater than 1
             result in higher output to the neurons and increases the s/n ratio.
-            Defaults to ``1``.
+            For ``None`` this is automatically adjusted during initialization.
         :param mock: Enable mock mode.
         :param wait_between_events: Wait time between two successive vector
             inputs, in FPGA clock cycles. Defaults to ``5``.
@@ -285,16 +355,18 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
                 "The bias will not be scaled along with the output, "
                 "this may lead to unexpected results.")
 
-        torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,
-                                 stride, padding, dilation, groups, bias,
-                                 padding_mode)
+        # super().__init__() would be nicer, but impossible due to different
+        # parameters
         ConvNd.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
+        torch.nn.Conv2d.__init__(
+            self, in_channels, out_channels, kernel_size, stride, padding,
+            dilation, groups, bias, padding_mode)
         self._conv = _hxtorch.conv2d
 
 
-class ReLU(torch.nn.ReLU):
+class ReLU(Layer, torch.nn.ReLU):
     """
     Applies a rectified linear unit to the input.
     """
@@ -303,8 +375,10 @@ class ReLU(torch.nn.ReLU):
         """
         :param mock: Enable mock mode
         """
-        super().__init__()
-        self.mock = mock
+        # super().__init__() would be nicer, but impossible due to different
+        # parameters
+        Layer.__init__(self, mock)
+        torch.nn.ReLU.__init__(self)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return _hxtorch.relu(input, mock=self.mock)
