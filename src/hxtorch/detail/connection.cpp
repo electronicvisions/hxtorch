@@ -17,4 +17,10 @@ grenade::vx::ChipConfig& getChip()
 	return chip;
 }
 
+std::unique_ptr<stadls::vx::ReinitStackEntry>& getReinitCalibration()
+{
+	static std::unique_ptr<stadls::vx::ReinitStackEntry> reinit_calibration;
+	return reinit_calibration;
+}
+
 } // namespace hxtorch::detail

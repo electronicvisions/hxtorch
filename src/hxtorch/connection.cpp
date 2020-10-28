@@ -7,6 +7,7 @@
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/detail/connection.h"
 #include "lola/vx/cerealization.h"
+#include "stadls/vx/reinit_stack_entry.h"
 #include "stadls/vx/v2/dumper.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_program_builder.h"
@@ -26,7 +27,7 @@ namespace hxtorch {
 
 namespace {
 
-grenade::vx::ChipConfig load_and_apply_calibration(
+std::tuple<grenade::vx::ChipConfig const, stadls::vx::ReinitStackEntry> load_and_apply_calibration(
     std::string calibration_path, grenade::vx::backend::Connection& connection)
 {
 	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
@@ -45,8 +46,16 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 		}
 	}
 	auto const chip = grenade::vx::convert_to_chip(cocos);
-	grenade::vx::backend::run(connection, stadls::vx::v2::convert_to_builder(cocos).done());
-	return chip;
+
+	auto calib_builder = stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder;
+	calib_builder.merge_back(stadls::vx::v2::convert_to_builder(cocos));
+	auto calib = calib_builder.done();
+
+	// Register reinit so the calibration gets reappplied whenever we regain control of hw.
+	// On direct-access backends, this is a no-op.
+	auto reinit_calibration = connection.create_reinit_stack_entry();
+	reinit_calibration.set(calib, true);
+	return std::make_tuple(std::move(chip), std::move(reinit_calibration));
 }
 
 } // namespace
@@ -79,20 +88,24 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 	                              connection.get_unique_identifier(hwdb_path_value) + "/"s +
 	                              version + "/hagen_cocolist.pbin"s;
 
-	auto const chip = load_and_apply_calibration(calibration_path, connection);
+	auto [chip, reinit] = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
 	detail::getConnection() =
 	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
+	detail::getReinitCalibration() =
+	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
 
 void init_hardware(CalibrationPath const& calibration_path)
 {
 	grenade::vx::backend::Connection connection;
 
-	auto const chip = load_and_apply_calibration(calibration_path.value, connection);
+	auto [chip, reinit] = load_and_apply_calibration(calibration_path.value, connection);
 	detail::getChip() = chip;
 	detail::getConnection() =
 	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
+	detail::getReinitCalibration() =
+	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
 
 void release_hardware()
