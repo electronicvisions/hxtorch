@@ -9,11 +9,10 @@ import torch
 
 import hxtorch
 from hxtorch.nn import scale_input
-from dlens_vx_v2 import logger
 
-logger.reset()
-logger.default_config(level=logger.LogLevel.INFO)
-logger.set_loglevel(logger.get('grenade'), logger.LogLevel.WARN)
+hxtorch.logger.reset()
+hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
+hxtorch.logger.set_loglevel(hxtorch.logger.get('grenade'), hxtorch.logger.LogLevel.WARN)
 torch.set_num_threads(1)
 
 
@@ -98,7 +97,7 @@ class MNISTTest(unittest.TestCase, metaclass=ABCMeta):
         target = torch.load(data_path.joinpath("test_labels.pt"))
         accuracy = (100. * (predicted == target)).mean().item()
 
-        logger.get(f"{self.__class__.__name__}.test_mnist").INFO(
+        hxtorch.logger.get(f"{self.__class__.__name__}.test_mnist").INFO(
             f"Classified {len(data)} MNIST images, "
             f"accuracy: {accuracy:.1f}% ({self.__class__.__name__[9:]})")
 

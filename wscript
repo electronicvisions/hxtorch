@@ -101,7 +101,7 @@ def build(bld):
     bld(
         target='hxtorch',
         features='py use',
-        use=['dlens_vx_v2', 'hxtorch_'],
+        use=['pylogging', 'pyhaldls_vx_v2', 'hxtorch_'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',
@@ -112,7 +112,7 @@ def build(bld):
         target='hxtorch_hwtests',
         tests=bld.path.ant_glob('tests/hw/*.py'),
         features='use pytest',
-        use=['hxtorch', 'dlens_vx_v2'],
+        use=['hxtorch'],
         install_path='${PREFIX}/bin/tests/hw',
         test_timeout=300,
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
@@ -122,7 +122,7 @@ def build(bld):
         target='hxtorch_swtests',
         tests=bld.path.ant_glob('tests/sw/*.py'),
         features='use pytest',
-        use=['hxtorch'],
+        use=['hxtorch', 'pyhaldls_vx_v2'],
         install_path='${PREFIX}/bin/tests/sw',
     )
 

@@ -4,9 +4,8 @@ import unittest
 import matplotlib.pyplot as plt
 import torch
 import hxtorch
-from dlens_vx_v2 import logger
 
-logger.default_config(level=logger.LogLevel.INFO)
+hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
 
 class TestHardwareDeviationsHX(unittest.TestCase):
     """
@@ -62,7 +61,7 @@ class TestHardwareDeviationsHX(unittest.TestCase):
             f"{self.__class__.__name__}_linearity_result.png"), dpi=600)
 
     def test_plot_noise(self):
-        log = logger.get(self.__class__.__name__)
+        log = hxtorch.logger.get(self.__class__.__name__)
 
         inputs = [(10, 15), (10, 25), (20, 15), (20, 25)]
 

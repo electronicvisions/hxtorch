@@ -4,11 +4,10 @@ from typing import ClassVar
 import unittest
 import torch
 import hxtorch
-from dlens_vx_v2 import logger
 
 from hxtorch_shared_test_tools import rand_full
 
-logger.default_config(level=logger.LogLevel.INFO)
+hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
 
 
 class AddInput(namedtuple('AddInput', ["input", "other"])):

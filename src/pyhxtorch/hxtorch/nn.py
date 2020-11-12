@@ -2,7 +2,8 @@ from abc import abstractmethod
 from typing import Callable, Tuple, Union, Optional
 import torch
 import hxtorch_
-from dlens_vx_v2 import hal, logger
+import pylogging as logger
+import pyhaldls_vx_v2 as hal
 
 
 def scale_input(x_in: torch.Tensor) -> torch.Tensor:

@@ -4,11 +4,10 @@ from typing import ClassVar
 import unittest
 import torch
 import hxtorch
-from dlens_vx_v2 import logger
 
 from hxtorch_shared_test_tools import rand_full
 
-logger.default_config(level=logger.LogLevel.INFO)
+hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
 
 
 class MatmulInput(namedtuple('MatmulInput', ["input", "other"])):
@@ -101,7 +100,7 @@ class TestMatmulPyTorch(unittest.TestCase):
 
     @unittest.skip("Noise is currently higher than expected")
     def test_noise_and_gain(self):
-        log = logger.get(self.__class__.__name__)
+        log = hxtorch.logger.get(self.__class__.__name__)
         data_in = torch.full((100, 128), 20., dtype=torch.float)
         weights_in = torch.full((128, 256), 25., dtype=torch.float)
 
