@@ -129,6 +129,14 @@ The current implementation only supports @p other to be 1D or 2D.
 
 @return Resulting tensor)doc";
 
+static const char* __doc_hxtorch_measure_mock_parameter =
+    R"doc(Measures the mock parameters, i.e. gain and noise_std, by multiplying a
+full weight with an artificial test input on the BSS-2 chip.
+For this purpose a random pattern is used, whose mean value is successively
+reduced to also work with higher gain factors.
+The output for the actual calibration is chosen such that it is close to
+the middle of the available range.)doc";
+
 static const char* __doc_hxtorch_release_hardware = R"doc(Release hardware resource.)doc";
 
 static const char* __doc_hxtorch_relu =

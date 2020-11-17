@@ -129,12 +129,14 @@ class TestMatmulHX(TestMatmulPyTorch):
     Tests the hxtorch matmul operation.
     """
     matmul: ClassVar = partial(hxtorch.matmul, wait_between_events=10)
-    noise_std: ClassVar[float] = 2.
-    gain: ClassVar[float] = 0.002
 
     @classmethod
     def setUpClass(cls):
         hxtorch.init_hardware()
+        mock_parameter = hxtorch.measure_mock_parameter()
+        hxtorch.set_mock_parameter(mock_parameter)
+        cls.noise_std = mock_parameter.noise_std
+        cls.gain = mock_parameter.gain
 
     @classmethod
     def tearDownClass(cls):

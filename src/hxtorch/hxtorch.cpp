@@ -41,6 +41,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 5,
 	    pybind11::arg("mock") = false);
 	m.def(
+	    "measure_mock_parameter", &hxtorch::measure_mock_parameter,
+	    __doc_hxtorch_measure_mock_parameter);
+	m.def(
 	    "relu", &hxtorch::relu, __doc_hxtorch_relu, pybind11::arg("input"),
 	    pybind11::arg("mock") = false);
 	m.def(

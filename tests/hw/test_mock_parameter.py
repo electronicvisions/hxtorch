@@ -27,6 +27,13 @@ class TestMockParameter(unittest.TestCase):
         hxtorch.set_mock_parameter(mock_parameter)
         self.assertEqual(hxtorch.get_mock_parameter(), mock_parameter)
 
+    def test_measure(self):
+        hxtorch.init_hardware()
+        mock_parameter = hxtorch.measure_mock_parameter()
+        hxtorch.release_hardware()
+        self.assertGreater(mock_parameter.gain, 0)
+        self.assertLessEqual(mock_parameter.gain, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

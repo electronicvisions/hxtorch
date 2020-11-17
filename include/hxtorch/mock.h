@@ -34,4 +34,14 @@ MockParameter get_mock_parameter();
  */
 void set_mock_parameter(MockParameter const& parameter);
 
+/*
+ * Measures the mock parameters, i.e. gain and noise_std, by multiplying a
+ * full weight with an artificial test input on the BSS-2 chip.
+ * For this purpose a random pattern is used, whose mean value is successively
+ * reduced to also work with higher gain factors.
+ * The output for the actual calibration is chosen such that it is close to
+ * the middle of the available range.
+ */
+MockParameter measure_mock_parameter();
+
 } // namespace hxtorch
