@@ -14,6 +14,7 @@
 #include "hxtorch/connection.h"
 #include "hxtorch/conv.h"
 #include "hxtorch/detail/conv.h"
+#include "hxtorch/detail/mock.h"
 #include "hxtorch/inference_tracer.h"
 #include "hxtorch/mac.h"
 #include "hxtorch/matmul.h"
@@ -105,8 +106,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 
 	pybind11::class_<hxtorch::HWDBPath>(m, "HWDBPath")
 	    .def(
-	        pybind11::init<std::string, std::string>(), pybind11::arg("path"),
-	        pybind11::arg("version") = "stable/latest");
+	        pybind11::init<std::optional<std::string>, std::string>(),
+	        pybind11::arg("path") = std::nullopt, pybind11::arg("version") = "stable/latest");
 	pybind11::class_<hxtorch::CalibrationPath>(m, "CalibrationPath")
 	    .def(pybind11::init<std::string>());
 }

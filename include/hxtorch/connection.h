@@ -9,9 +9,10 @@ namespace hxtorch {
  */
 struct HWDBPath
 {
-	std::string path;
+	std::optional<std::string> path;
 	std::string version;
-	explicit HWDBPath(std::string path, std::string version = "stable/latest") :
+	explicit HWDBPath(
+	    std::optional<std::string> path = std::nullopt, std::string version = "stable/latest") :
 	    path(path), version(version)
 	{}
 };
