@@ -8,11 +8,12 @@ from pathlib import Path
 import torch
 
 import hxtorch
-from hxtorch.nn import scale_input
+from hxtorch.nn import scale_input, scale_weight
 
 hxtorch.logger.reset()
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
 hxtorch.logger.set_loglevel(hxtorch.logger.get('grenade'), hxtorch.logger.LogLevel.WARN)
+hxtorch.logger.set_loglevel(hxtorch.logger.get('fisch.PlaybackProgramBuilder'), hxtorch.logger.LogLevel.ERROR)
 torch.set_num_threads(1)
 
 
@@ -30,16 +31,16 @@ class HXTorchModel(torch.nn.Module):
         self.conv2d = hxtorch.nn.Conv2d(
             1, out_channels=20, kernel_size=(10, 10), stride=(5, 5),
             bias=False, padding=1,
-            input_transform=scale_input,
-            num_sends=6, wait_between_events=8, mock=mock)
+            input_transform=scale_input, weight_transform=scale_weight,
+            num_sends=3, wait_between_events=2, mock=mock)
         self.fc1 = hxtorch.nn.Linear(
             5 * 5 * 20, 128, bias=False,
-            input_transform=scale_input,
-            num_sends=6, wait_between_events=8, mock=mock)
+            input_transform=scale_input, weight_transform=scale_weight,
+            num_sends=6, wait_between_events=2, mock=mock)
         self.fc2 = hxtorch.nn.Linear(
             128, 10, bias=False,
-            input_transform=scale_input,
-            num_sends=6, wait_between_events=8, mock=mock)
+            input_transform=scale_input, weight_transform=scale_weight,
+            num_sends=6, wait_between_events=2, mock=mock)
 
     def forward(self, *input):  # pylint: disable=redefined-builtin
         result = torch.nn.functional.relu(self.conv2d(input[0]))
@@ -118,10 +119,6 @@ class MNISTTestHX(MNISTTest):
     def setUpClass(cls) -> None:
         hxtorch.init()
 
-    @unittest.skip("Currently not working for v2 (Issue #3703)")
-    def test_mnist(self) -> None:
-        super(MNISTTestHX, self).test_mnist()
-
     @classmethod
     def tearDownClass(cls) -> None:
         hxtorch.release()  # also disconnects executor
@@ -136,7 +133,7 @@ class MNISTTestMock(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init(hxtorch.MockParameter(noise_std=2., gain=0.0015))
+        hxtorch.init(hxtorch.MockParameter(noise_std=1.6, gain=0.0018))
 
 
 class MNISTTestMockWithoutNoise(MNISTTest):
@@ -148,7 +145,7 @@ class MNISTTestMockWithoutNoise(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init(hxtorch.MockParameter(noise_std=0, gain=0.0012))
+        hxtorch.init(hxtorch.MockParameter(noise_std=0, gain=0.0018))
 
 
 class MNISTTestPyTorch(MNISTTest):
