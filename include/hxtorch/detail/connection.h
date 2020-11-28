@@ -1,6 +1,6 @@
 #pragma once
-#include <memory>
 #include "hxcomm/vx/connection_variant.h"
+#include <memory>
 
 namespace grenade::vx {
 class ChipConfig;

@@ -14,10 +14,10 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/cereal.hpp>
 // Needed for manual wrapping (pickling) of Dumper::done_type
+#include "hxtorch/detail/mock.h"
 #include <cereal/types/utility.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
-#include "hxtorch/detail/mock.h"
 
 namespace hxtorch {
 
