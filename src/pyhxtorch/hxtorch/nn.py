@@ -46,6 +46,8 @@ def clamp_weight_(weight: torch.Tensor) -> torch.Tensor:
 class Layer:
     """
     Base class of all layers in :mod:`hxtorch.nn`.
+
+    :ivar out: Output of the last execution
     """
 
     def __init__(self, mock: bool = False):
@@ -53,6 +55,7 @@ class Layer:
         :param mock: Enable mock mode.
         """
         self.mock = mock
+        self.out: Optional[torch.Tensor] = None
 
     def __repr__(self):
         repr_str = f"{self.__class__.__name__}("
@@ -191,17 +194,17 @@ class Linear(MACLayer, torch.nn.Linear):
             weight = self.weight_transform(weight)
         if self.input_transform is not None:
             input = self.input_transform(input)
-        output = self._matmul(input, weight.t(),
+        self.out = self._matmul(input, weight.t(),
                               num_sends=self.num_sends,
                               wait_between_events=self.wait_between_events,
                               mock=self.mock)
         torch.set_printoptions(profile="full")
-        log.debug(f"out:\n{output.to(int)}\n"
-                  f"out.shape {output.shape}\tout.max {output.max()}")
+        log.debug(f"out:\n{self.out.to(int)}\n"
+                  f"out.shape {self.out.shape}\tout.max {self.out.max()}")
         torch.set_printoptions(profile="default")
         if bias is not None:
-            output = _hxtorch.add(output, bias, mock=self.mock)
-        return output
+            self.out = _hxtorch.add(self.out, bias, mock=self.mock)
+        return self.out
 
 
 class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protected-access
@@ -244,15 +247,15 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
             weight = self.weight_transform(weight)
         if self.input_transform is not None:
             input = self.input_transform(input)
-        output = self._conv(input, weight, bias,
+        self.out = self._conv(input, weight, bias,
                             self.stride, num_sends=self.num_sends,
                             wait_between_events=self.wait_between_events,
                             mock=self.mock)
         torch.set_printoptions(profile="full")
-        log.debug(f"out[0, 0]:\n{output[0, 0].to(int)}\n"
-                  f"out.shape {output.shape}\tout.max {output.max()}")
+        log.debug(f"out[0, 0]:\n{self.out[0, 0].to(int)}\n"
+                  f"out.shape {self.out.shape}\tout.max {self.out.max()}")
         torch.set_printoptions(profile="default")
-        return output
+        return self.out
 
 
 class Conv1d(ConvNd, torch.nn.Conv1d):
@@ -381,7 +384,8 @@ class ReLU(Layer, torch.nn.ReLU):
         torch.nn.ReLU.__init__(self)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return _hxtorch.relu(input, mock=self.mock)
+        self.out = _hxtorch.relu(input, mock=self.mock)
+        return self.out
 
     def extra_repr(self) -> str:
         return f"mock={self.mock}"
@@ -402,8 +406,9 @@ class ConvertingReLU(ReLU):
         self.shift = shift
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return _hxtorch.converting_relu(
+        self.out = _hxtorch.converting_relu(
             input, shift=self.shift, mock=self.mock)
+        return self.out
 
     def extra_repr(self) -> str:
         return f"shift={self.shift}, {super().extra_repr()}"
