@@ -172,11 +172,6 @@ class Linear(MACLayer, torch.nn.Linear):
         :param weight_transform: Function that receives the weight and returns
             a tensor to be used as weight matrix on the chip.
         """
-        if bias:
-            logger.get(f"{__name__}.{self.__class__.__name__}").warn(
-                "The bias will not be scaled along with the output, "
-                "this may lead to unexpected results.")
-
         # super().__init__() would be nicer, but impossible due to different
         # parameters
         MACLayer.__init__(
@@ -186,9 +181,6 @@ class Linear(MACLayer, torch.nn.Linear):
         self._matmul = _hxtorch.matmul
 
     def forward(self, input):  # pylint: disable=redefined-builtin
-        log = logger.get(__name__)
-        log.debug(f"linear.forward:\tinput.shape {input.shape}\t"
-                  f"weight.shape {self.weight.shape}")
         weight, bias = self.weight, self.bias
         if self.weight_transform is not None:
             weight = self.weight_transform(weight)
@@ -198,10 +190,6 @@ class Linear(MACLayer, torch.nn.Linear):
                               num_sends=self.num_sends,
                               wait_between_events=self.wait_between_events,
                               mock=self.mock)
-        torch.set_printoptions(profile="full")
-        log.debug(f"out:\n{self.out.to(int)}\n"
-                  f"out.shape {self.out.shape}\tout.max {self.out.max()}")
-        torch.set_printoptions(profile="default")
         if bias is not None:
             self.out = _hxtorch.add(self.out, bias, mock=self.mock)
         return self.out
@@ -239,9 +227,6 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
             input = torch.nn.functional.pad(
                 input, tuple(expanded_padding), padding_mode)
 
-        log = logger.get(__name__)
-        log.debug(f"ConvNd.forward:\tinput.shape {input.shape}\t"
-                  f"weight.shape {self.weight.shape}")
         weight, bias = self.weight, self.bias
         if self.weight_transform is not None:
             weight = self.weight_transform(weight)
@@ -251,10 +236,6 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
                             self.stride, num_sends=self.num_sends,
                             wait_between_events=self.wait_between_events,
                             mock=self.mock)
-        torch.set_printoptions(profile="full")
-        log.debug(f"out[0, 0]:\n{self.out[0, 0].to(int)}\n"
-                  f"out.shape {self.out.shape}\tout.max {self.out.max()}")
-        torch.set_printoptions(profile="default")
         return self.out
 
 
@@ -298,11 +279,6 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         :param weight_transform: Function that receives the weight and returns
             a tensor to be used as weight matrix on the chip.
         """
-        if bias:
-            logger.get(f"{__name__}.{self.__class__.__name__}").warn(
-                "The bias will not be scaled along with the output, "
-                "this may lead to unexpected results.")
-
         # super().__init__() would be nicer, but impossible due to different
         # parameters
         MACLayer.__init__(
@@ -353,11 +329,6 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
         :param weight_transform: Function that receives the weight and returns
             a tensor to be used as weight matrix on the chip.
         """
-        if bias:
-            logger.get(f"{__name__}.{self.__class__.__name__}").warn(
-                "The bias will not be scaled along with the output, "
-                "this may lead to unexpected results.")
-
         # super().__init__() would be nicer, but impossible due to different
         # parameters
         ConvNd.__init__(
