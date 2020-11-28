@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Tuple, Union, Optional
 import torch
-import hxtorch_
+import _hxtorch
 import pylogging as logger
 import pyhaldls_vx_v2 as hal
 
@@ -105,7 +105,7 @@ class Linear(Layer, torch.nn.Linear):
         Layer.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        self._matmul = hxtorch_.matmul
+        self._matmul = _hxtorch.matmul
 
     def forward(self, input):  # pylint: disable=redefined-builtin
         log = logger.get(__name__)
@@ -125,7 +125,7 @@ class Linear(Layer, torch.nn.Linear):
                   f"out.shape {output.shape}\tout.max {output.max()}")
         torch.set_printoptions(profile="default")
         if bias is not None:
-            output = hxtorch_.add(output, bias, mock=self.mock)
+            output = _hxtorch.add(output, bias, mock=self.mock)
         return output
 
 
@@ -231,7 +231,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         ConvNd.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        self._conv = hxtorch_.conv1d
+        self._conv = _hxtorch.conv1d
 
 
 class Conv2d(ConvNd, torch.nn.Conv2d):
@@ -284,7 +284,7 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
         ConvNd.__init__(
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
-        self._conv = hxtorch_.conv2d
+        self._conv = _hxtorch.conv2d
 
 
 class ReLU(torch.nn.ReLU):
@@ -300,7 +300,7 @@ class ReLU(torch.nn.ReLU):
         self.mock = mock
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return hxtorch_.relu(input, mock=self.mock)
+        return _hxtorch.relu(input, mock=self.mock)
 
     def extra_repr(self) -> str:
         return f"mock={self.mock}"
@@ -321,7 +321,7 @@ class ConvertingReLU(ReLU):
         self.shift = shift
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return hxtorch_.converting_relu(
+        return _hxtorch.converting_relu(
             input, shift=self.shift, mock=self.mock)
 
     def extra_repr(self) -> str:

@@ -1,4 +1,4 @@
-from hxtorch_ import *
+from _hxtorch import *
 from hxtorch import nn
 import pylogging as logger
 
