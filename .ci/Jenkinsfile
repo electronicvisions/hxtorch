@@ -22,4 +22,6 @@ if (executeHwTests) {
 	]
 }
 
-wafDefaultPipeline(pipelineOptions)
+withCcache() {
+    wafDefaultPipeline(pipelineOptions)
+}
