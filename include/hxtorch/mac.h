@@ -23,7 +23,7 @@ torch::Tensor mac(
     torch::Tensor const& x,
     torch::Tensor const& weights,
     int64_t num_sends = 1,
-    int64_t wait_between_events = 25,
+    int64_t wait_between_events = 5,
     bool mock = false);
 
 } // namespace hxtorch

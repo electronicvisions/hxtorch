@@ -29,7 +29,7 @@ class Layer:
     Base class of all layers in :mod:`hxtorch.nn`.
     """
 
-    def __init__(self, num_sends: int = 1, wait_between_events: int = 25,
+    def __init__(self, num_sends: int = 1, wait_between_events: int = 5,
                  mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
@@ -40,7 +40,7 @@ class Layer:
             result in higher output to the neurons and increases the s/n ratio.
             Defaults to ``1``.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``25``.
+            inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -74,7 +74,7 @@ class Linear(Layer, torch.nn.Linear):
     """
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True,
-                 num_sends: int = 1, wait_between_events: int = 25,
+                 num_sends: int = 1, wait_between_events: int = 5,
                  mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
@@ -88,7 +88,7 @@ class Linear(Layer, torch.nn.Linear):
             result in higher output to the neurons and increases the s/n ratio.
             Defaults to ``1``.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``25``.
+            inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -191,7 +191,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
                  stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: Union[int, Tuple] = 1, groups: int = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
-                 num_sends: int = 1, wait_between_events: int = 25,
+                 num_sends: int = 1, wait_between_events: int = 5,
                  mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
@@ -212,7 +212,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
             result in higher output to the neurons and increases the s/n ratio.
             Defaults to ``1``.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``25``.
+            inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -245,7 +245,7 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
                  stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: int = 1, groups: int = 1, bias: bool = True,
                  padding_mode: str = 'zeros', num_sends: int = 1,
-                 wait_between_events: int = 25, mock: bool = False, *,
+                 wait_between_events: int = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -266,7 +266,7 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
             Defaults to ``1``.
         :param mock: Enable mock mode.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``25``.
+            inputs, in FPGA clock cycles. Defaults to ``5``.
             Shorter wait time can lead to saturation of the synaptic input.
         :param input_transform: Function that receives the input and returns
             a tensor to be used as input to the chip.

@@ -84,7 +84,7 @@ class TestNN(unittest.TestCase):
 
         # repr
         self.assertRegex(repr(hxtorch_layer),
-                         r'Conv1d\(.*, num_sends=1, wait_between_events=25.*')
+                         r'Conv1d\(.*, num_sends=1, wait_between_events=5.*')
 
     def test_conv2d(self):
         """

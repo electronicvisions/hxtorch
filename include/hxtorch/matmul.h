@@ -16,7 +16,7 @@ torch::Tensor matmul(
     torch::Tensor const& tensor1,
     torch::Tensor const& tensor2,
     int64_t num_sends = 1,
-    int64_t wait_between_events = 25,
+    int64_t wait_between_events = 5,
     bool mock = false);
 
 } // namespace hxtorch
