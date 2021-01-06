@@ -49,6 +49,19 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 
 } // namespace
 
+void init_hardware_minimal()
+{
+	detail::getConnection().reset();
+	auto connection = hxcomm::vx::get_connection_from_env();
+	auto init_generator = stadls::vx::v2::DigitalInit();
+	stadls::vx::v2::run(connection, stadls::vx::v2::generate(init_generator).builder.done());
+	grenade::vx::ChipConfig const chip;
+	detail::getChip() = chip;
+	detail::getConnection() =
+	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+}
+
+
 void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 {
 	auto connection = hxcomm::vx::get_connection_from_env();

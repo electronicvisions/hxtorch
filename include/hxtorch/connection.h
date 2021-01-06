@@ -42,6 +42,12 @@ struct CalibrationPath
 void init_hardware(CalibrationPath const& calibration_path);
 
 /**
+ * Initialize automatically from the environment
+ * without ExperimentInit and without any calibration.
+ */
+void init_hardware_minimal();
+
+/**
  * Release hardware resource.
  */
 void release_hardware();

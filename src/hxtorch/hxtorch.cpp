@@ -31,6 +31,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "init_hardware", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init_hardware,
 	    __doc_hxtorch_init_hardware_2, pybind11::arg("calibration_path"));
+	m.def(
+	    "init_hardware_minimal", &hxtorch::init_hardware_minimal,
+	    __doc_hxtorch_init_hardware_minimal);
 	m.def("release_hardware", &hxtorch::release_hardware, __doc_hxtorch_release_hardware);
 	m.def("get_mock_parameter", &hxtorch::get_mock_parameter, __doc_hxtorch_get_mock_parameter);
 	m.def(

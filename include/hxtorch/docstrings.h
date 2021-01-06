@@ -101,6 +101,10 @@ static const char* __doc_hxtorch_init_hardware_2 =
 
 @param calibration_path Calibration path to load from)doc";
 
+static const char* __doc_hxtorch_init_hardware_minimal =
+    R"doc(Initialize automatically from the environment
+without ExperimentInit and without any calibration.)doc";
+
 static const char* __doc_hxtorch_mac =
     R"doc(The bare mutliply-accumulate operation of BrainScaleS-2. A 1D input @p x
 is multiplied by the weight matrix @p weights. If @p x is two-dimensional,

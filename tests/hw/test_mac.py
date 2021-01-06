@@ -10,7 +10,7 @@ class TestHXMAC(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware()
+        hxtorch.init_hardware_minimal()
 
     @classmethod
     def tearDownClass(cls):
