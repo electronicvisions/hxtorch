@@ -5,10 +5,12 @@ from typing import ClassVar, Dict
 import unittest
 import torch
 import hxtorch
+from hxtorch import logger
 
 from hxtorch_shared_test_tools import rand_full
 
-hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
+logger.default_config(level=logger.LogLevel.INFO)
+logger.set_loglevel(logger.get("grenade"), logger.LogLevel.WARN)
 
 
 class ConvInput(namedtuple('ConvInput', ["input", "weight", "bias", "stride"],
@@ -69,7 +71,7 @@ class TestConv(ABC, unittest.TestCase):
                         if name != "bias":
                             grad_torch *= gain
                         self.assertTrue(
-                            torch.allclose(grad, grad_torch, rtol=.1),
+                            torch.allclose(grad, grad_torch, rtol=.2),
                             f"{name.capitalize()} gradient does not match:\n"
                             f"{grad}\n!=\n{grad_torch}")
 
@@ -83,25 +85,25 @@ class TestConv1d(TestConv):
 
     test_inputs = {
         "batch1_outchannels1_inchannels1_kernel_larger_stride":
-        ConvInput(rand_full((3, 1, 30), 20.), rand_full((1, 1, 5), 50.),
+        ConvInput(rand_full((3, 1, 30), 25.), rand_full((1, 1, 5), 50.),
                   stride=7),
         "batch2_outchannels1_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30), 20.), rand_full((1, 3, 5), 50.),
+        ConvInput(rand_full((2, 3, 30), 10.), rand_full((1, 3, 5), 50.),
                   stride=7),
         "batch2_outchannels4_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
                   stride=7),
         "batch1_outchannels1_inchannels1_kernel_smaller_stride":
-        ConvInput(rand_full((3, 1, 30), 20.), rand_full((1, 1, 5), 50.),
+        ConvInput(rand_full((3, 1, 30), 25.), rand_full((1, 1, 5), 50.),
                   stride=4),
         "batch2_outchannels1_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30), 20.), rand_full((1, 3, 5), 50.),
+        ConvInput(rand_full((2, 3, 30), 10.), rand_full((1, 3, 5), 50.),
                   stride=4),
         "batch2_outchannels4_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
                   stride=4),
         "batch2_outchannels4_inchannels3_bias":
-        ConvInput(rand_full((2, 3, 30), 20.), rand_full((4, 3, 5), 50.),
+        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
                   bias=torch.full((4,), 0.).requires_grad_(), stride=4),
     }
 
@@ -110,7 +112,7 @@ class TestConv1dHX(TestConv1d):
     """
     Tests the conv1d operation on HX.
     """
-    conv = partial(hxtorch.conv1d, num_sends=5, wait_between_events=10)
+    conv = hxtorch.conv1d
 
     @classmethod
     def setUpClass(cls):
@@ -125,7 +127,7 @@ class TestConv1dHXmock(TestConv1d):
     """
     Tests the mocked conv1d operation.
     """
-    conv = partial(hxtorch.conv1d, num_sends=5, mock=True)
+    conv = partial(hxtorch.conv1d, mock=True)
 
 
 class TestConv2d(TestConv):
@@ -137,25 +139,25 @@ class TestConv2d(TestConv):
 
     test_inputs = {
         "batch1_outchannels1_inchannels1_kernel_larger_stride":
-        ConvInput(rand_full((1, 1, 30, 60), 20), rand_full((1, 1, 5, 10), 20),
+        ConvInput(rand_full((1, 1, 30, 60), 25.), rand_full((1, 1, 5, 10), 20),
                   stride=(7, 14)),
         "batch2_outchannels1_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((1, 3, 5, 10), 20),
+        ConvInput(rand_full((2, 3, 30, 60), 10.), rand_full((1, 3, 5, 10), 20),
                   stride=(7, 14)),
         "batch2_outchannels4_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+        ConvInput(rand_full((2, 3, 30, 60), 10.), rand_full((4, 3, 5, 10), 20),
                   stride=(7, 14)),
         "batch1_outchannels1_inchannels1_kernel_smaller_stride":
-        ConvInput(rand_full((1, 1, 30, 60), 20), rand_full((1, 1, 5, 10), 20),
+        ConvInput(rand_full((1, 1, 30, 60), 25.), rand_full((1, 1, 5, 10), 20),
                   stride=(4, 8)),
         "batch2_outchannels1_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((1, 3, 5, 10), 20),
+        ConvInput(rand_full((2, 3, 30, 60), 10.), rand_full((1, 3, 5, 10), 20),
                   stride=(4, 8)),
         "batch2_outchannels4_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+        ConvInput(rand_full((2, 3, 30, 60), 10.), rand_full((4, 3, 5, 10), 20),
                   stride=(4, 8)),
         "batch2_outchannels4_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30, 60), 20), rand_full((4, 3, 5, 10), 20),
+        ConvInput(rand_full((2, 3, 30, 60), 10.), rand_full((4, 3, 5, 10), 20),
                   bias=torch.full((4,), 0.).requires_grad_(), stride=(4, 8))
     }
 
@@ -164,7 +166,7 @@ class TestConv2dHX(TestConv2d):
     """
     Tests the conv2d operation on HX.
     """
-    conv = partial(hxtorch.conv2d, num_sends=1, wait_between_events=10)
+    conv = hxtorch.conv2d
 
     @classmethod
     def setUpClass(cls):
@@ -179,7 +181,7 @@ class TestConv2dHXmock(TestConv2d):
     """
     Tests the mocked conv2d operation.
     """
-    conv = partial(hxtorch.conv2d, num_sends=1, mock=True)
+    conv = partial(hxtorch.conv2d, mock=True)
 
 
 del TestConv  # remove abstract base class from tests

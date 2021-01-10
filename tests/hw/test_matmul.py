@@ -4,10 +4,12 @@ from typing import ClassVar
 import unittest
 import torch
 import hxtorch
+from hxtorch import logger
 
 from hxtorch_shared_test_tools import rand_full
 
-hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
+logger.default_config(level=logger.LogLevel.INFO)
+logger.set_loglevel(logger.get("grenade"), logger.LogLevel.WARN)
 
 
 class MatmulInput(namedtuple('MatmulInput', ["input", "other"])):
@@ -37,40 +39,40 @@ class TestMatmulPyTorch(unittest.TestCase):
 
         test_inputs = {
             "1-d x 1-d":
-            MatmulInput(rand_full((128,), 20.), rand_full((128,), 25.)),
+            MatmulInput(rand_full((128,), 12.), rand_full((128,), 15.)),
             "1-d x 2-d":
-            MatmulInput(rand_full((128,), 20.), rand_full((128, 5), 25.)),
+            MatmulInput(rand_full((128,), 12.), rand_full((128, 5), 15.)),
             # TODO: implement > 2D weights
             # "1-d x 3-d":
-            # MatmulInput(rand_full((128,), 20.), rand_full((2, 128, 5), 25.)),
+            # MatmulInput(rand_full((128,), 12.), rand_full((2, 128, 5), 15.)),
             # "1-d x 4-d":
-            # MatmulInput(rand_full((128,), 20.), rand_full((4, 2, 128, 5), 25.)),
+            # MatmulInput(rand_full((128,), 12.), rand_full((4, 2, 128, 5), 15.)),
             "2-d x 1-d":
-            MatmulInput(rand_full((3, 128), 20.), rand_full((128,), 25.)),
+            MatmulInput(rand_full((3, 128), 12.), rand_full((128,), 15.)),
             "2-d x 2-d":
-            MatmulInput(rand_full((3, 128), 20.), rand_full((128, 5), 25.)),
+            MatmulInput(rand_full((3, 128), 12.), rand_full((128, 5), 15.)),
             # "2-d x 3-d":
-            # MatmulInput(rand_full((3, 128), 20.), rand_full((2, 128, 5), 25.)),
+            # MatmulInput(rand_full((3, 128), 12.), rand_full((2, 128, 5), 15.)),
             # "2-d x 4-d":
-            # MatmulInput(rand_full((3, 128), 20.), rand_full((4, 2, 128, 5), 25.)),
+            # MatmulInput(rand_full((3, 128), 12.), rand_full((4, 2, 128, 5), 15.)),
             "3-d x 1-d":
-            MatmulInput(rand_full((2, 3, 128), 20.), rand_full((128,), 25.)),
+            MatmulInput(rand_full((2, 3, 128), 12.), rand_full((128,), 15.)),
             "3-d x 2-d":
-            MatmulInput(rand_full((2, 3, 128), 20.), rand_full((128, 5), 25.)),
+            MatmulInput(rand_full((2, 3, 128), 12.), rand_full((128, 5), 15.)),
             # TODO: implement batched mode
             # "3-d x 3-d":
-            # MatmulInput(rand_full((2, 3, 128), 20.), rand_full((2, 128, 5), 25.)),
+            # MatmulInput(rand_full((2, 3, 128), 12.), rand_full((2, 128, 5), 15.)),
             # "3-d x 4-d":
-            # MatmulInput(rand_full((2, 3, 128), 20.), rand_full((4, 2, 128, 5), 25.)),
+            # MatmulInput(rand_full((2, 3, 128), 12.), rand_full((4, 2, 128, 5), 15.)),
             "2-d x 2-d non-contiguous input":
             MatmulInput(
-                rand_full((128, 3), 20.).data.t().requires_grad_(),
-                rand_full((128, 5), 25.)
+                rand_full((128, 3), 12.).data.t().requires_grad_(),
+                rand_full((128, 5), 15.)
             ),
             "2-d x 2-d non-contiguous other":
             MatmulInput(
-                rand_full((3, 128), 20.),
-                rand_full((5, 128), 25.).data.t().requires_grad_()
+                rand_full((3, 128), 12.),
+                rand_full((5, 128), 15.).data.t().requires_grad_()
             )
         }
 
@@ -98,11 +100,10 @@ class TestMatmulPyTorch(unittest.TestCase):
                             f"{name.capitalize()} gradient does not match:\n"
                             f"{grad}\n!=\n{grad_torch}")
 
-    @unittest.skip("Noise is currently higher than expected")
     def test_noise_and_gain(self):
         log = hxtorch.logger.get(self.__class__.__name__)
-        data_in = torch.full((100, 128), 20., dtype=torch.float)
-        weights_in = torch.full((128, 256), 25., dtype=torch.float)
+        data_in = torch.full((100, 128), 12., dtype=torch.float)
+        weights_in = torch.full((128, 256), 15., dtype=torch.float)
 
         result = self.matmul(data_in, weights_in)
         log.info(f"Mean output: {result.mean():.1f}")
@@ -111,7 +112,7 @@ class TestMatmulPyTorch(unittest.TestCase):
         # check gain
         gain = torch.median((result / result_torch).view(-1)).item()
         log.info(f"Gain: {gain:.5f} (median)")
-        self.assertLess(abs(gain - self.gain), .5 * self.gain)
+        self.assertLess(abs(gain - self.gain), .25 * self.gain)
 
         # check noise
         noise = result - result_torch * gain
@@ -119,7 +120,7 @@ class TestMatmulPyTorch(unittest.TestCase):
         noise_fixed_std = noise.mean(dim=0).std() # this removes stat. noise
         log.info(f"Noise: ±{noise_std:.4f} (stat.) "
                  f"/ {noise_fixed_std / result.mean() * 100:.2f}% (fixed)")
-        self.assertLessEqual(noise_std - self.noise_std, 1. * self.noise_std,
+        self.assertLessEqual(noise_std, 2. * self.noise_std,
                              "Statistical noise on neurons is higher than expected.")
 
 
@@ -129,7 +130,7 @@ class TestMatmulHX(TestMatmulPyTorch):
     """
     matmul: ClassVar = partial(hxtorch.matmul, wait_between_events=10)
     noise_std: ClassVar[float] = 2.
-    gain: ClassVar[float] = 0.0012
+    gain: ClassVar[float] = 0.002
 
     @classmethod
     def setUpClass(cls):
@@ -169,7 +170,7 @@ class TestMatmulHXmock(TestMatmulPyTorch):
     """
     matmul: ClassVar = partial(hxtorch.matmul, mock=True)
     noise_std: ClassVar[float] = 2.
-    gain: ClassVar[float] = 0.0012
+    gain: ClassVar[float] = 0.002
 
     @classmethod
     def setUpClass(cls):
