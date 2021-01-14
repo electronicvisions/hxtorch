@@ -1,27 +1,46 @@
 @Library("jenlib") _
 
-boolean executeHwTests = [
-               !isTriggeredByGerrit(),
-               env.GERRIT_PROJECT == "hxtorch",
-               env.GERRIT_PROJECT == "grenade",
-].any({ it })
+try {
+	boolean executeHwTests = [
+		       !isTriggeredByGerrit(),
+		       env.GERRIT_PROJECT == "hxtorch",
+		       env.GERRIT_PROJECT == "grenade",
+	].any({ it })
 
-Map<String, Object> pipelineOptions = [
-		projects: ["hxtorch"],
-		container: [app: "dls-core"],
-		moduleOptions: [modules: ["ppu-toolchain"]],
-		notificationChannel: "#dls-software"
-]
-
-if (executeHwTests) {
-	pipelineOptions << [
-			testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0, reservation: "pdauer_33"],
-			preTestHook: { configureHxCubeBitfile() },
-			testOptions: "--test-execall -j1",
-			postTestHook: { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
+	Map<String, Object> pipelineOptions = [
+			projects: ["hxtorch"],
+			container: [app: "dls-core"],
+			moduleOptions: [modules: ["ppu-toolchain"]],
+			notificationChannel: "#dls-software"
 	]
+
+	if (executeHwTests) {
+		pipelineOptions << [
+				testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0, reservation: "pdauer_33"],
+				preTestHook: { configureHxCubeBitfile() },
+				testOptions: "--test-execall -j1",
+				postTestHook: { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
+		]
+	}
+
+	boolean deploy = env.GERRIT_EVENT_TYPE == "change-merged"
+
+	withCcache() {
+		wafDefaultPipeline(pipelineOptions)
+	}
+
+	conditionalStage(name: "Module Deployment", skip: !deploy) {
+		runOnSlave(label: "frontend") {
+			inSingularity(app: "dls") {
+				deployModule([name: "hxtorch", source: "bin/ lib/ repos_log.txt"])
+			}
+		}
+	}
+} catch (Throwable t) {
+	notifyFailure(mattermostChannel: "#dls-software")
+	throw t
 }
 
-withCcache() {
-    wafDefaultPipeline(pipelineOptions)
+if (currentBuild.currentResult != "SUCCESS") {
+	notifyFailure(mattermostChannel: "#dls-software")
 }
