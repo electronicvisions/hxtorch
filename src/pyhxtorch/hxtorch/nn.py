@@ -6,6 +6,7 @@ BrainScaleS-2 accelerator. Additional digital operations are performed
 in the SIMD processors of BSS-2.
 """
 from abc import abstractmethod
+from inspect import signature
 import math
 from typing import Callable, Tuple, Union, Optional
 import torch
@@ -58,11 +59,15 @@ class Layer:
         self.out: Optional[torch.Tensor] = None
 
     def __repr__(self):
-        repr_str = f"{self.__class__.__name__}("
-        if hasattr(self, "extra_repr"):
-            repr_str += f"{self.extra_repr()}, "
-        repr_str += f"mock={self.mock})"
-        return repr_str
+        repr_str = ""
+        # get params from signature and include only non-default values:
+        for name, param in signature(type(self)).parameters.items():
+            value = getattr(self, name)
+            if isinstance(value, torch.Tensor):
+                value = len(value) > 0
+            if value is not param.default:
+                repr_str += f"{name}={value}, "
+        return f"{self.__class__.__name__}({repr_str[:-2]})"
 
 
 class MACLayer(Layer):
@@ -94,16 +99,6 @@ class MACLayer(Layer):
         self.wait_between_events = wait_between_events
         self.input_transform = input_transform
         self.weight_transform = weight_transform
-
-    def __repr__(self):
-        repr_str = f"{Layer.__repr__(self)[:-1]}, "
-        if self.input_transform:
-            repr_str += f"input_transform={self.input_transform}, "
-        if self.weight_transform:
-            repr_str += f"weight_transform={self.weight_transform}, "
-        repr_str += f"num_sends={self.num_sends}, "
-        repr_str += f"wait_between_events={self.wait_between_events})"
-        return repr_str
 
     def reset_parameters(self, weight_mean: float = 0.,
                          relu_shift: int = 1) -> None:
@@ -358,9 +353,6 @@ class ReLU(Layer, torch.nn.ReLU):
         self.out = _hxtorch.relu(input, mock=self.mock)
         return self.out
 
-    def extra_repr(self) -> str:
-        return f"mock={self.mock}"
-
 
 class ConvertingReLU(ReLU):
     """
@@ -380,6 +372,3 @@ class ConvertingReLU(ReLU):
         self.out = _hxtorch.converting_relu(
             input, shift=self.shift, mock=self.mock)
         return self.out
-
-    def extra_repr(self) -> str:
-        return f"shift={self.shift}, {super().extra_repr()}"

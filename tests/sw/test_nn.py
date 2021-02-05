@@ -77,7 +77,8 @@ class TestNN(unittest.TestCase):
         torch_layer = torch.nn.Conv1d(
             in_channels=1, out_channels=2, kernel_size=3, stride=2, padding=1)
         hxtorch_layer = hxnn.Conv1d(
-            in_channels=1, out_channels=2, kernel_size=3, stride=2, padding=1)
+            in_channels=1, out_channels=2, kernel_size=3, stride=2, padding=1,
+            wait_between_events=4)
         hxtorch_layer._conv = Mock(side_effect=conv1d_side_effect)
         x_in = torch.arange(-8., 11.).view(1, 1, -1)
         x_out = torch_layer(x_in)
@@ -88,7 +89,7 @@ class TestNN(unittest.TestCase):
 
         # repr
         self.assertRegex(repr(hxtorch_layer),
-                         r'Conv1d\(.*, num_sends=39, wait_between_events=5.*')
+                         r'Conv1d\(.*, num_sends=39, wait_between_events=4.*')
 
     def test_conv2d(self):
         """
