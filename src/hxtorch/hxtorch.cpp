@@ -94,8 +94,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
 	pybind11::class_<hxtorch::MockParameter>(m, "MockParameter")
-	    .def(pybind11::init<>())
-	    .def(pybind11::init<float, float>(), pybind11::arg("noise_std"), pybind11::arg("gain"))
+	    .def(
+	        pybind11::init<double, double>(), pybind11::arg("noise_std") = 2,
+	        pybind11::arg("gain") = 0.002)
 	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
 	    .def_readwrite("gain", &hxtorch::MockParameter::gain);
 
