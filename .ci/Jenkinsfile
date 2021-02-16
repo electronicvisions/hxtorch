@@ -2,28 +2,38 @@
 
 try {
 	boolean executeHwTests = [
-		       !isTriggeredByGerrit(),
-		       env.GERRIT_PROJECT == "hxtorch",
-		       env.GERRIT_PROJECT == "grenade",
+			!isTriggeredByGerrit(),
+			env.GERRIT_PROJECT == "hxtorch",
+			env.GERRIT_PROJECT == "grenade",
 	].any({ it })
 
-	Map<String, Object> pipelineOptions = [
-			projects: ["hxtorch"],
-			container: [app: "dls-core"],
-			moduleOptions: [modules: ["ppu-toolchain"]],
-			notificationChannel: "#dls-software"
+	Map<String, Object> commonPipelineOptions = [
+			projects           : ["hxtorch"],
+			moduleOptions      : [modules: ["ppu-toolchain"]],
+			notificationChannel: "#jenkins-trashbin"  // success is checked globally
 	]
 
+	Map<String, Object> pipelineDeploymentOptions = [
+			container              : [app: "dls-core"],
+			configureInstallOptions: "--build-profile=release_with_debug"
+	]  << commonPipelineOptions
+
+	Map<String, Object> pipelineNoDeploymentOptions = [
+			container: [app: "dls"],
+	] << commonPipelineOptions
+
 	if (executeHwTests) {
-		pipelineOptions << [
+		commonPipelineOptions << [
 				testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0],
-				preTestHook: { configureHxCubeBitfile() },
-				testOptions: "--test-execall -j1",
-				postTestHook: { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
+				preTestHook      : { configureHxCubeBitfile() },
+				testOptions      : "--test-execall -j1",
+				postTestHook     : { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
 		]
 	}
 
 	boolean deploy = env.GERRIT_EVENT_TYPE == "change-merged"
+
+	Map<String, Object> pipelineOptions = deploy ? pipelineDeploymentOptions : pipelineNoDeploymentOptions
 
 	withCcache() {
 		wafDefaultPipeline(pipelineOptions)
