@@ -19,7 +19,8 @@ try {
 	]  << commonPipelineOptions
 
 	Map<String, Object> pipelineNoDeploymentOptions = [
-			container: [app: "dls"],
+			container              : [app: "dls"],
+			configureInstallOptions: "--build-profile=ci"
 	] << commonPipelineOptions
 
 	if (executeHwTests) {
