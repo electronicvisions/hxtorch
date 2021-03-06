@@ -149,6 +149,7 @@ class Linear(MACLayer, torch.nn.Linear):
                  bias: bool = True, num_sends: Optional[Integral] = None,
                  wait_between_events: Integral = defaults.wait_between_events,
                  mock: bool = False, *,
+                 avg: Integral = 1,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -164,6 +165,11 @@ class Linear(MACLayer, torch.nn.Linear):
             inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
+        :param avg: Number of neurons to average over. This option is targeted
+            at reducing statistical noise.
+            Beware: We average over different fixed-pattern instances, but they
+            are all configured at the same weight, so they are not trained
+            individually. This could potentially have negative implications.
         :param input_transform: Function that receives the input and returns
             a tensor to be used as input to the chip.
         :param weight_transform: Function that receives the weight and returns
@@ -176,6 +182,7 @@ class Linear(MACLayer, torch.nn.Linear):
             input_transform=input_transform, weight_transform=weight_transform)
         torch.nn.Linear.__init__(self, in_features, out_features, bias)
         self._matmul = _hxtorch.matmul
+        self.avg = avg
 
     def forward(self, input):  # pylint: disable=redefined-builtin
         weight, bias = self.weight, self.bias
@@ -183,10 +190,14 @@ class Linear(MACLayer, torch.nn.Linear):
             weight = self.weight_transform(weight)
         if self.input_transform is not None:
             input = self.input_transform(input)
-        output = self._matmul(input, weight.t(),
+        output = self._matmul(input,
+                              weight.t().repeat_interleave(self.avg, -1),
                               num_sends=self.num_sends,
                               wait_between_events=self.wait_between_events,
                               mock=self.mock)
+        if self.avg > 1:
+            output = torch.nn.functional.avg_pool1d(
+                output.unsqueeze(-2), self.avg).squeeze(-2)
         if bias is not None:
             output = _hxtorch.add(output, bias, mock=self.mock)
         return output
