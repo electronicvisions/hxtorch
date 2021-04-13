@@ -72,7 +72,8 @@ class TestConv(ABC, unittest.TestCase):
                         self.assertTrue(
                             torch.allclose(grad, grad_torch, rtol=.001),
                             f"{name.capitalize()} gradient does not match:\n"
-                            f"{grad}\n!=\n{grad_torch}")
+                            f"{grad}\n!=\n{grad_torch}"
+                            f"\ndiff:\n{grad - grad_torch}")
 
 
 class TestConv1d(TestConv):

@@ -7,9 +7,10 @@ namespace F = torch::nn::functional;
 
 namespace hxtorch::detail {
 
-size_t conv1d_num_outputs(size_t x_size, size_t weights_size, size_t stride)
+int64_t conv1d_output_size(
+    int64_t input_size, int64_t kernel_size, int64_t stride, int64_t dilation)
 {
-	return ((x_size - (weights_size - 1) - 1) / stride) + 1;
+	return ((input_size - dilation * (kernel_size - 1) - 1) / stride) + 1;
 }
 
 torch::Tensor expanded_conv1d(
@@ -17,6 +18,7 @@ torch::Tensor expanded_conv1d(
     torch::Tensor const& weight,
     c10::optional<torch::Tensor> const& bias,
     int64_t const stride,
+    int64_t const dilation,
     int64_t const num_expansions,
     int64_t const num_sends,
     int64_t const wait_between_events,
@@ -53,12 +55,13 @@ torch::Tensor expanded_conv1d(
 		input_new = input;
 	}
 
-	auto out =
-	    conv(input_new, weight_new, bias_new, {stride_new}, num_sends, wait_between_events, mock)
-	        .permute({0, 2, 1})
-	        .reshape({input_sizes.at(0), -1, weight_sizes.at(0), num_expansions})
-	        .permute({0, 2, 1, 3})
-	        .reshape({input_sizes.at(0), weight_sizes.at(0), -1});
+	auto out = conv(
+	               input_new, weight_new, bias_new, {stride_new}, {dilation}, num_sends,
+	               wait_between_events, mock)
+	               .permute({0, 2, 1})
+	               .reshape({input_sizes.at(0), -1, weight_sizes.at(0), num_expansions})
+	               .permute({0, 2, 1, 3})
+	               .reshape({input_sizes.at(0), weight_sizes.at(0), -1});
 	return out.index({"...", torch::indexing::Slice(torch::indexing::None, l_out)}).contiguous();
 }
 

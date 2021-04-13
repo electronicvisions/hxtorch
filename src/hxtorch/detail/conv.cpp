@@ -14,208 +14,22 @@
 
 namespace hxtorch::detail {
 
-std::vector<int64_t> conv_num_outputs(
-    std::vector<int64_t> input_size, std::vector<int64_t> kernel_size, std::vector<int64_t> stride)
-{
-	if (input_size.size() != kernel_size.size() || input_size.size() != stride.size()) {
-		throw std::runtime_error("conv_num_outputs: sizes of inputs don't match.");
-	}
-	auto const dim = input_size.size();
-	std::vector<int64_t> num_outputs(dim);
-	for (size_t i = 0; i < dim; ++i) {
-		num_outputs.at(i) = conv1d_num_outputs(input_size.at(i), kernel_size.at(i), stride.at(i));
-	}
-	return num_outputs;
-}
-
-torch::Tensor conv_fold_input(
-    torch::Tensor const& input, std::vector<int64_t> kernel_size, std::vector<int64_t> stride)
-{
-	if (kernel_size.size() != stride.size()) {
-		throw std::runtime_error("kernel_size and stride shape don't match.");
-	}
-	if (input.dim() != static_cast<int64_t>(2 /* minibatch + in_channels */ + kernel_size.size())) {
-		throw std::runtime_error("conv_fold_input input dimension does not match.");
-	}
-
-	auto const kernel_dim = kernel_size.size();
-
-	auto const input_tensor_sizes = input.sizes().vec();
-	auto const input_sizes =
-	    std::vector<int64_t>(input_tensor_sizes.end() - kernel_dim, input_tensor_sizes.end());
-
-	auto const num_cols = conv_num_outputs(input_sizes, kernel_size, stride);
-
-	std::vector<int64_t> kernel_dims(kernel_dim);
-	for (size_t i = 0; i < kernel_dim; ++i) {
-		kernel_dims.at(i) = input.dim() - (kernel_dim - i);
-	}
-
-	torch::Tensor input_folded = input.contiguous().narrow(kernel_dims.at(0), 0, kernel_size.at(0));
-	for (size_t i = 1; i < kernel_dim; ++i) {
-		input_folded = input_folded.narrow(kernel_dims.at(i), 0, kernel_size.at(i));
-	}
-	auto input_folded_sizes = input_folded.sizes().vec();
-	input_folded_sizes.insert(input_folded_sizes.end() - kernel_dim - 1 /* in_channels */, 1);
-	input_folded = input_folded.reshape(input_folded_sizes);
-
-	auto it = MultidimIterator(num_cols);
-	++it; // first location already present
-	for (; it != it.end(); ++it) {
-		auto const location = *it;
-		std::vector<int64_t> offset(kernel_dim);
-		for (size_t i = 0; i < kernel_dim; ++i) {
-			offset.at(i) = location.at(i) * stride.at(i);
-		}
-		auto const local_input_folded =
-		    multi_narrow(input, kernel_dims, offset, kernel_size).reshape(input_folded_sizes);
-		input_folded =
-		    torch::cat({input_folded, local_input_folded}, input_folded.dim() - kernel_dim - 2);
-	}
-	auto input_folded_sizes_flat = input_folded.sizes().vec();
-	int64_t kernel_size_flat = 1;
-	for (auto const k : kernel_size) {
-		kernel_size_flat *= k;
-	}
-	for (size_t i = 0; i < kernel_dim + 1 /* in_channels */; ++i) {
-		input_folded_sizes_flat.pop_back();
-	}
-	input_folded_sizes_flat.push_back(
-	    kernel_size_flat * input.sizes().vec().at(1) /* in_channels */);
-	auto const input_folded_flat = input_folded.reshape(input_folded_sizes_flat);
-	return input_folded_flat;
-}
-
-torch::Tensor conv_unfold_input(
-    torch::Tensor const& input,
-    size_t in_channels,
+std::vector<int64_t> conv_output_size(
+    std::vector<int64_t> input_size,
     std::vector<int64_t> kernel_size,
-    std::vector<int64_t> num_cols,
-    std::vector<int64_t> stride)
+    std::vector<int64_t> stride,
+    std::vector<int64_t> dilation)
 {
-	if (kernel_size.size() != num_cols.size() || kernel_size.size() != stride.size()) {
-		throw std::runtime_error("kernel_size, num_cols or stride shape don't match.");
+	auto const dim{input_size.size()};
+	if (kernel_size.size() != dim || stride.size() != dim || dilation.size() != dim) {
+		throw std::runtime_error("conv_output_size: sizes of arguments don't match.");
 	}
-	if (input.dim() != 3 /* minibatch + flattening + 1D-input */) {
-		throw std::runtime_error("conv_unfold_input input dimension does not match.");
+	std::vector<int64_t> output_size(dim);
+	for (size_t i = 0; i < dim; ++i) {
+		output_size.at(i) =
+		    conv1d_output_size(input_size.at(i), kernel_size.at(i), stride.at(i), dilation.at(i));
 	}
-	auto const kernel_dim = kernel_size.size();
-
-	auto input_kernel_unflattened_sizes = input.sizes().vec();
-	input_kernel_unflattened_sizes.pop_back();
-	input_kernel_unflattened_sizes.push_back(in_channels);
-	for (auto const k : kernel_size) {
-		input_kernel_unflattened_sizes.push_back(k);
-	}
-	auto const input_kernel_unflattened = input.reshape(input_kernel_unflattened_sizes);
-
-	std::vector<int64_t> input_size(kernel_dim);
-	for (size_t i = 0; i < kernel_dim; ++i) {
-		input_size.at(i) = (num_cols.at(i) - 1) * stride.at(i) + kernel_size.at(i);
-	}
-
-	auto input_sizes = input.sizes().vec();
-	input_sizes.pop_back();
-	input_sizes.pop_back();
-	input_sizes.push_back(in_channels);
-	for (size_t i = 0; i < kernel_dim; ++i) {
-		input_sizes.push_back(input_size.at(i));
-	}
-
-	torch::Tensor input_unfolded = torch::zeros(input_sizes, input.dtype());
-
-	std::vector<int64_t> dims;
-	std::vector<int64_t> lengths;
-	for (size_t i = 0; i < kernel_dim; ++i) {
-		dims.push_back(input_unfolded.dim() - (kernel_dim - i));
-		lengths.push_back(kernel_size.at(i));
-	}
-	size_t location_linear = 0;
-	for (auto it = MultidimIterator(num_cols); it != it.end(); ++it) {
-		auto location = *it;
-		auto const input_view = input_kernel_unflattened.narrow(1, location_linear, 1).squeeze(1);
-		std::vector<int64_t> offsets;
-		for (size_t i = 0; i < kernel_dim; ++i) {
-			offsets.push_back(location.at(i) * stride.at(i));
-		}
-		multi_narrow(input_unfolded, dims, offsets, lengths) = input_view;
-		location_linear++;
-	}
-	return input_unfolded;
-}
-
-torch::Tensor conv_fold_kernel(torch::Tensor const& kernel)
-{
-	if (kernel.dim() < 3) {
-		throw std::runtime_error("conv_fold_kernel expects kernel of shape (out_channels, "
-		                         "in_channels, (single_kernel)..)");
-	}
-	return kernel.reshape({kernel.sizes().vec().at(0), -1}).t();
-}
-
-torch::Tensor conv_unfold_kernel(
-    torch::Tensor const& kernel, std::vector<int64_t> kernel_size, int64_t in_channels)
-{
-	if (kernel.dim() != 2) {
-		throw std::runtime_error("conv_unfold_kernel expects kernel of 2D shape.");
-	}
-	auto const out_channels = kernel.sizes().vec().at(1);
-	std::vector<int64_t> kernel_shape;
-	kernel_shape.push_back(out_channels);
-	kernel_shape.push_back(in_channels);
-	std::copy(kernel_size.begin(), kernel_size.end(), std::back_inserter(kernel_shape));
-	return kernel.t().reshape(kernel_shape);
-}
-
-torch::Tensor conv_permute_output(torch::Tensor const& value)
-{
-	std::vector<int64_t> dims(value.dim());
-	dims.at(0) = 0;
-	dims.at(1) = dims.size() - 1;
-	for (size_t i = 2; i < dims.size(); ++i) {
-		dims.at(i) = i - 1;
-	}
-	return value.permute(dims);
-}
-
-torch::Tensor conv_unpermute_output(torch::Tensor const& value)
-{
-	std::vector<int64_t> dims(value.dim());
-	dims.at(0) = 0;
-	for (size_t i = 1; i < dims.size() - 1; ++i) {
-		dims.at(i) = i + 1;
-	}
-	dims.back() = 1;
-	return value.permute(dims);
-}
-
-torch::Tensor conv_unfold_output(torch::Tensor const& value, std::vector<int64_t> num_outputs)
-{
-	if (value.dim() != 3 /* minibatch + out_channels + folded */) {
-		throw std::runtime_error("conv_unfold_output: provided tensor's dimension is not "
-		                         "(minibatch, out_channels, folded).");
-	}
-	auto const kernel_dim = num_outputs.size();
-	auto sizes = value.sizes().vec();
-	sizes.resize(sizes.size() - 1 + kernel_dim);
-	std::copy(num_outputs.begin(), num_outputs.end(), sizes.end() - kernel_dim);
-	return value.reshape(sizes);
-}
-
-torch::Tensor conv_fold_output(torch::Tensor const& value)
-{
-	auto const kernel_dim = value.dim() - 2 /* minibatch + out_channels */;
-	if (kernel_dim < 1) {
-		throw std::runtime_error("conv_fold_output: provided tensor's dimension is too low.");
-	}
-	auto sizes = value.sizes().vec();
-	int64_t output_linear_size = 1;
-	for (int64_t i = 0; i < kernel_dim; ++i) {
-		output_linear_size *= sizes.at(sizes.size() - i - 1);
-	}
-	sizes.resize(sizes.size() - kernel_dim + 1);
-	sizes.back() = output_linear_size;
-	return value.reshape(sizes);
+	return output_size;
 }
 
 torch::Tensor conv(
@@ -223,10 +37,12 @@ torch::Tensor conv(
     torch::Tensor const& weight,
     c10::optional<torch::Tensor> const& bias,
     std::vector<int64_t> const& stride,
+    std::vector<int64_t> const& dilation,
     int64_t const num_sends,
     int64_t const wait_between_events,
     bool const mock)
 {
+	int64_t const groups(1); // preparation for groups
 	int64_t const dim = stride.size();
 	if (weight.dim() != 2 + dim) {
 		throw std::runtime_error(
@@ -236,26 +52,96 @@ torch::Tensor conv(
 		throw std::runtime_error(
 		    "conv expects a input shape of (minibatches, in_channels, **single_input_shape).");
 	}
-	if (weight.sizes().vec().at(1) != input.sizes().vec().at(1)) {
+	if (groups < 1) {
+		throw std::runtime_error("conv expects groups >= 1.");
+	}
+	// get dimensions from input
+	int64_t const batch_size{input.sizes().at(0)};
+	int64_t const in_channels{input.sizes().at(1)};
+	std::vector<int64_t> const input_size(input.sizes().begin() + 2, input.sizes().end());
+	// get dimensions from weight kernel
+	int64_t const out_channels{weight.sizes().at(0)};
+	int64_t const out_channels_group{out_channels / groups}; // per group
+	int64_t const in_channels_group{weight.sizes().at(1)};   // per group
+	std::vector<int64_t> const kernel_size(weight.sizes().begin() + 2, weight.sizes().end());
+
+	if (in_channels % groups != 0) {
+		throw std::runtime_error(
+		    "Input channels: " + std::to_string(in_channels) +
+		    ". Groups: " + std::to_string(groups) +
+		    ". The number of input channels is not divisible by number of groups");
+	}
+	if (out_channels % groups != 0) {
+		throw std::runtime_error(
+		    "Output channels: " + std::to_string(out_channels) +
+		    ". Groups: " + std::to_string(groups) +
+		    ". The number of output channels is not divisible by number of groups");
+	}
+	if (in_channels != in_channels_group * groups) {
 		throw std::runtime_error("conv expects matching in_channels in input and weight.");
 	}
 
-	auto const weight_sizes = weight.sizes().vec();
-	std::vector<int64_t> kernel_size(weight_sizes.begin() + 2, weight_sizes.end());
-	auto const input_folded = hxtorch::detail::conv_fold_input(input, kernel_size, stride);
-	auto const weight_folded = hxtorch::detail::conv_fold_kernel(weight);
+	// this also checks for correct dimensions of its arguments
+	std::vector<int64_t> const output_size{
+	    hxtorch::detail::conv_output_size(input_size, kernel_size, stride, dilation)};
 
-	auto result = matmul(input_folded, weight_folded, num_sends, wait_between_events, mock);
-	result = hxtorch::detail::conv_permute_output(result);
-	auto input_sizes = input.sizes().vec();
-	std::vector<int64_t> input_size(dim);
-	std::copy(input_sizes.begin() + 2, input_sizes.end(), input_size.begin());
-	result = hxtorch::detail::conv_unfold_output(
-	             result, hxtorch::detail::conv_num_outputs(input_size, kernel_size, stride))
-	             .contiguous();
+	for (int64_t i{0}; i < dim; ++i) {
+		if (kernel_size.at(i) > input_size.at(i)) {
+			throw std::runtime_error(
+			    "Input size per channel: " + std::to_string(input_size.at(i)) +
+			    ". Kernel size: " + std::to_string(kernel_size.at(i)) + ". " +
+			    "Kernel size can't be greater than actual input size");
+		}
+	}
+
+	// get strides from input
+	int64_t const batch_stride{input.strides().at(0)};
+	int64_t const in_channels_stride{input.strides().at(1)};
+	std::vector<int64_t> const input_stride(input.strides().begin() + 2, input.strides().end());
+
+	// calculate new sizes for strided view on the input
+	std::vector<int64_t> input_view_sizes(2 + 2 * dim);
+	input_view_sizes.at(0) = batch_size;
+	input_view_sizes.at(dim + 1) = in_channels_group;
+	for (int64_t i{0}; i < dim; ++i) {
+		input_view_sizes.at(i + 1) = output_size.at(i);
+		input_view_sizes.at(i + dim + 2) = kernel_size.at(i);
+	}
+
+	// calculate new in-memory strides for strided view on the input
+	std::vector<int64_t> input_view_strides(input_view_sizes.size());
+	input_view_strides.at(0) = batch_stride;
+	input_view_strides.at(dim + 1) = in_channels_stride * groups;
+	for (int64_t i{0}; i < dim; ++i) {
+		// stride of the output
+		input_view_strides.at(i + 1) = input_stride.at(i) * stride.at(i);
+		// stride inside the window
+		input_view_strides.at(i + dim + 2) = input_stride.at(i) * dilation.at(i);
+	}
+
+	std::vector<torch::Tensor> results(groups);
+	for (int64_t group_id{0}; group_id < groups; ++group_id) {
+		int64_t const offset{in_channels_stride * group_id};
+		auto const input_view{input.as_strided(input_view_sizes, input_view_strides, offset)};
+		auto const weight_view{weight.narrow(0, group_id * out_channels_group, out_channels_group)};
+
+		// input channels and all dimensions of the kernel weight will be flattened into a single
+		// one dimensional kernel
+		// result has sizes: N x output_size.. x out_channels
+		auto result_group = hxtorch::matmul(
+		    input_view.flatten(dim + 1), // N x output_size.. x (in_channels * prod(kernel_size..))
+		    weight_view.flatten(1).t(),  // (in_channels * prod(kernel_size..)) x out_channels
+		    num_sends, wait_between_events, mock);
+
+		// moves out_channels dimension to get N x out_channels x output_size..
+		results.at(group_id) = result_group.unsqueeze(1).transpose(1, -1).squeeze(-1);
+	}
+	auto result = torch::cat(results, 1).contiguous();
+
 	if (bias) {
-		result = (dim == 1) ? result.add(bias.value().view({-1, 1}))
-		                    : result.add(bias.value().view({-1, 1, 1}));
+		std::vector<int64_t> bias_sizes(dim + 1, 1);
+		bias_sizes.at(0) = -1;
+		result = result.add(bias.value().view(bias_sizes));
 	}
 	return result;
 }

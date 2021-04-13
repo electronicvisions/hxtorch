@@ -22,7 +22,8 @@ torch::Tensor conv1d(
     int64_t const wait_between_events,
     bool const mock)
 {
-	return detail::conv(input, weight, bias, {stride}, num_sends, wait_between_events, mock);
+	return detail::conv(
+	    input, weight, bias, {stride}, {1} /* dilation */, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor conv1d(
@@ -34,7 +35,8 @@ torch::Tensor conv1d(
     int64_t const wait_between_events,
     bool const mock)
 {
-	return detail::conv(input, weight, bias, {stride[0]}, num_sends, wait_between_events, mock);
+	return detail::conv(
+	    input, weight, bias, {stride[0]}, {1} /* dilation */, num_sends, wait_between_events, mock);
 }
 
 torch::Tensor expanded_conv1d(
@@ -48,7 +50,8 @@ torch::Tensor expanded_conv1d(
     bool const mock)
 {
 	return detail::expanded_conv1d(
-	    input, weight, bias, stride, num_expansions, num_sends, wait_between_events, mock);
+	    input, weight, bias, stride, 1 /* dilation */, num_expansions, num_sends,
+	    wait_between_events, mock);
 }
 
 torch::Tensor expanded_conv1d(
@@ -62,7 +65,8 @@ torch::Tensor expanded_conv1d(
     bool const mock)
 {
 	return detail::expanded_conv1d(
-	    input, weight, bias, stride[0], num_expansions, num_sends, wait_between_events, mock);
+	    input, weight, bias, stride[0], 1 /* dilation */, num_expansions, num_sends,
+	    wait_between_events, mock);
 }
 
 torch::Tensor conv2d(
@@ -75,7 +79,8 @@ torch::Tensor conv2d(
     bool const mock)
 {
 	return detail::conv(
-	    input, weight, bias, {stride, stride}, num_sends, wait_between_events, mock);
+	    input, weight, bias, {stride, stride}, {1, 1} /* dilation */, num_sends,
+	    wait_between_events, mock);
 }
 
 torch::Tensor conv2d(
@@ -88,7 +93,8 @@ torch::Tensor conv2d(
     bool const mock)
 {
 	return detail::conv(
-	    input, weight, bias, {stride[0], stride[1]}, num_sends, wait_between_events, mock);
+	    input, weight, bias, {stride[0], stride[1]}, {1, 1} /* dilation */, num_sends,
+	    wait_between_events, mock);
 }
 
 } // namespace hxtorch
