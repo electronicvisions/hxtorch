@@ -3,6 +3,7 @@ import copy
 import site
 import os
 import re
+from waflib.extras.symwaf2ic import get_toplevel_path
 
 def depends(dep):
     dep('hxcomm')
@@ -15,6 +16,7 @@ def options(opt):
     opt.load('test_base')
     opt.load('python')
     opt.load('pytest')
+    opt.load('doxygen')
 
 
 def configure(cfg):
@@ -24,6 +26,7 @@ def configure(cfg):
     cfg.check_python_version()
     cfg.check_python_headers()
     cfg.load('pytest')
+    cfg.load('doxygen')
 
     cfg.check(
         compiler='cxx',
@@ -144,6 +147,32 @@ def build(bld):
         type = 'install_files',
         relative_trick=True,
     )
+
+    bld(
+        target = 'doxygen_hxtorch',
+        features = 'doxygen',
+        doxyfile = bld.root.make_node(os.path.join(get_toplevel_path(), "code-format", "doxyfile")),
+        doxy_inputs = 'include/hxtorch',
+        install_path = 'doc/hxtorch',
+        pars = {
+            "PROJECT_NAME": "\"hxtorch\"",
+            "INCLUDE_PATH": os.path.join(get_toplevel_path(), "hxtorch", "include"),
+            "OUTPUT_DIRECTORY": os.path.join(get_toplevel_path(), "build", "hxtorch", "doc")
+        },
+    )
+
+    bld(
+        target = 'doxygen_pyhxtorch',
+        features = 'doxygen',
+        doxyfile = bld.root.make_node(os.path.join(get_toplevel_path(), "code-format", "doxyfile")),
+        doxy_inputs = 'src/pyhxtorch',
+        install_path = 'doc/pyhxtorch',
+        pars = {
+            "PROJECT_NAME": "\"pyhxtorch\"",
+            "OUTPUT_DIRECTORY": os.path.join(get_toplevel_path(), "build", "pyhxtorch", "doc")
+        },
+    )
+
 
 # Create test summary (to stdout and XML file)
     bld.add_post_fun(summary)
