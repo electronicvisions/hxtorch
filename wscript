@@ -200,7 +200,8 @@ def build(bld):
         install_path = 'doc/pyhxtorch',
         pars = {
             "PROJECT_NAME": "\"pyhxtorch\"",
-            "OUTPUT_DIRECTORY": os.path.join(get_toplevel_path(), "build", "pyhxtorch", "doc")
+            "OUTPUT_DIRECTORY": os.path.join(get_toplevel_path(), "build", "pyhxtorch", "doc"),
+            "PYTHON_DOCSTRING": "NO",
         },
     )
 
