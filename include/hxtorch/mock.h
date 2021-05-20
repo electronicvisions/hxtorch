@@ -24,4 +24,14 @@ struct MockParameter
 	MockParameter(double noise_std, double gain) : noise_std(noise_std), gain(gain) {}
 };
 
+/*
+ * Returns the current mock parameters.
+ */
+MockParameter get_mock_parameter();
+
+/*
+ * Sets the mock parameters.
+ */
+void set_mock_parameter(MockParameter const& parameter);
+
 } // namespace hxtorch

@@ -30,10 +30,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "init", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init, __doc_hxtorch_init_2,
 	    pybind11::arg("calibration_path"));
-	m.def(
-	    "init", (void (*)(hxtorch::MockParameter const&)) & hxtorch::init, __doc_hxtorch_init_3,
-	    pybind11::arg("parameter"));
 	m.def("release", &hxtorch::release, __doc_hxtorch_release);
+	m.def("get_mock_parameter", &hxtorch::get_mock_parameter, __doc_hxtorch_get_mock_parameter);
+	m.def(
+	    "set_mock_parameter", &hxtorch::set_mock_parameter, __doc_hxtorch_set_mock_parameter,
+	    pybind11::arg("parameter"));
 	m.def(
 	    "mac", &hxtorch::mac, __doc_hxtorch_mac, pybind11::arg("x"), pybind11::arg("weights"),
 	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 5,
@@ -96,7 +97,16 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	        pybind11::init<double, double>(), __doc_hxtorch_MockParameter_MockParameter,
 	        pybind11::arg("noise_std") = 2, pybind11::arg("gain") = 0.002)
 	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
-	    .def_readwrite("gain", &hxtorch::MockParameter::gain);
+	    .def_readwrite("gain", &hxtorch::MockParameter::gain)
+	    .def(
+	        "__repr__",
+	        [](const hxtorch::MockParameter& p) {
+		        return "MockParameter(noise_std=" + std::to_string(p.noise_std) +
+		               ", gain=" + std::to_string(p.gain) + ")";
+	        })
+	    .def("__eq__", [](const hxtorch::MockParameter& p1, const hxtorch::MockParameter& p2) {
+		    return (p1.gain == p2.gain) && (p1.noise_std == p2.noise_std);
+	    });
 
 	pybind11::class_<hxtorch::InferenceTracer>(m, "InferenceTracer", __doc_hxtorch_InferenceTracer)
 	    .def(

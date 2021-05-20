@@ -81,6 +81,9 @@ to the input range of BrainScaleS-2.
 @param shift Amount of bits to shift before clipping
 @param mock Enable mock mode)doc";
 
+static const char* __doc_hxtorch_get_mock_parameter =
+    R"doc(Returns the current mock parameters.)doc";
+
 static const char* __doc_hxtorch_inference_trace =
     R"doc(Execute inference of stored trace.
 
@@ -97,11 +100,6 @@ static const char* __doc_hxtorch_init_2 =
     R"doc(Initialize the hardware with calibration path.
 
 @param calibration_path Calibration path to load from)doc";
-
-static const char* __doc_hxtorch_init_3 =
-    R"doc(Initialize hardware mock configuration.
-
-@param parameter Parameter to use)doc";
 
 static const char* __doc_hxtorch_mac =
     R"doc(The bare mutliply-accumulate operation of BrainScaleS-2. A 1D input @p x
@@ -138,3 +136,5 @@ static const char* __doc_hxtorch_relu =
 
 @param input Input tensor
 @param mock Enable mock mode)doc";
+
+static const char* __doc_hxtorch_set_mock_parameter = R"doc(Sets the mock parameters.)doc";

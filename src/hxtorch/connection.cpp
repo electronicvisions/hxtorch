@@ -84,15 +84,6 @@ void init(CalibrationPath const& calibration_path)
 	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
 }
 
-void init(MockParameter const& parameter)
-{
-	if ((parameter.gain <= 0) || (parameter.gain > 1)) {
-		std::overflow_error(
-		    "Gain of " + std::to_string(parameter.gain) + " is not in the interval (0, 1]");
-	}
-	detail::getMockParameter() = parameter;
-}
-
 void release()
 {
 	detail::getConnection().reset();

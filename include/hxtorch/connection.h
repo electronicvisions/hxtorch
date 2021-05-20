@@ -41,15 +41,6 @@ struct CalibrationPath
  */
 void init(CalibrationPath const& calibration_path);
 
-struct MockParameter;
-
-/**
- * Initialize hardware mock configuration.
- *
- * @param parameter Parameter to use
- */
-void init(MockParameter const& parameter);
-
 /**
  * Release hardware resource.
  */
