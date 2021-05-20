@@ -10,11 +10,15 @@ struct InferenceTracer;
 
 /**
  * Inference tracer for a linear sequence of operations.
- * The traced operations' state is saved as a grenade::compute::Sequence, which can be
- * executed as a single operation without transformation to and from PyTorch tensors.
- * It is ensured, that no untraced modifications are made in-between traced operations by comparing
- * the last traced operation's output with the currently traced operation's input value.
- * @note Not final API or implementation, see Issue #3694
+ * The traced operations' state is saved as a grenade::compute::Sequence,
+ * which can be executed as a single operation without transformation to and
+ * from PyTorch tensors.
+ * It is ensured, that no untraced modifications are made in-between traced
+ * operations by comparing the last traced operation's output with the
+ * currently traced operation's input value.
+ *
+ * @note
+ * Not final API or implementation, see Issue #3694
  */
 class InferenceTracer
 {
@@ -30,7 +34,9 @@ public:
 	void start();
 
 	/**
-	 * Stop tracing operations by deregistering tracer and save traced operations to given file.
+	 * Stop tracing operations by deregistering tracer and save traced
+	 * operations to given file.
+	 *
 	 * @return List of traced operation names
 	 */
 	std::vector<std::string> stop();
@@ -43,6 +49,7 @@ private:
 
 /**
  * Execute inference of stored trace.
+ *
  * @param input Input data to use
  * @param filename Filename to serialized operation trace
  */

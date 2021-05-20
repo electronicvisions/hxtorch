@@ -18,7 +18,8 @@ struct HWDBPath
 };
 
 /**
- * Initialize automatically from the environment.
+ * Initialize the hardware automatically from the environment.
+ *
  * @param calibration_version Calibration version to load
  * @param hwdb_path Optional path to the hwdb to use
  */
@@ -34,9 +35,9 @@ struct CalibrationPath
 };
 
 /**
- * Initialize with hardware connection and calibration path.
+ * Initialize the hardware with calibration path.
+ *
  * @param calibration_path Calibration path to load from
- * @param connection Connection to use
  */
 void init(CalibrationPath const& calibration_path);
 
@@ -44,6 +45,7 @@ struct MockParameter;
 
 /**
  * Initialize hardware mock configuration.
+ *
  * @param parameter Parameter to use
  */
 void init(MockParameter const& parameter);

@@ -17,6 +17,7 @@ struct MockParameter
 
 	/**
 	 * Construct with noise standard deviation and gain.
+	 *
 	 * @param noise_std Noise standard deviation to use
 	 * @param gain Gain to use
 	 */

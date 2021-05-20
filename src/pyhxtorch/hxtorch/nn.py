@@ -1,3 +1,10 @@
+"""
+This module contains layers that can be used in modules together
+with the building blocks from py:mod:`torch.nn`. Unlike their counterparts,
+their multiply-accumulate operations are performed with the
+BrainScaleS-2 accelerator. Additional digital operations are performed
+in the SIMD processors of BSS-2.
+"""
 from abc import abstractmethod
 from typing import Callable, Tuple, Union, Optional
 import torch
@@ -8,7 +15,7 @@ import pyhaldls_vx_v2 as hal
 
 def scale_input(x_in: torch.Tensor) -> torch.Tensor:
     """
-    Scales the tensor to the maximal input range of the chip.
+    Scales the tensor to the maximal input range of BrainScaleS-2.
     """
     max_in = torch.max(x_in)
     factor = hal.PADIEvent.HagenActivation.max / max_in if max_in > 0 else 1
@@ -17,7 +24,7 @@ def scale_input(x_in: torch.Tensor) -> torch.Tensor:
 
 def scale_weight(weight: torch.Tensor) -> torch.Tensor:
     """
-    Scales the tensor to the maximal weight matrix range of HX.
+    Scales the tensor to the maximal weight range of BrainScaleS-2.
     """
     max_in = torch.max(torch.abs(weight))
     factor = hal.SynapseQuad.Weight.max / max_in if max_in > 0 else 1

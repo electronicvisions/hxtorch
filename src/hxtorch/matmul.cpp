@@ -13,28 +13,28 @@
 namespace hxtorch {
 
 torch::Tensor matmul(
-    torch::Tensor const& tensor1,
-    torch::Tensor const& tensor2,
+    torch::Tensor const& input,
+    torch::Tensor const& other,
     int64_t const num_sends,
     int64_t wait_between_events,
     bool mock)
 {
-	size_t const dim1 = tensor1.dim();
-	size_t const dim2 = tensor2.dim();
+	size_t const dim1 = input.dim();
+	size_t const dim2 = other.dim();
 
 	if (dim1 == 0 || dim2 == 0) {
 		throw std::runtime_error("both arguments to matmul need to be at least 1D");
 	}
 
 	// add dimensions to get >= 2D
-	torch::Tensor t1 = (dim1 == 1) ? tensor1.unsqueeze(0) : tensor1;
-	torch::Tensor t2 = (dim2 == 1) ? tensor2.unsqueeze(-1) : tensor2;
+	torch::Tensor t1 = (dim1 == 1) ? input.unsqueeze(0) : input;
+	torch::Tensor t2 = (dim2 == 1) ? other.unsqueeze(-1) : other;
 
 	torch::Tensor res;
 	if (dim1 <= 2 && dim2 <= 2) {
 		res = mac(t1, t2, num_sends, wait_between_events, mock);
 	} else if (dim1 >= 3 && dim2 <= 2) {
-		// fold tensor1's batch into its leading matrix dimension
+		// fold input's batch into its leading matrix dimension
 		auto size1 = t1.sizes();
 		auto size2 = t2.sizes();
 		std::vector<int64_t> output_size;
