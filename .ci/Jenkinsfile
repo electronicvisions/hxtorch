@@ -19,7 +19,7 @@ try {
 	]  << commonPipelineOptions
 
 	Map<String, Object> pipelineNoDeploymentOptions = [
-			container              : [app: "dls"],
+			container              : [app: "dls-nodev"],
 			configureInstallOptions: "--build-profile=ci"
 	] << commonPipelineOptions
 
@@ -42,7 +42,7 @@ try {
 
 	conditionalStage(name: "Module Deployment", skip: !deploy) {
 		runOnSlave(label: "frontend") {
-			inSingularity(app: "dls") {
+			inSingularity(app: "dls-nodev") {
 				deployModule([name: "hxtorch", source: "bin/ lib/ repos_log.txt"])
 			}
 		}
