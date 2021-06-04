@@ -18,6 +18,7 @@
 #include <cereal/types/utility.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
+#include <log4cxx/logger.h>
 
 namespace hxtorch {
 
@@ -26,6 +27,9 @@ namespace {
 grenade::vx::ChipConfig load_and_apply_calibration(
     std::string calibration_path, hxcomm::vx::ConnectionVariant& connection)
 {
+	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
+	LOG4CXX_INFO(logger, "Loading calibration from \"" << calibration_path << "\"");
+
 	stadls::vx::v2::Dumper::done_type cocos;
 	{
 		std::ifstream calibration(calibration_path);
