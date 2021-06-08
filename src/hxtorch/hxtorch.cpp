@@ -25,12 +25,13 @@
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
 	m.def(
-	    "init", (void (*)(std::optional<hxtorch::HWDBPath> const&)) & hxtorch::init,
-	    __doc_hxtorch_init, pybind11::arg("hwdb_path") = std::nullopt);
+	    "init_hardware",
+	    (void (*)(std::optional<hxtorch::HWDBPath> const&)) & hxtorch::init_hardware,
+	    __doc_hxtorch_init_hardware, pybind11::arg("hwdb_path") = std::nullopt);
 	m.def(
-	    "init", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init, __doc_hxtorch_init_2,
-	    pybind11::arg("calibration_path"));
-	m.def("release", &hxtorch::release, __doc_hxtorch_release);
+	    "init_hardware", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init_hardware,
+	    __doc_hxtorch_init_hardware_2, pybind11::arg("calibration_path"));
+	m.def("release_hardware", &hxtorch::release_hardware, __doc_hxtorch_release_hardware);
 	m.def("get_mock_parameter", &hxtorch::get_mock_parameter, __doc_hxtorch_get_mock_parameter);
 	m.def(
 	    "set_mock_parameter", &hxtorch::set_mock_parameter, __doc_hxtorch_set_mock_parameter,

@@ -117,11 +117,11 @@ class MNISTTestHX(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls) -> None:
-        hxtorch.release()  # also disconnects executor
+        hxtorch.release_hardware()  # also disconnects executor
 
 
 class MNISTTestMock(MNISTTest):

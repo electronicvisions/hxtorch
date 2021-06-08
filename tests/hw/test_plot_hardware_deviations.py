@@ -16,11 +16,11 @@ class TestHardwareDeviationsHX(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
     def setUp(self):
         self.plot_path.mkdir(exist_ok=True)

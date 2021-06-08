@@ -90,13 +90,13 @@ static const char* __doc_hxtorch_inference_trace =
 @param input Input data to use
 @param filename Filename to serialized operation trace)doc";
 
-static const char* __doc_hxtorch_init =
+static const char* __doc_hxtorch_init_hardware =
     R"doc(Initialize the hardware automatically from the environment.
 
 @param calibration_version Calibration version to load
 @param hwdb_path Optional path to the hwdb to use)doc";
 
-static const char* __doc_hxtorch_init_2 =
+static const char* __doc_hxtorch_init_hardware_2 =
     R"doc(Initialize the hardware with calibration path.
 
 @param calibration_path Calibration path to load from)doc";
@@ -129,7 +129,7 @@ The current implementation only supports @p other to be 1D or 2D.
 
 @return Resulting tensor)doc";
 
-static const char* __doc_hxtorch_release = R"doc(Release hardware resource.)doc";
+static const char* __doc_hxtorch_release_hardware = R"doc(Release hardware resource.)doc";
 
 static const char* __doc_hxtorch_relu =
     R"doc(Rectified linear unit operating on int8 value range.

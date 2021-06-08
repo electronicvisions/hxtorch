@@ -45,7 +45,7 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 
 } // namespace
 
-void init(std::optional<HWDBPath> const& hwdb_path)
+void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 {
 	auto connection = hxcomm::vx::get_connection_from_env();
 
@@ -72,7 +72,7 @@ void init(std::optional<HWDBPath> const& hwdb_path)
 	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
 }
 
-void init(CalibrationPath const& calibration_path)
+void init_hardware(CalibrationPath const& calibration_path)
 {
 	auto connection = hxcomm::vx::get_connection_from_env();
 	stadls::vx::v2::run(
@@ -84,7 +84,7 @@ void init(CalibrationPath const& calibration_path)
 	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
 }
 
-void release()
+void release_hardware()
 {
 	detail::getConnection().reset();
 }

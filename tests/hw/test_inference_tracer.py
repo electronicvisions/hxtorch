@@ -8,11 +8,11 @@ import hxtorch
 class TestInferenceTracer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
     def template(self, func):
         fd, path = tempfile.mkstemp()

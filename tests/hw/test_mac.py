@@ -10,11 +10,11 @@ class TestHXMAC(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
     def test_construction(self):
         data_in = torch.ones(5)

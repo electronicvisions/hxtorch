@@ -134,11 +134,11 @@ class TestMatmulHX(TestMatmulPyTorch):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
     def test_gradient_zeros(self):
         test_inputs = {

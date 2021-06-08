@@ -116,11 +116,11 @@ class TestConv1dHX(TestConv1d):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
 
 class TestConv1dHXmock(TestConv1d):
@@ -170,11 +170,11 @@ class TestConv2dHX(TestConv2d):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init()
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
-        hxtorch.release()
+        hxtorch.release_hardware()
 
 
 class TestConv2dHXmock(TestConv2d):

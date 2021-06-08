@@ -23,7 +23,7 @@ struct HWDBPath
  * @param calibration_version Calibration version to load
  * @param hwdb_path Optional path to the hwdb to use
  */
-void init(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
+void init_hardware(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
 
 /**
  * Path to a calibration.
@@ -39,11 +39,11 @@ struct CalibrationPath
  *
  * @param calibration_path Calibration path to load from
  */
-void init(CalibrationPath const& calibration_path);
+void init_hardware(CalibrationPath const& calibration_path);
 
 /**
  * Release hardware resource.
  */
-void release();
+void release_hardware();
 
 } // namespace hxtorch
