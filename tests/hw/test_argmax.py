@@ -97,14 +97,6 @@ class TestArgMaxHXmock(TestArgMaxPyTorch):
     """
     argmax: ClassVar = partial(hxtorch.argmax, mock=True)
 
-    @classmethod
-    def setUpClass(cls):
-        hxtorch.init(hxtorch.MockParameter())
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
 
 if __name__ == '__main__':
     unittest.main()

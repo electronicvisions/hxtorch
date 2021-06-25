@@ -180,7 +180,7 @@ class TestConv2dHX(TestConv2d):
     def setUpClass(cls):
         hxtorch.init_hardware()
         mock_parameter = hxtorch.measure_mock_parameter()
-        hxtorch.set_mock_parameter(cls.mock_parameter)
+        hxtorch.set_mock_parameter(mock_parameter)
         cls.gain = mock_parameter.gain
 
     @classmethod

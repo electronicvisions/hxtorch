@@ -94,10 +94,6 @@ class TestAddHXmock(TestAddPyTorch):
     """
     add: ClassVar = partial(hxtorch.add, mock=True)
 
-    @classmethod
-    def setUpClass(cls):
-        hxtorch.init(hxtorch.MockParameter())
-
 
 if __name__ == '__main__':
     unittest.main()
