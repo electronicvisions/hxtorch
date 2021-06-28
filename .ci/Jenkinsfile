@@ -13,6 +13,15 @@ try {
 			notificationChannel: "#jenkins-trashbin"  // success is checked globally
 	]
 
+	if (executeHwTests) {
+		commonPipelineOptions << [
+				testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0],
+				preTestHook      : { configureHxCubeBitfile() },
+				testOptions      : "--test-execall -j1",
+				postTestHook     : { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
+		]
+	}
+
 	Map<String, Object> pipelineDeploymentOptions = [
 			container              : [app: "dls-core"],
 			configureInstallOptions: "--build-profile=release_with_debug"
@@ -22,15 +31,6 @@ try {
 			container              : [app: "dls-nodev"],
 			configureInstallOptions: "--build-profile=ci"
 	] << commonPipelineOptions
-
-	if (executeHwTests) {
-		commonPipelineOptions << [
-				testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 0],
-				preTestHook      : { configureHxCubeBitfile() },
-				testOptions      : "--test-execall -j1",
-				postTestHook     : { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
-		]
-	}
 
 	boolean deploy = env.GERRIT_EVENT_TYPE == "change-merged"
 
