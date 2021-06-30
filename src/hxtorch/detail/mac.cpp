@@ -26,12 +26,12 @@ torch::Tensor mac_mock_forward(
 	auto const quantized_weights = weights.round();
 	auto const quantized_inputs = x.round();
 
-	if ((quantized_weights.min().item().to<float>() < -haldls::vx::v2::SynapseQuad::Weight::max) ||
-	    (quantized_weights.max().item().to<float>() > haldls::vx::v2::SynapseQuad::Weight::max)) {
+	if ((quantized_weights.min().item().to<float>() < grenade::vx::compute::MAC::Weight::min) ||
+	    (quantized_weights.max().item().to<float>() > grenade::vx::compute::MAC::Weight::max)) {
 		throw std::overflow_error(
 		    "HICANN-X only supports weights between " +
-		    std::to_string(-haldls::vx::v2::SynapseQuad::Weight::max) + " and " +
-		    std::to_string(haldls::vx::v2::SynapseQuad::Weight::max) + ", got " +
+		    std::to_string(grenade::vx::compute::MAC::Weight::min) + " and " +
+		    std::to_string(grenade::vx::compute::MAC::Weight::max) + ", got " +
 		    std::to_string(quantized_weights.min().item().to<float>()) + " (min), " +
 		    std::to_string(quantized_weights.max().item().to<float>()) + " (max)");
 	}

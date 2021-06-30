@@ -1,8 +1,8 @@
 #include "hxtorch/mock.h"
 
+#include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
-#include "haldls/vx/v2/synapse.h"
 #include "hxtorch/detail/mock.h"
 #include "hxtorch/matmul.h"
 #include <stdexcept>
@@ -30,7 +30,7 @@ MockParameter measure_mock_parameter()
 {
 	// parameters for measurement
 	auto const input_value = grenade::vx::UInt5::max / 2.;
-	auto const weight_value = haldls::vx::v2::SynapseQuad::Weight::max / 3.;
+	auto const weight_value = grenade::vx::compute::MAC::Weight::max / 3.;
 	auto const target_output = grenade::vx::Int8::max / 2.;
 	// factor by which the input is reduced:
 	auto const masking_factor = torch::tensor(0.85);
