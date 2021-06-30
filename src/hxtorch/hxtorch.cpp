@@ -12,6 +12,7 @@
 #include "hxtorch/add.h"
 #include "hxtorch/argmax.h"
 #include "hxtorch/connection.h"
+#include "hxtorch/constants.h"
 #include "hxtorch/conv.h"
 #include "hxtorch/detail/conv.h"
 #include "hxtorch/detail/mock.h"
@@ -131,4 +132,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(
 	        pybind11::init<std::string>(), __doc_hxtorch_CalibrationPath_CalibrationPath,
 	        pybind11::arg("value"));
+
+	auto constants_module = m.def_submodule("constants", "");
+	constants_module.attr("synaptic_weight_min") = hxtorch::constants::synaptic_weight_min;
+	constants_module.attr("synaptic_weight_max") = hxtorch::constants::synaptic_weight_max;
+	constants_module.attr("input_activation_min") = hxtorch::constants::input_activation_min;
+	constants_module.attr("input_activation_max") = hxtorch::constants::input_activation_max;
+	constants_module.attr("output_activation_min") = hxtorch::constants::output_activation_min;
+	constants_module.attr("output_activation_max") = hxtorch::constants::output_activation_max;
 }

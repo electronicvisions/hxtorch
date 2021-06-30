@@ -3,6 +3,7 @@
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
+#include "hxtorch/constants.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
@@ -26,20 +27,23 @@ torch::Tensor mac_mock_forward(
 	auto const quantized_weights = weights.round();
 	auto const quantized_inputs = x.round();
 
-	if ((quantized_weights.min().item().to<float>() < grenade::vx::compute::MAC::Weight::min) ||
-	    (quantized_weights.max().item().to<float>() > grenade::vx::compute::MAC::Weight::max)) {
+	if ((quantized_weights.min().item().to<float>() < constants::synaptic_weight_min) ||
+	    (quantized_weights.max().item().to<float>() > constants::synaptic_weight_max)) {
 		throw std::overflow_error(
 		    "HICANN-X only supports weights between " +
-		    std::to_string(grenade::vx::compute::MAC::Weight::min) + " and " +
-		    std::to_string(grenade::vx::compute::MAC::Weight::max) + ", got " +
+		    std::to_string(constants::synaptic_weight_min) + " and " +
+		    std::to_string(constants::synaptic_weight_max) + ", got " +
 		    std::to_string(quantized_weights.min().item().to<float>()) + " (min), " +
 		    std::to_string(quantized_weights.max().item().to<float>()) + " (max)");
 	}
-	if ((quantized_inputs.min().item().to<float>() < static_cast<int>(grenade::vx::UInt5::min)) ||
-	    (quantized_inputs.max().item().to<float>() > static_cast<int>(grenade::vx::UInt5::max))) {
+	if ((quantized_inputs.min().item().to<float>() <
+	     static_cast<int>(constants::input_activation_min)) ||
+	    (quantized_inputs.max().item().to<float>() >
+	     static_cast<int>(constants::input_activation_max))) {
 		throw std::overflow_error(
-		    "HICANN-X only supports inputs between " + std::to_string(grenade::vx::UInt5::min) +
-		    " and " + std::to_string(grenade::vx::UInt5::max) + ", got " +
+		    "HICANN-X only supports inputs between " +
+		    std::to_string(constants::input_activation_min) + " and " +
+		    std::to_string(constants::input_activation_max) + ", got " +
 		    std::to_string(quantized_inputs.min().item().to<float>()) + " (min), " +
 		    std::to_string(quantized_inputs.max().item().to<float>()) + " (max)");
 	}

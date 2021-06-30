@@ -104,7 +104,7 @@ def build(bld):
     bld(
         target='hxtorch',
         features='py use',
-        use=['pylogging', 'pyhaldls_vx_v2', '_hxtorch'],
+        use=['pylogging', '_hxtorch'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',
@@ -125,7 +125,7 @@ def build(bld):
         target='hxtorch_swtests',
         tests=bld.path.ant_glob('tests/sw/*.py'),
         features='use pytest',
-        use=['hxtorch', 'pyhaldls_vx_v2'],
+        use=['hxtorch'],
         install_path='${PREFIX}/bin/tests/sw',
     )
 

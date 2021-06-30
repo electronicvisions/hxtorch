@@ -12,7 +12,6 @@ from typing import Callable, Tuple, Union, Optional
 import torch
 import _hxtorch
 import pylogging as logger
-import pyhaldls_vx_v2 as hal
 
 
 def scale_input(x_in: torch.Tensor) -> torch.Tensor:
@@ -20,7 +19,8 @@ def scale_input(x_in: torch.Tensor) -> torch.Tensor:
     Scales the tensor to the maximal input range of BrainScaleS-2.
     """
     max_in = torch.max(x_in)
-    factor = hal.PADIEvent.HagenActivation.max / max_in if max_in > 0 else 1
+    factor = \
+        _hxtorch.constants.input_activation_max / max_in if max_in > 0 else 1
     return x_in * factor
 
 
@@ -29,7 +29,8 @@ def scale_weight(weight: torch.Tensor) -> torch.Tensor:
     Scales the tensor to the maximal weight range of BrainScaleS-2.
     """
     max_in = torch.max(torch.abs(weight))
-    factor = hal.SynapseQuad.Weight.max / max_in if max_in > 0 else 1
+    factor = \
+        _hxtorch.constants.synaptic_weight_max / max_in if max_in > 0 else 1
     return weight * factor
 
 
@@ -38,7 +39,7 @@ def clamp_weight_(weight: torch.Tensor) -> torch.Tensor:
     Clamps all elements of the weight in-place into the maximal weight range
     of BrainScaleS-2.
     """
-    max_weight = hal.SynapseQuad.Weight.max
+    max_weight = _hxtorch.constants.synaptic_weight_max
     with torch.no_grad():
         torch.clamp(weight, -max_weight, max_weight, out=weight)
     return weight
@@ -120,20 +121,20 @@ class MACLayer(Layer):
 
         if self.num_sends is None:
             self.num_sends = int(
-                math.ceil(std / (hal.SynapseQuad.Weight.max / 3)))
+                math.ceil(std / (_hxtorch.constants.synaptic_weight_max / 3)))
         std /= self.num_sends
 
         torch.nn.init.trunc_normal_(
             self.weight,
             mean=weight_mean,
             std=std,
-            a=-hal.SynapseQuad.Weight.max,
-            b=hal.SynapseQuad.Weight.max
+            a=_hxtorch.constants.synaptic_weight_min,
+            b=_hxtorch.constants.synaptic_weight_max
         )
 
         if self.bias is not None:
             # estimated standard deviation of the input
-            std_in = hal.PADIEvent.HagenActivation.max / math.sqrt(3.)
+            std_in = _hxtorch.constants.input_activation_max / math.sqrt(3.)
             bound = gain_tot / math.sqrt(fan_in) / std_in
             with torch.no_grad():
                 self.bias.uniform_(-bound, bound)

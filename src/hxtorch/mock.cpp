@@ -1,8 +1,7 @@
 #include "hxtorch/mock.h"
 
-#include "grenade/vx/compute/mac.h"
-#include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
+#include "hxtorch/constants.h"
 #include "hxtorch/detail/mock.h"
 #include "hxtorch/matmul.h"
 #include <stdexcept>
@@ -29,9 +28,9 @@ void set_mock_parameter(MockParameter const& parameter)
 MockParameter measure_mock_parameter()
 {
 	// parameters for measurement
-	auto const input_value = grenade::vx::UInt5::max / 2.;
-	auto const weight_value = grenade::vx::compute::MAC::Weight::max / 3.;
-	auto const target_output = grenade::vx::Int8::max / 2.;
+	auto const input_value = constants::input_activation_max / 2.;
+	auto const weight_value = constants::synaptic_weight_max / 3.;
+	auto const target_output = constants::output_activation_max / 2.;
 	// factor by which the input is reduced:
 	auto const masking_factor = torch::tensor(0.85);
 	int64_t const num_steps = 20;

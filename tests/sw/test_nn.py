@@ -2,8 +2,8 @@ import unittest
 from unittest.mock import Mock
 import torch
 from torch.autograd import gradcheck
-import pyhaldls_vx_v2 as hal
 from hxtorch import nn  as hxnn
+from hxtorch import constants as hxc
 
 
 class TestNN(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestNN(unittest.TestCase):
         x_in = torch.arange(8., 16., .5).view(2, 8)
         x_in.requires_grad = True
         x_scaled = hxnn.scale_input(x_in)
-        self.assertLessEqual(x_scaled.max(), hal.PADIEvent.HagenActivation.max)
+        self.assertLessEqual(x_scaled.max(), hxc.input_activation_max)
 
         self.assertTrue(gradcheck(hxnn.scale_input, x_in, eps=1e-2, atol=1e-1))
 
@@ -29,7 +29,7 @@ class TestNN(unittest.TestCase):
         w_in = torch.arange(-32, 32., .5).view(8, 16)
         w_in.requires_grad = True
         w_scaled = hxnn.scale_weight(w_in)
-        self.assertLessEqual(w_scaled.abs().max(), hal.SynapseQuad.Weight.max)
+        self.assertLessEqual(w_scaled.abs().max(), hxc.synaptic_weight_max)
 
         self.assertTrue(
             gradcheck(hxnn.scale_weight, w_in, eps=1e-2, atol=1e-1))
