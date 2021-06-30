@@ -1,5 +1,7 @@
 #include "hxtorch/connection.h"
 
+#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/backend/run.h"
 #include "grenade/vx/config.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -25,7 +27,7 @@ namespace hxtorch {
 namespace {
 
 grenade::vx::ChipConfig load_and_apply_calibration(
-    std::string calibration_path, hxcomm::vx::ConnectionVariant& connection)
+    std::string calibration_path, grenade::vx::backend::Connection& connection)
 {
 	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
 	LOG4CXX_INFO(logger, "Loading calibration from \"" << calibration_path << "\"");
@@ -43,7 +45,7 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 		}
 	}
 	auto const chip = grenade::vx::convert_to_chip(cocos);
-	stadls::vx::v2::run(connection, stadls::vx::v2::convert_to_builder(cocos).done());
+	grenade::vx::backend::run(connection, stadls::vx::v2::convert_to_builder(cocos).done());
 	return chip;
 }
 
@@ -52,19 +54,19 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 void init_hardware_minimal()
 {
 	detail::getConnection().reset();
-	auto connection = hxcomm::vx::get_connection_from_env();
 	auto init_generator = stadls::vx::v2::DigitalInit();
-	stadls::vx::v2::run(connection, stadls::vx::v2::generate(init_generator).builder.done());
+	grenade::vx::backend::Connection connection(
+	    hxcomm::vx::get_connection_from_env(), init_generator);
 	grenade::vx::ChipConfig const chip;
 	detail::getChip() = chip;
 	detail::getConnection() =
-	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
 }
 
 
 void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 {
-	auto connection = hxcomm::vx::get_connection_from_env();
+	grenade::vx::backend::Connection connection;
 
 	std::optional<std::string> hwdb_path_value;
 	std::string version = "stable/latest";
@@ -73,32 +75,24 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 		version = hwdb_path->version;
 	}
 	using namespace std::string_literals;
-	auto const calibration_path =
-	    "/wang/data/calibration/hicann-dls-sr-hx/"s +
-	    std::visit(
-	        [hwdb_path_value](auto const& c) { return c.get_unique_identifier(hwdb_path_value); },
-	        connection) +
-	    "/"s + version + "/hagen_cocolist.bin"s;
-
-	stadls::vx::v2::run(
-	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
+	auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
+	                              connection.get_unique_identifier(hwdb_path_value) + "/"s +
+	                              version + "/hagen_cocolist.bin"s;
 
 	auto const chip = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
 	detail::getConnection() =
-	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
 }
 
 void init_hardware(CalibrationPath const& calibration_path)
 {
-	auto connection = hxcomm::vx::get_connection_from_env();
-	stadls::vx::v2::run(
-	    connection, stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder.done());
+	grenade::vx::backend::Connection connection;
 
 	auto const chip = load_and_apply_calibration(calibration_path.value, connection);
 	detail::getChip() = chip;
 	detail::getConnection() =
-	    std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
 }
 
 void release_hardware()
