@@ -3,6 +3,7 @@ Training example for the MNIST handwritten-digits dataset using a host machine
 with the BrainScaleS-2 ASIC in the loop.
 """
 import argparse
+from numbers import Real
 import os
 from pathlib import Path
 import torch
@@ -154,7 +155,7 @@ def test(model: torch.nn.Module, loader: torch.utils.data.DataLoader) -> float:
     return accuracy
 
 
-def shrink_dataset(dataset: torch.utils.data.Dataset, fraction: float):
+def shrink_dataset(dataset: torch.utils.data.Dataset, fraction: Real):
     """ Returns a fraction of the original dataset  """
     new_length = int(fraction * len(dataset))
     return torch.utils.data.Subset(

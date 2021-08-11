@@ -8,6 +8,7 @@ in the SIMD processors of BSS-2.
 from abc import abstractmethod
 from inspect import signature
 import math
+from numbers import Integral, Real
 from typing import Callable, Tuple, Union, Optional
 import torch
 import _hxtorch
@@ -76,8 +77,8 @@ class MACLayer(Layer):
     Layer that performs a multiply accumulate operation.
     """
 
-    def __init__(self, num_sends: Optional[int] = None,
-                 wait_between_events: int = 5, mock: bool = False, *,
+    def __init__(self, num_sends: Optional[Integral] = None,
+                 wait_between_events: Integral = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -101,8 +102,8 @@ class MACLayer(Layer):
         self.input_transform = input_transform
         self.weight_transform = weight_transform
 
-    def reset_parameters(self, weight_mean: float = 0.,
-                         relu_shift: int = 1) -> None:
+    def reset_parameters(self, weight_mean: Real = 0.,
+                         relu_shift: Integral = 1) -> None:
         """
         Reset parameters to reasonable initialization values. Method based on
         *Delving deep into rectifiers: Surpassing human-level performance on
@@ -145,9 +146,9 @@ class Linear(MACLayer, torch.nn.Linear):
     Applies a linear transformation to the incoming data on Hicann-X.
     """
 
-    def __init__(self, in_features: int, out_features: int, bias: bool = True,
-                 num_sends: Optional[int] = None,
-                 wait_between_events: int = 5, mock: bool = False, *,
+    def __init__(self, in_features: Integral, out_features: Integral,
+                 bias: bool = True, num_sends: Optional[Integral] = None,
+                 wait_between_events: Integral = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -198,7 +199,8 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
 
     @abstractmethod
     def _conv(self, x: torch.Tensor, weight: torch.Tensor,
-              stride: Tuple[int, ...], num_sends: int) -> torch.Tensor:
+              stride: Tuple[Integral, ...],
+              num_sends: Integral) -> torch.Tensor:
         """
         Implementation of convolution function.
         """
@@ -241,13 +243,14 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
     planes.
     """
 
-    def __init__(self, in_channels: int, out_channels: int,
-                 kernel_size: Union[int, Tuple[int]],
-                 stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
-                 dilation: Union[int, Tuple] = 1, groups: int = 1,
+    def __init__(self, in_channels: Integral, out_channels: Integral,
+                 kernel_size: Union[Integral, Tuple[Integral]],
+                 stride: Integral = 1,
+                 padding: Union[Integral, Tuple[Integral, Integral]] = 0,
+                 dilation: Union[Integral, Tuple] = 1, groups: Integral = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
-                 num_sends: Optional[int] = None,
-                 wait_between_events: int = 5, mock: bool = False, *,
+                 num_sends: Optional[Integral] = None,
+                 wait_between_events: Integral = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -292,12 +295,14 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
     planes.
     """
 
-    def __init__(self, in_channels: int, out_channels: int,
-                 kernel_size: Union[int, Tuple[int, int]],
-                 stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
-                 dilation: int = 1, groups: int = 1, bias: bool = True,
-                 padding_mode: str = 'zeros', num_sends: Optional[int] = None,
-                 wait_between_events: int = 5, mock: bool = False, *,
+    def __init__(self, in_channels: Integral, out_channels: Integral,
+                 kernel_size: Union[Integral, Tuple[Integral, Integral]],
+                 stride: Integral = 1,
+                 padding: Union[Integral, Tuple[Integral, Integral]] = 0,
+                 dilation: Integral = 1, groups: Integral = 1,
+                 bias: bool = True, padding_mode: str = 'zeros',
+                 num_sends: Optional[Integral] = None,
+                 wait_between_events: Integral = 5, mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -361,7 +366,7 @@ class ConvertingReLU(ReLU):
     input range of the chip.
     """
 
-    def __init__(self, shift: int = 2, mock: bool = False):
+    def __init__(self, shift: Integral = 2, mock: bool = False):
         """
         :param shift: Number of bits the result is shifted by
         :param mock: Enable mock mode
