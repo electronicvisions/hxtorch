@@ -51,9 +51,6 @@ class TestNN(unittest.TestCase):
         x_out = torch_layer(x_in)
         x_out_hx = hxtorch_layer(x_in)
 
-        # cached output
-        self.assertTrue(torch.equal(x_out_hx, hxtorch_layer.out))
-
         call_args, call_kwargs = hxtorch_layer._matmul.call_args
         self.assertSequenceEqual(x_out.shape, x_out_hx.shape)
         self.assertListEqual(call_args[0].tolist(), x_in.tolist())
@@ -84,7 +81,6 @@ class TestNN(unittest.TestCase):
         x_out = torch_layer(x_in)
         x_out_hx = hxtorch_layer(x_in)
 
-        self.assertTrue(torch.equal(x_out_hx, hxtorch_layer.out))
         self.assertSequenceEqual(x_out.shape, x_out_hx.shape)
 
         # repr
@@ -109,7 +105,6 @@ class TestNN(unittest.TestCase):
         x_out = torch_layer(x_in)
         x_out_hx = hxtorch_layer(x_in)
 
-        self.assertTrue(torch.equal(x_out_hx, hxtorch_layer.out))
         self.assertSequenceEqual(x_out.shape, x_out_hx.shape)
 
         # repr

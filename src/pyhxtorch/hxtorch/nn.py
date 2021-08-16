@@ -49,8 +49,6 @@ def clamp_weight_(weight: torch.Tensor) -> torch.Tensor:
 class Layer:
     """
     Base class of all layers in :mod:`hxtorch.nn`.
-
-    :ivar out: Output of the last execution
     """
 
     def __init__(self, mock: bool = False):
@@ -58,7 +56,6 @@ class Layer:
         :param mock: Enable mock mode.
         """
         self.mock = mock
-        self.out: Optional[torch.Tensor] = None
 
     def __repr__(self):
         repr_str = ""
@@ -183,13 +180,13 @@ class Linear(MACLayer, torch.nn.Linear):
             weight = self.weight_transform(weight)
         if self.input_transform is not None:
             input = self.input_transform(input)
-        self.out = self._matmul(input, weight.t(),
+        output = self._matmul(input, weight.t(),
                               num_sends=self.num_sends,
                               wait_between_events=self.wait_between_events,
                               mock=self.mock)
         if bias is not None:
-            self.out = _hxtorch.add(self.out, bias, mock=self.mock)
-        return self.out
+            output = _hxtorch.add(output, bias, mock=self.mock)
+        return output
 
 
 class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protected-access
@@ -230,11 +227,11 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
             weight = self.weight_transform(weight)
         if self.input_transform is not None:
             input = self.input_transform(input)
-        self.out = self._conv(input, weight, bias,
+        output = self._conv(input, weight, bias,
                             self.stride, num_sends=self.num_sends,
                             wait_between_events=self.wait_between_events,
                             mock=self.mock)
-        return self.out
+        return output
 
 
 class Conv1d(ConvNd, torch.nn.Conv1d):
@@ -356,8 +353,8 @@ class ReLU(Layer, torch.nn.ReLU):
         torch.nn.ReLU.__init__(self)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        self.out = _hxtorch.relu(input, mock=self.mock)
-        return self.out
+        output = _hxtorch.relu(input, mock=self.mock)
+        return output
 
 
 class ConvertingReLU(ReLU):
@@ -375,6 +372,6 @@ class ConvertingReLU(ReLU):
         self.shift = shift
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        self.out = _hxtorch.converting_relu(
+        output = _hxtorch.converting_relu(
             input, shift=self.shift, mock=self.mock)
-        return self.out
+        return output
