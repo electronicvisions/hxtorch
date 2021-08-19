@@ -7,13 +7,28 @@ from numbers import Real
 import os
 from pathlib import Path
 import torch
-from torchvision import datasets, transforms
 from tqdm.auto import tqdm
 
 import hxtorch
 import hxtorch.nn as hxnn
 
 log = hxtorch.logger.get("hxtorch.examples.mnist")
+
+
+class MNIST(torch.utils.data.TensorDataset):
+    """ The MNIST dataset """
+
+    def __init__(self, root, train):
+        """
+        :param root: Root directory of the dataset that contains
+            `MNIST/processed/training.pt` and  `MNIST/processed/test.pt`.
+        :param train: If True, creates dataset from `training.pt`, otherwise
+            from `test.pt`.
+        """
+        dataset_path = Path(root).joinpath(
+            "MNIST", "processed", f"{'training' if train else 'test'}.pt")
+        data, targets = torch.load(dataset_path)
+        super().__init__(data.unsqueeze(1), targets)
 
 
 class Model(torch.nn.Module):
@@ -42,6 +57,8 @@ class Model(torch.nn.Module):
                                        # lower values may lead to saturation
                                        # effects in the drivers.
                 mock=mock,             # enables simulation-mode.
+                input_transform=hxnn.scale_input,  # Scale the input to the
+                                                   # full range of BSS-2.
             ),
             hxnn.ConvertingReLU(
                 shift=1,  # shifts the output by 1 bit, i.e. divides it by 2.
@@ -175,14 +192,8 @@ def main(args: argparse.Namespace):
             f"Checkpoint directory does not exist: '{checkpoint_path}'")
 
     data_path = Path(args.data_path).resolve()
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x * 31),  # scale to input range of BSS-2
-    ])
-
-    train_data = datasets.MNIST(data_path, train=True, transform=transform,
-                                download=True)
-    test_data = datasets.MNIST(data_path, train=False, transform=transform)
+    train_data = MNIST(data_path, train=True)
+    test_data = MNIST(data_path, train=False)
 
     if args.dataset_fraction < 1:
         train_data = shrink_dataset(train_data, args.dataset_fraction)
