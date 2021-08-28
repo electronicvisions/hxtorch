@@ -57,7 +57,7 @@ torch::Tensor mac_mock_forward(
 	size_t const num_cols = quantized_weights.sizes().vec().at(1);
 	auto output_sizes = quantized_inputs.sizes().vec();
 	output_sizes.back() = num_cols;
-	torch::Tensor results = torch::zeros(output_sizes);
+	torch::Tensor results = torch::zeros(output_sizes, torch::TensorOptions().device(x.device()));
 	for (size_t i = 0; i < split_inputs.size(); ++i) {
 		// perform matrix multiplication for one synram vertical split
 		auto local_results = split_inputs.at(i).matmul(split_weights.at(i));
@@ -65,7 +65,9 @@ torch::Tensor mac_mock_forward(
 		local_results.mul_(static_cast<float>(num_sends) * getMockParameter().gain);
 		// add membrane noise
 		if (getMockParameter().noise_std > 0.) {
-			auto const noise = torch::normal(0., getMockParameter().noise_std, results.sizes());
+			auto const noise = torch::normal(
+			    0., getMockParameter().noise_std, results.sizes(), c10::nullopt,
+			    torch::TensorOptions().device(x.device()));
 			local_results.add_(noise);
 		}
 		// digitize membrane potential
