@@ -13,7 +13,7 @@
 #include "stadls/vx/v2/run.h"
 
 #include <fstream>
-#include <cereal/archives/binary.hpp>
+#include <cereal/archives/portable_binary.hpp>
 #include <cereal/cereal.hpp>
 // Needed for manual wrapping (pickling) of Dumper::done_type
 #include "hxtorch/detail/mock.h"
@@ -40,7 +40,7 @@ grenade::vx::ChipConfig load_and_apply_calibration(
 			    std::string("Failed to open calibration at ") + calibration_path + ".");
 		}
 		{
-			cereal::BinaryInputArchive ia(calibration);
+			cereal::PortableBinaryInputArchive ia(calibration);
 			ia(cocos);
 		}
 	}
@@ -77,7 +77,7 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 	using namespace std::string_literals;
 	auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
 	                              connection.get_unique_identifier(hwdb_path_value) + "/"s +
-	                              version + "/hagen_cocolist.bin"s;
+	                              version + "/hagen_cocolist.pbin"s;
 
 	auto const chip = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
