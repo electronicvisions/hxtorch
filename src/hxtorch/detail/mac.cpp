@@ -49,10 +49,9 @@ torch::Tensor mac_mock_forward(
 	}
 
 	// split one synram height from matrix
-	auto const rows_per_synram = halco::hicann_dls::vx::SynapseRowOnSynram::size /
-	                             halco::hicann_dls::vx::SynapseRowOnSynapseDriver::size;
-	auto const split_inputs = quantized_inputs.split(rows_per_synram, quantized_inputs.dim() - 1);
-	auto const split_weights = quantized_weights.split(rows_per_synram, 0);
+	auto const split_inputs =
+	    quantized_inputs.split(constants::hardware_matrix_height, quantized_inputs.dim() - 1);
+	auto const split_weights = quantized_weights.split(constants::hardware_matrix_height, 0);
 
 	size_t const num_cols = quantized_weights.sizes().vec().at(1);
 	auto output_sizes = quantized_inputs.sizes().vec();

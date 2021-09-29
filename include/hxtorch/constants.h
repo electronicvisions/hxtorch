@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
+#include "halco/hicann-dls/vx/v2/synapse.h"
 #include <limits>
 
 namespace hxtorch::constants {
@@ -15,5 +16,10 @@ constexpr static intmax_t output_activation_min =
     std::numeric_limits<grenade::vx::Int8::value_type>::min();
 constexpr static intmax_t output_activation_max =
     std::numeric_limits<grenade::vx::Int8::value_type>::max();
+
+constexpr static intmax_t hardware_matrix_height =
+    halco::hicann_dls::vx::v2::SynapseRowOnSynram::size / 2; // signed weight needs two rows
+constexpr static intmax_t hardware_matrix_width =
+    halco::hicann_dls::vx::v2::SynapseOnSynapseRow::size;
 
 } // hxtorch::constants

@@ -140,4 +140,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	constants_module.attr("input_activation_max") = hxtorch::constants::input_activation_max;
 	constants_module.attr("output_activation_min") = hxtorch::constants::output_activation_min;
 	constants_module.attr("output_activation_max") = hxtorch::constants::output_activation_max;
+	constants_module.attr("hardware_matrix_height") = hxtorch::constants::hardware_matrix_height;
+	constants_module.attr("hardware_matrix_width") = hxtorch::constants::hardware_matrix_width;
 }

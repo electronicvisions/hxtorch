@@ -1,6 +1,5 @@
 #include "hxtorch/mock.h"
 
-#include "halco/hicann-dls/vx/v2/synapse.h"
 #include "hxtorch/constants.h"
 #include "hxtorch/detail/mock.h"
 #include "hxtorch/matmul.h"
@@ -35,8 +34,8 @@ MockParameter measure_mock_parameter()
 	auto const masking_factor = torch::tensor(0.85);
 	int64_t const num_steps = 20;
 	int64_t const batch_size = 50;
-	auto const rows_per_synram = halco::hicann_dls::vx::v2::SynapseRowOnSynram::size / 2;
-	auto const cols_per_synram = halco::hicann_dls::vx::v2::SynapseOnSynapseRow::size;
+	auto const rows_per_synram = constants::hardware_matrix_width;
+	auto const cols_per_synram = constants::hardware_matrix_height;
 
 	// full weight matrix:
 	auto full_weight =
