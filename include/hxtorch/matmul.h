@@ -1,7 +1,11 @@
 #pragma once
 #include <torch/torch.h>
 
+#include "hxtorch/constants.h"
+
 namespace hxtorch {
+
+using namespace hxtorch::constants::defaults;
 
 /**
  * Drop-in replacement for the torch.matmul operation that uses BrainScaleS-2.
@@ -21,7 +25,7 @@ torch::Tensor matmul(
     torch::Tensor const& input,
     torch::Tensor const& other,
     int64_t num_sends = 1,
-    int64_t wait_between_events = 5,
+    int64_t wait_between_events = wait_between_events,
     bool mock = false);
 
 } // namespace hxtorch

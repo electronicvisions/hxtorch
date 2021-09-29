@@ -82,10 +82,8 @@ def init(calibration_path: str, mock: bool, mock_disable_noise: bool):
     :param mock_disable_noise: Disable noise in mock mode
     """
     if mock:
-        mock_parameter = hxtorch.MockParameter(
-            gain=0.002,
-            noise_std=0. if mock_disable_noise else 2.
-        )
+        mock_parameter = hxtorch.MockParameter(noise_std=0.) \
+            if mock_disable_noise else hxtorch.MockParameter()
         log.info(f"Initialize mock mode with {mock_parameter}")
     else:
         log.info("Initialize with BrainScaleS-2 ASIC")

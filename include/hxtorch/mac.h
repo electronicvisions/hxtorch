@@ -1,6 +1,8 @@
 #pragma once
 #include <torch/torch.h>
 
+#include "hxtorch/constants.h"
+
 namespace hxtorch {
 
 class MAC : public torch::autograd::Function<MAC>
@@ -17,6 +19,8 @@ public:
 	static torch::autograd::variable_list backward(
 	    torch::autograd::AutogradContext* ctx, torch::autograd::variable_list grad_output);
 };
+
+using namespace hxtorch::constants::defaults;
 
 /**
  * The bare mutliply-accumulate operation of BrainScaleS-2. A 1D input @p x
@@ -36,7 +40,7 @@ torch::Tensor mac(
     torch::Tensor const& x,
     torch::Tensor const& weights,
     int64_t num_sends = 1,
-    int64_t wait_between_events = 5,
+    int64_t wait_between_events = wait_between_events,
     bool mock = false);
 
 } // namespace hxtorch

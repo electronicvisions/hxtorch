@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hxtorch/constants.h"
+
 namespace hxtorch {
 
 /**
@@ -8,9 +10,9 @@ namespace hxtorch {
 struct MockParameter
 {
 	/* Standard deviation of noise to add to membrane potentials. */
-	double noise_std = 2.;
+	double noise_std = constants::defaults::noise_std;
 	/* Gain to assume for analog multiplication */
-	double gain = 0.002;
+	double gain = constants::defaults::gain;
 
 	/** Default constructor. */
 	MockParameter() = default;

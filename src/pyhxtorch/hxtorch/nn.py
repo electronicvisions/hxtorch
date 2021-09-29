@@ -12,6 +12,7 @@ from numbers import Integral, Real
 from typing import Callable, Tuple, Union, Optional
 import torch
 import _hxtorch
+from _hxtorch.constants import defaults
 import pylogging as logger
 
 
@@ -75,7 +76,8 @@ class MACLayer(Layer):
     """
 
     def __init__(self, num_sends: Optional[Integral] = None,
-                 wait_between_events: Integral = 5, mock: bool = False, *,
+                 wait_between_events: Integral = defaults.wait_between_events,
+                 mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -85,7 +87,7 @@ class MACLayer(Layer):
             result in higher output to the neurons and increases the s/n ratio.
             For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``5``.
+            inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -145,7 +147,8 @@ class Linear(MACLayer, torch.nn.Linear):
 
     def __init__(self, in_features: Integral, out_features: Integral,
                  bias: bool = True, num_sends: Optional[Integral] = None,
-                 wait_between_events: Integral = 5, mock: bool = False, *,
+                 wait_between_events: Integral = defaults.wait_between_events,
+                 mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -158,7 +161,7 @@ class Linear(MACLayer, torch.nn.Linear):
             result in higher output to the neurons and increases the s/n ratio.
             For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``5``.
+            inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -247,7 +250,8 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
                  dilation: Union[Integral, Tuple] = 1, groups: Integral = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
                  num_sends: Optional[Integral] = None,
-                 wait_between_events: Integral = 5, mock: bool = False, *,
+                 wait_between_events: Integral = defaults.wait_between_events,
+                 mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -267,7 +271,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
             result in higher output to the neurons and increases the s/n ratio.
             For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``5``.
+            inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -302,7 +306,8 @@ class ExpandedConv1d(Conv1d):
                  dilation: Union[int, Tuple] = 1, groups: int = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
                  num_sends: Optional[int] = None,
-                 wait_between_events: int = 5, mock: bool = False, *,
+                 wait_between_events: int = defaults.wait_between_events,
+                 mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -323,7 +328,7 @@ class ExpandedConv1d(Conv1d):
             result in higher output to the neurons and increases the s/n ratio.
             For ``None`` this is automatically adjusted during initialization.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``5``.
+            inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param mock: Enable mock mode.
         :param input_transform: Function that receives the input and returns
@@ -369,7 +374,8 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
                  dilation: Integral = 1, groups: Integral = 1,
                  bias: bool = True, padding_mode: str = 'zeros',
                  num_sends: Optional[Integral] = None,
-                 wait_between_events: Integral = 5, mock: bool = False, *,
+                 wait_between_events: Integral = defaults.wait_between_events,
+                 mock: bool = False, *,
                  input_transform: Optional[Callable[[
                      torch.Tensor], torch.Tensor]] = None,
                  weight_transform: Optional[Callable[[
@@ -390,7 +396,7 @@ class Conv2d(ConvNd, torch.nn.Conv2d):
             For ``None`` this is automatically adjusted during initialization.
         :param mock: Enable mock mode.
         :param wait_between_events: Wait time between two successive vector
-            inputs, in FPGA clock cycles. Defaults to ``5``.
+            inputs, in FPGA clock cycles.
             Shorter wait time can lead to saturation of the synaptic input.
         :param input_transform: Function that receives the input and returns
             a tensor to be used as input to the chip.

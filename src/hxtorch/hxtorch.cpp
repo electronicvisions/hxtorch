@@ -42,7 +42,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("parameter"));
 	m.def(
 	    "mac", &hxtorch::mac, __doc_hxtorch_mac, pybind11::arg("x"), pybind11::arg("weights"),
-	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 5,
+	    pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
 	    pybind11::arg("mock") = false);
 	m.def(
 	    "measure_mock_parameter", &hxtorch::measure_mock_parameter,
@@ -66,7 +67,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "matmul", &hxtorch::matmul, __doc_hxtorch_matmul, pybind11::arg("input"),
 	    pybind11::arg("other"), pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
+	    pybind11::arg("mock") = false);
 
 	typedef torch::Tensor (*single_stride_conv_type)(
 	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&, int64_t,
@@ -88,40 +90,47 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    "conv1d", (single_stride_conv_type) &hxtorch::conv1d, __doc_hxtorch_conv1d,
 	    pybind11::arg("input"), pybind11::arg("weight"),
 	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride") = 1,
-	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 5,
+	    pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
 	    pybind11::arg("mock") = false);
 	m.def(
 	    "conv1d", (conv1d_type) &hxtorch::conv1d, __doc_hxtorch_conv1d_2, pybind11::arg("input"),
 	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
+	    pybind11::arg("mock") = false);
 	m.def(
 	    "expanded_conv1d", (single_stride_expanded_conv1d_type) &hxtorch::expanded_conv1d,
 	    __doc_hxtorch_expanded_conv1d, pybind11::arg("input"), pybind11::arg("weight"),
 	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride") = 1,
 	    pybind11::arg("num_expansions") = 1, pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
+	    pybind11::arg("mock") = false);
 	m.def(
 	    "expanded_conv1d", (expanded_conv1d_type) &hxtorch::expanded_conv1d,
 	    __doc_hxtorch_expanded_conv1d_2, pybind11::arg("input"), pybind11::arg("weight"),
 	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride"),
 	    pybind11::arg("num_expansions") = 1, pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
+	    pybind11::arg("mock") = false);
 	m.def(
 	    "conv2d", (single_stride_conv_type) &hxtorch::conv2d, __doc_hxtorch_conv2d,
 	    pybind11::arg("input"), pybind11::arg("weight"),
 	    pybind11::arg("bias") = c10::optional<torch::Tensor>(), pybind11::arg("stride") = 1,
-	    pybind11::arg("num_sends") = 1, pybind11::arg("wait_between_events") = 5,
+	    pybind11::arg("num_sends") = 1,
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
 	    pybind11::arg("mock") = false);
 	m.def(
 	    "conv2d", (conv2d_type) &hxtorch::conv2d, __doc_hxtorch_conv2d_2, pybind11::arg("input"),
 	    pybind11::arg("weight"), pybind11::arg("bias") = c10::optional<torch::Tensor>(),
 	    pybind11::arg("stride"), pybind11::arg("num_sends") = 1,
-	    pybind11::arg("wait_between_events") = 5, pybind11::arg("mock") = false);
+	    pybind11::arg("wait_between_events") = hxtorch::constants::defaults::wait_between_events,
+	    pybind11::arg("mock") = false);
 	pybind11::class_<hxtorch::MockParameter>(m, "MockParameter", __doc_hxtorch_MockParameter)
 	    .def(
 	        pybind11::init<double, double>(), __doc_hxtorch_MockParameter_MockParameter,
-	        pybind11::arg("noise_std") = 2, pybind11::arg("gain") = 0.002)
+	        pybind11::arg("noise_std") = hxtorch::constants::defaults::noise_std,
+	        pybind11::arg("gain") = hxtorch::constants::defaults::gain)
 	    .def_readwrite("noise_std", &hxtorch::MockParameter::noise_std)
 	    .def_readwrite("gain", &hxtorch::MockParameter::gain)
 	    .def(
@@ -160,4 +169,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	constants_module.attr("output_activation_max") = hxtorch::constants::output_activation_max;
 	constants_module.attr("hardware_matrix_height") = hxtorch::constants::hardware_matrix_height;
 	constants_module.attr("hardware_matrix_width") = hxtorch::constants::hardware_matrix_width;
+
+	auto constants_defaults_module = constants_module.def_submodule("defaults", "");
+	constants_defaults_module.attr("wait_between_events") =
+	    hxtorch::constants::defaults::wait_between_events;
+	constants_defaults_module.attr("gain") = hxtorch::constants::defaults::gain;
+	constants_defaults_module.attr("noise_std") = hxtorch::constants::defaults::noise_std;
 }

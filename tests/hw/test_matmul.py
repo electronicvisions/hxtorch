@@ -147,8 +147,8 @@ class TestMatmulHXmock(TestMatmulPyTorch):
     Tests the hxtorch matmul operation.
     """
     matmul: ClassVar = partial(hxtorch.matmul, mock=True)
-    noise_std: ClassVar[float] = 2.
-    gain: ClassVar[float] = 0.002
+    noise_std: ClassVar[float] = hxtorch.constants.defaults.noise_std
+    gain: ClassVar[float] = hxtorch.constants.defaults.gain
 
     @classmethod
     def setUpClass(cls):

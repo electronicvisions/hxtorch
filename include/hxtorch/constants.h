@@ -22,4 +22,12 @@ constexpr static intmax_t hardware_matrix_height =
 constexpr static intmax_t hardware_matrix_width =
     halco::hicann_dls::vx::v2::SynapseOnSynapseRow::size;
 
+namespace defaults {
+
+constexpr static intmax_t wait_between_events = 5;
+constexpr static double gain = 0.002;
+constexpr static double noise_std = 2.;
+
+} // defaults
+
 } // hxtorch::constants
