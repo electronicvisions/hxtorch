@@ -5,7 +5,7 @@
 #include "hxtorch/detail/inference_tracer.h"
 
 #include <fstream>
-#include <cereal/archives/binary.hpp>
+#include <cereal/archives/portable_binary.hpp>
 #include <cereal/cereal.hpp>
 
 namespace hxtorch {
@@ -26,7 +26,7 @@ std::vector<std::string> InferenceTracer::stop()
 	{
 		std::ofstream file(m_filename);
 		{
-			cereal::BinaryOutputArchive oa(file);
+			cereal::PortableBinaryOutputArchive oa(file);
 			oa(m_impl->ops);
 		}
 	}
@@ -103,7 +103,7 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 	{
 		std::ifstream file(filename);
 		{
-			cereal::BinaryInputArchive ia(file);
+			cereal::PortableBinaryInputArchive ia(file);
 			ia(ops);
 		}
 	}
