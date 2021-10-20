@@ -7,7 +7,7 @@ namespace hxtorch::detail {
 
 template <typename T>
 auto multi_narrow(
-    T&& t, std::vector<int64_t> dim, std::vector<int64_t> start, std::vector<int64_t> length)
+    T& t, std::vector<int64_t> dim, std::vector<int64_t> start, std::vector<int64_t> length)
 {
 	assert(dim.size() == start.size() && dim.size() == length.size());
 	if (dim.size() == 0) {
@@ -19,7 +19,7 @@ auto multi_narrow(
 		dim.pop_back();
 		start.pop_back();
 		length.pop_back();
-		return multi_narrow(std::move(t), dim, start, length).narrow(d, s, l);
+		return multi_narrow(t, dim, start, length).narrow(d, s, l);
 	}
 }
 
