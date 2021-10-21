@@ -40,9 +40,17 @@ std::tuple<grenade::vx::ChipConfig const, stadls::vx::ReinitStackEntry> load_and
 			throw std::runtime_error(
 			    std::string("Failed to open calibration at ") + calibration_path + ".");
 		}
-		{
+		try {
 			cereal::PortableBinaryInputArchive ia(calibration);
 			ia(cocos);
+		} catch (std::exception const& error) {
+			LOG4CXX_ERROR(
+			    logger,
+			    "Deserializing calibration failed. The deserializer expects portable binary data "
+			    "(which typically has a .pbin file extension). Other common errors can be caused "
+			    "by mismatch of the hardware abstraction layers used to generate the calibration "
+			    "and the ones this library is compiled-against.");
+			throw error;
 		}
 	}
 	auto const chip = grenade::vx::convert_to_chip(cocos);
