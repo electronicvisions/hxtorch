@@ -30,7 +30,7 @@ def configure(cfg):
 
     cfg.check(
         compiler='cxx',
-        features='cxx pyembed',
+        features='cxx pyext',
         uselib_store='PYBIND11HXTORCH',
         mandatory=True,
         header_name='pybind11/pybind11.h',
@@ -80,7 +80,9 @@ def build(bld):
     )
 
     bld(
-        features = 'cxx cxxshlib pyembed',
+        # pyext needed due to op registration, i.e. this can't be a shared lib
+        # for non-Python usage
+        features = 'cxx pyext',
         source = bld.path.ant_glob('src/hxtorch/**/*.cpp', excl='src/hxtorch/hxtorch.cpp'),
         target = 'hxtorch_cpp',
         use = ['hxtorch_inc', 'grenade_vx', 'TORCH_CPP'],
@@ -90,11 +92,10 @@ def build(bld):
     )
 
     bld(
-        features = 'cxx cxxshlib pyext pyembed',
+        features = 'cxx cxxshlib pyext',
         source = 'src/hxtorch/hxtorch.cpp',
         target = '_hxtorch',
         use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx_v2', 'PYBIND11HXTORCH', 'TORCH'],
-        linkflags = '-Wl,-z,defs',
         defines = ['TORCH_EXTENSION_NAME=_hxtorch'],
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
@@ -131,7 +132,7 @@ def build(bld):
 
     bld(
         target = 'hxtorch_cpp_swtests',
-        features = 'gtest cxx cxxprogram pyembed',
+        features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/test-*.cpp'),
         use = ['hxtorch_cpp', 'GTEST'],
         linkflags = '-Wl,-z,defs',
