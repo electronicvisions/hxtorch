@@ -51,7 +51,7 @@ class Model(torch.nn.Module):
                 in_channels=1, out_channels=20, kernel_size=10, stride=5,
                 bias=False, padding=1,
                 # hardware specific parameters:
-                num_sends=3,           # scales the hardware-gain, will be
+                num_sends=None,        # scales the hardware-gain, will be
                                        # adjusted automatically if set to None.
                 wait_between_events=2, # specifies wait time between two inputs
                                        # lower values may lead to saturation
@@ -70,14 +70,14 @@ class Model(torch.nn.Module):
                 in_features=5 * 5 * 20,
                 out_features=128,
                 bias=False,
-                num_sends=2,
+                num_sends=None,
                 wait_between_events=2,
                 mock=mock,
             ),
             hxnn.ConvertingReLU(mock=mock, shift=1),
             hxnn.Linear(
                 128, 10, bias=False,
-                num_sends=3,
+                num_sends=None,
                 wait_between_events=2,
                 mock=mock
             )
@@ -90,23 +90,28 @@ class Model(torch.nn.Module):
         return x
 
 
-def init(calibration_path: str, mock: bool, mock_disable_noise: bool):
+def init(calibration_path: str, mock: bool, mock_noise_std: Real,
+         mock_gain: Real):
     """
     Initialize hxtorch connection and load calibration.
 
+    Caveat: This also measures and sets the gain, therefore do this before
+    initializing the model (as this influences layer initialization).
+
     :param calibration_path: Path of custom calibration
     :param mock: Whether to simulate the hardware
-    :param mock_disable_noise: Disable noise in mock mode
+    :param mock_noise_std: Standard deviation of artificial noise in mock mode
+    :param mock_gain: Multiplication gain used in mock mode
     """
     if mock:
-        mock_parameter = hxtorch.MockParameter(noise_std=0.) \
-            if mock_disable_noise else hxtorch.MockParameter()
+        mock_parameter = hxtorch.MockParameter(
+            noise_std=mock_noise_std, gain=mock_gain)
         log.info(f"Initialize mock mode with {mock_parameter}")
     else:
         log.info("Initialize with BrainScaleS-2 ASIC")
         if calibration_path:
-            log.info(f"Apply calibration from: '{args.calibration_path}'")
-            hxtorch.init(hxtorch.CalibrationPath(args.calibration_path))
+            log.info(f"Apply calibration from: '{calibration_path}'")
+            hxtorch.init_hardware(hxtorch.CalibrationPath(calibration_path))
         else:
             log.info("Apply latest nightly calibration")
             hxtorch.init_hardware()  # defaults to a nightly default calib
@@ -204,6 +209,9 @@ def main(args: argparse.Namespace):
     test_loader = torch.utils.data.DataLoader(
         dataset=test_data, batch_size=args.test_batch_size)
 
+    # Initialize the hardware / mock
+    init(args.calibration_path, args.mock, args.mock_noise_std, args.mock_gain)
+
     model = Model(mock=args.mock)
     log.info(f"Used model:\n{model}")
     if args.resume_from:
@@ -212,9 +220,6 @@ def main(args: argparse.Namespace):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=1, gamma=args.gamma)
-
-    init(mock=args.mock, mock_disable_noise=args.mock_disable_noise,
-         calibration_path=args.calibration_path)
 
     accuracy = test(model, test_loader)
     for epoch in range(1, args.epochs + 1):
@@ -240,26 +245,31 @@ def get_parser() -> argparse.ArgumentParser:
         description="hxtorch MNIST example",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        "--batch-size", type=int, default=100, metavar="<num samples>",
+        "--batch-size", type=int, default=1000, metavar="<num samples>",
         help="input batch size for training")
     parser.add_argument(
-        "--test-batch-size", type=int, default=500, metavar="<num samples>",
+        "--test-batch-size", type=int, default=2000, metavar="<num samples>",
         help="input batch size for testing")
     parser.add_argument(
-        "--epochs", type=int, default=10, metavar="<num epochs>",
+        "--epochs", type=int, default=20, metavar="<num epochs>",
         help="number of epochs to train")
     parser.add_argument(
         "--lr", type=float, default=1.0, metavar="<learning rate>",
         help="learning rate")
     parser.add_argument(
-        "--gamma", type=float, default=0.7, metavar="<gamma>",
+        "--gamma", type=float, default=0.99, metavar="<gamma>",
         help="Learning rate decay")
     parser.add_argument(
         "--mock", action="store_true", default=False,
         help="enable mock mode")
     parser.add_argument(
-        "--mock-disable-noise", action="store_true", default=False,
-        help="disable artificial noise in mock mode")
+        "--mock-noise-std", type=float,
+        default=hxtorch.constants.defaults.noise_std,
+        help="standard deviation of artificial noise in mock mode")
+    parser.add_argument(
+        "--mock-gain", type=float,
+        default=hxtorch.constants.defaults.gain,
+        help="multiplication gain used in mock mode")
     parser.add_argument(
         "--seed", type=int, default=0x5EEED, metavar="<seed>",
         help="seed used for initialization")
