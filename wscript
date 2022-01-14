@@ -105,7 +105,7 @@ def build(bld):
     bld(
         target='hxtorch',
         features='py use',
-        use=['pylogging', '_hxtorch'],
+        use=['pylogging', '_hxtorch', 'pygrenade_vx'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',

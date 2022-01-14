@@ -116,6 +116,12 @@ void init_hardware(CalibrationPath const& calibration_path)
 	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
 
+
+grenade::vx::ChipConfig get_chip()
+{
+	return detail::getChip();
+}
+
 void release_hardware()
 {
 	detail::getConnection().reset();

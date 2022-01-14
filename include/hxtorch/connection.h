@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/config.h"
 #include <optional>
 #include <string>
 
@@ -46,6 +47,11 @@ void init_hardware(CalibrationPath const& calibration_path);
  * without ExperimentInit and without any calibration.
  */
 void init_hardware_minimal();
+
+/**
+ * Get copy of ChipConfig object
+ */
+grenade::vx::ChipConfig get_chip();
 
 /**
  * Release hardware resource.
