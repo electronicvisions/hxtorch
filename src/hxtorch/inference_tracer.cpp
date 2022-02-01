@@ -55,7 +55,6 @@ std::tuple<std::vector<std::vector<T>>, std::vector<int64_t>> convert_inference_
 	auto input_2d = input.reshape({-1, sizes.at(sizes.size() - 1)});
 	auto const sizes_2d = input_2d.sizes().vec();
 
-	grenade::vx::IODataList::Entry input_variant;
 	auto input_a = input_2d.accessor<float, 2>();
 	if constexpr (std::is_same_v<T, grenade::vx::Int8>) {
 		auto input_in = hxtorch::convert_to_vector<grenade::vx::Int8>(input_a);
