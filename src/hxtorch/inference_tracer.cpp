@@ -101,7 +101,7 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 		throw std::runtime_error("Empty trace can't be run.");
 	}
 
-	grenade::vx::IODataList::Entry input_variant;
+	grenade::vx::compute::Sequence::IOData input_variant;
 	std::vector<int64_t> sizes_2d;
 	if (std::holds_alternative<grenade::vx::compute::MAC>(ops.data.front())) {
 		auto const [i, s] = convert_inference_trace_input<grenade::vx::UInt5>(input);
