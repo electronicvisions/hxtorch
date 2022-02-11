@@ -23,6 +23,8 @@
 #include "hxtorch/mock.h"
 #include "hxtorch/relu.h"
 
+#include "hxtorch/snn/run.h"
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
 	m.import("pygrenade_vx");
@@ -178,4 +180,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    hxtorch::constants::defaults::wait_between_events;
 	constants_defaults_module.attr("gain") = hxtorch::constants::defaults::gain;
 	constants_defaults_module.attr("noise_std") = hxtorch::constants::defaults::noise_std;
+
+	auto m_snn = m.def_submodule("_snn");
+	m_snn.def(
+	    "run", &hxtorch::snn::run, pybind11::arg("config"), pybind11::arg("network_graph"),
+	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
 }
