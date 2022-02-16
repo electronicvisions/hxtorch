@@ -24,7 +24,8 @@ struct HWDBPath
  * @param calibration_version Calibration version to load
  * @param hwdb_path Optional path to the hwdb to use
  */
-void init_hardware(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
+void init_hardware(std::optional<HWDBPath> const& hwdb_path = std::nullopt, bool spiking = false);
+
 
 /**
  * Path to a calibration.

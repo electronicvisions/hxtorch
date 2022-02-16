@@ -81,7 +81,7 @@ void init_hardware_minimal()
 }
 
 
-void init_hardware(std::optional<HWDBPath> const& hwdb_path)
+void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool spiking)
 {
 	grenade::vx::backend::Connection connection;
 
@@ -92,9 +92,14 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path)
 		version = hwdb_path->version;
 	}
 	using namespace std::string_literals;
+
+	auto mode = "hagen";
+	if (spiking) {
+		mode = "spiking";
+	}
 	auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
 	                              connection.get_unique_identifier(hwdb_path_value) + "/"s +
-	                              version + "/hagen_cocolist.pbin"s;
+	                              version + "/" + mode + "_cocolist.pbin"s;
 
 	auto [chip, reinit] = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;

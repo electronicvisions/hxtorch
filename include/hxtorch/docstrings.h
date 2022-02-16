@@ -113,8 +113,8 @@ static const char* __doc_hxtorch_inference_trace =
 static const char* __doc_hxtorch_init_hardware =
     R"doc(Initialize the hardware automatically from the environment.
 
-@param calibration_version Calibration version to load
-@param hwdb_path Optional path to the hwdb to use)doc";
+@param hwdb_path Optional path to the hwdb to use
+@param spiking Boolean flag indicating whether spiking or non-spiking calibration is loaded)doc";
 
 static const char* __doc_hxtorch_init_hardware_2 =
     R"doc(Initialize the hardware with calibration path.
