@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from functools import partial
 from typing import ClassVar, Dict
+import math
 import unittest
 import torch
 import hxtorch
@@ -80,6 +81,7 @@ class TestConv1d(TestConv):
     """
     Tests the conv1d operation.
     """
+
     conv = torch.conv1d
     torch_conv = torch.conv1d
 
@@ -87,24 +89,6 @@ class TestConv1d(TestConv):
         "batch1_outchannels1_inchannels1_kernel_larger_stride":
         ConvInput(rand_full((3, 1, 30), 25.), rand_full((1, 1, 5), 50.),
                   stride=7),
-        "batch2_outchannels1_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30), 10.), rand_full((1, 3, 5), 50.),
-                  stride=7),
-        "batch2_outchannels4_inchannels3_kernel_larger_stride":
-        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
-                  stride=7),
-        "batch1_outchannels1_inchannels1_kernel_smaller_stride":
-        ConvInput(rand_full((3, 1, 30), 25.), rand_full((1, 1, 5), 50.),
-                  stride=4),
-        "batch2_outchannels1_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30), 10.), rand_full((1, 3, 5), 50.),
-                  stride=4),
-        "batch2_outchannels4_inchannels3_kernel_smaller_stride":
-        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
-                  stride=4),
-        "batch2_outchannels4_inchannels3_bias":
-        ConvInput(rand_full((2, 3, 30), 10.), rand_full((4, 3, 5), 50.),
-                  bias=torch.full((4,), 0.).requires_grad_(), stride=4),
         "expanded_full_synram":
         ConvInput(rand_full((2, 1, 128), 10.), rand_full((14, 1, 43), 15.),
                   bias=torch.full((14,), 1.).requires_grad_(), stride=5),
@@ -112,6 +96,20 @@ class TestConv1d(TestConv):
         ConvInput(rand_full((2, 1, 138), 10.), rand_full((14, 1, 43), 15.),
                   bias=torch.full((14,), 1.).requires_grad_(), stride=5),
     }
+
+    kernel_size = 5
+    for n_batches in [2, 4]:
+        for n_input_channels in [1, 3, 5]:
+            for n_output_channels in [1, 4]:
+                for stride in [7, 4, 2]:
+                    test_inputs.update({
+                        f"batch{n_batches}_outchannels{n_output_channels}_"
+                        + f"inchannels{n_input_channels}_kernel{kernel_size}_"
+                        + f"stride{stride}": ConvInput(
+                            rand_full((n_batches, n_input_channels, 30), 10.),
+                            rand_full((n_output_channels, n_input_channels,
+                                       kernel_size), 50.),
+                            stride=stride)})
 
 
 class TestConv1dHX(TestConv1d):
@@ -148,9 +146,16 @@ class TestConv1dHXmock(TestConv1d):
 class TestExpandedConv1d(TestConv1d):
     """
     Tests the conv1d operation.
+
+    :cvar num_expansions: Number of expansions of the conv1d operation.
+        Number of times the convolution kernel is placed side by side
+        in the synapse matrix, shifted by the convolution's stride.
     """
+
+    num_expansions = 18
     conv = partial(
-        hxtorch.expanded_conv1d, num_expansions=18, num_sends=4, mock=True)
+        hxtorch.expanded_conv1d, num_expansions=num_expansions,
+        num_sends=4, mock=True)
 
     @classmethod
     def setUpClass(cls):
@@ -170,12 +175,31 @@ class TestExpandedConv1d(TestConv1d):
                 result = hxtorch.conv1d(
                     num_sends=4, mock=True, **conv_input._asdict())
 
+                # calculate how many synrams are filled with the given
+                # operation, each will run as its own MAC operation and
+                # will result in a rounding error up to 1.
+
+                # size limitation in terms of height, caused by inputs:
+                n_input_channels = self.test_inputs[mode].input.size()[1]
+                kernel_size = self.test_inputs[mode].weight.size()[2]
+                stride = self.test_inputs[mode].stride
+
+                n_synapse_matrices = math.ceil(
+                    ((n_input_channels * stride * self.num_expansions)
+                     + kernel_size) / hxtorch.constants.hardware_matrix_height)
+
+                # size limitation in terms of width, caused by outputs:
+                n_output_channels = self.test_inputs[mode].weight.size()[0]
+                n_synapse_matrices = max(
+                    n_synapse_matrices,
+                    math.ceil(n_output_channels
+                              / hxtorch.constants.hardware_matrix_width))
+
                 self.assertTrue(
-                    torch.allclose(result_expanded, result, rtol=.05),
+                    torch.allclose(result_expanded, result,
+                                   atol=n_synapse_matrices),
                     "Results do not match:\n"
                     f"{result_expanded}\n!=\n{result}")
-
-
 
 
 class TestConv2d(TestConv):
