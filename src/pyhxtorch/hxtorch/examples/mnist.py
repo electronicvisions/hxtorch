@@ -51,12 +51,12 @@ class Model(torch.nn.Module):
                 in_channels=1, out_channels=20, kernel_size=10, stride=5,
                 bias=False, padding=1,
                 # hardware specific parameters:
-                num_sends=None,        # scales the hardware-gain, will be
-                                       # adjusted automatically if set to None.
-                wait_between_events=2, # specifies wait time between two inputs
-                                       # lower values may lead to saturation
-                                       # effects in the drivers.
-                mock=mock,             # enables simulation-mode.
+                num_sends=None,         # scales the hardware-gain, will be
+                                        # adjusted automatically if set to None.
+                wait_between_events=2,  # specifies wait time between two inputs
+                                        # lower values may lead to saturation
+                                        # effects in the drivers.
+                mock=mock,              # enables simulation-mode.
                 input_transform=hxnn.scale_input,  # Scale the input to the
                                                    # full range of BSS-2.
             ),

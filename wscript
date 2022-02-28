@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from waflib.extras.test_base import summary
 import copy
 import site
@@ -16,6 +17,8 @@ def options(opt):
     opt.load('test_base')
     opt.load('python')
     opt.load('pytest')
+    opt.load('pylint')
+    opt.load('pycodestyle')
     opt.load('doxygen')
 
 
@@ -104,12 +107,14 @@ def build(bld):
 
     bld(
         target='hxtorch',
-        features='py use',
+        features='py use pylint pycodestyle',
         use=['pylogging', '_hxtorch', 'pygrenade_vx'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',
         install_from='src/pyhxtorch',
+        pylint_config=os.path.join(get_toplevel_path(), "code-format", "pylintrc"),
+        pycodestyle_config=os.path.join(get_toplevel_path(), "code-format", "pycodestyle")
     )
 
     bld(

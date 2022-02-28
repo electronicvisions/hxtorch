@@ -12,8 +12,7 @@ from numbers import Integral, Real
 from typing import Callable, Tuple, Union, Optional
 import torch
 import _hxtorch
-from _hxtorch.constants import defaults
-import pylogging as logger
+from _hxtorch.constants import defaults  # pylint: disable=import-error
 
 
 def scale_input(x_in: torch.Tensor) -> torch.Tensor:
@@ -111,7 +110,7 @@ class MACLayer(Layer):
         :param weight_mean: Mean value of the weight distribution
         :param relu_shift: Bit shift assumed in subsequent ConvertingReLU
         """
-        fan_in = self.weight[0].numel()
+        fan_in = self.weight[0].numel()  # pylint: disable=no-member
 
         gain_relu = math.sqrt(2)
         gain_mac = _hxtorch.get_mock_parameter().gain
@@ -125,19 +124,19 @@ class MACLayer(Layer):
         std /= self.num_sends
 
         torch.nn.init.trunc_normal_(
-            self.weight,
+            self.weight,  # pylint: disable=no-member
             mean=weight_mean,
             std=std,
             a=_hxtorch.constants.synaptic_weight_min,
             b=_hxtorch.constants.synaptic_weight_max
         )
 
-        if self.bias is not None:
+        if self.bias is not None:  # pylint: disable=no-member
             # estimated standard deviation of the input
             std_in = _hxtorch.constants.input_activation_max / math.sqrt(3.)
             bound = gain_tot / math.sqrt(fan_in) / std_in
             with torch.no_grad():
-                self.bias.uniform_(-bound, bound)
+                self.bias.uniform_(-bound, bound)  # pylint: disable=no-member
 
 
 class Linear(MACLayer, torch.nn.Linear):
@@ -145,6 +144,7 @@ class Linear(MACLayer, torch.nn.Linear):
     Applies a linear transformation to the incoming data on Hicann-X.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(self, in_features: Integral, out_features: Integral,
                  bias: bool = True, num_sends: Optional[Integral] = None,
                  wait_between_events: Integral = defaults.wait_between_events,
@@ -184,6 +184,7 @@ class Linear(MACLayer, torch.nn.Linear):
         self._matmul = _hxtorch.matmul
         self.avg = avg
 
+    # Allow redefinition of builtin in order to maintain PyTorch style
     def forward(self, input):  # pylint: disable=redefined-builtin
         weight, bias = self.weight, self.bias
         if self.weight_transform is not None:
@@ -209,20 +210,21 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
     """
 
     @abstractmethod
-    def _conv(self, x: torch.Tensor, weight: torch.Tensor,
-              stride: Tuple[Integral, ...],
-              num_sends: Integral) -> torch.Tensor:
+    def _conv(self, input: torch.Tensor, weight: torch.Tensor,  # pylint: disable=redefined-builtin
+              bias: torch.Tensor, stride: Tuple[Integral, ...],
+              **kwargs) -> torch.Tensor:
         """
         Implementation of convolution function.
         """
         raise NotImplementedError
 
+    # Allow redefinition of builtin in order to maintain PyTorch style
     def forward(self, input):  # pylint: disable=redefined-builtin,arguments-differ
         if self.dilation not in ((1,), (1, 1)):
             raise ValueError(
-                f"Dilations greater than 1 are currently not supported.")
+                "Dilations greater than 1 are currently not supported.")
         if self.groups > 1:
-            raise ValueError(f"More than 1 group is currently not supported.")
+            raise ValueError("More than 1 group is currently not supported.")
 
         if any(self.padding):
             expanded_padding = list()
@@ -248,12 +250,13 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
         return output
 
 
-class Conv1d(ConvNd, torch.nn.Conv1d):
+class Conv1d(ConvNd, torch.nn.Conv1d):  # pylint: disable=abstract-method # Issue 3983
     """
     Applies a 1D convolution over an input signal composed of several input
     planes.
     """
 
+    # pylint: disable=too-many-arguments, super-init-not-called
     def __init__(self, in_channels: Integral, out_channels: Integral,
                  kernel_size: Union[Integral, Tuple[Integral]],
                  stride: Integral = 1,
@@ -292,7 +295,7 @@ class Conv1d(ConvNd, torch.nn.Conv1d):
         """
         # super().__init__() would be nicer, but impossible due to different
         # parameters
-        MACLayer.__init__(
+        MACLayer.__init__(  # pylint: disable=non-parent-init-called
             self, num_sends, wait_between_events, mock,
             input_transform=input_transform, weight_transform=weight_transform)
         torch.nn.Conv1d.__init__(
@@ -311,6 +314,7 @@ class ExpandedConv1d(Conv1d):
     training, because the same weights are used at different locations!
     """
 
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, in_channels: int, out_channels: int,
                  kernel_size: Union[int, Tuple[int]],
                  stride: int = 1, padding: Union[int, Tuple[int, int]] = 0,
@@ -361,7 +365,7 @@ class ExpandedConv1d(Conv1d):
             max_kernel_size = _hxtorch.constants.hardware_matrix_height
             max_num_width = max_out_channels // self.out_channels
             max_num_height = (max_kernel_size - self.kernel_size[0]) \
-                             // self.stride[0] + 1
+                // self.stride[0] + 1
             self.num_expansions = min(max_num_width, max_num_height)
 
     def _conv(self, *args, **kwargs) -> torch.Tensor:
@@ -372,12 +376,13 @@ class ExpandedConv1d(Conv1d):
         return f"num_expansions={self.num_expansions}, {super().extra_repr()}"
 
 
-class Conv2d(ConvNd, torch.nn.Conv2d):
+class Conv2d(ConvNd, torch.nn.Conv2d):  # pylint: disable=abstract-method # Issue 3983
     """
     Applies a 2D convolution over an input image composed of several input
     planes.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(self, in_channels: Integral, out_channels: Integral,
                  kernel_size: Union[Integral, Tuple[Integral, Integral]],
                  stride: Integral = 1,
@@ -439,7 +444,8 @@ class ReLU(Layer, torch.nn.ReLU):
         Layer.__init__(self, mock)
         torch.nn.ReLU.__init__(self)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    # Allow redefinition of builtin in order to maintain PyTorch style
+    def forward(self, input: torch.Tensor) -> torch.Tensor:  # pylint: disable=redefined-builtin
         output = _hxtorch.relu(input, mock=self.mock)
         return output
 
@@ -458,7 +464,8 @@ class ConvertingReLU(ReLU):
         super().__init__(mock)
         self.shift = shift
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    # Allow redefinition of builtin in order to maintain PyTorch style
+    def forward(self, input: torch.Tensor) -> torch.Tensor:  # pylint: disable=redefined-builtin
         output = _hxtorch.converting_relu(
             input, shift=self.shift, mock=self.mock)
         return output
