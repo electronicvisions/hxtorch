@@ -107,12 +107,20 @@ def build(bld):
 
     bld(
         target='hxtorch',
-        features='py use pylint pycodestyle',
+        features='py use',
         use=['pylogging', '_hxtorch', 'pygrenade_vx'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',
         install_from='src/pyhxtorch',
+    )
+
+    bld(
+        target='hxtorch_linting',
+        features='py use pylint pycodestyle',
+        use=['pylogging', '_hxtorch', 'pygrenade_vx'],
+        relative_trick=True,
+        source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         pylint_config=os.path.join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=os.path.join(get_toplevel_path(), "code-format", "pycodestyle")
     )
