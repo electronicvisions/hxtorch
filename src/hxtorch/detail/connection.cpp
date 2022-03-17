@@ -1,7 +1,7 @@
 #include "hxtorch/detail/connection.h"
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
+#include "lola/vx/v2/chip.h"
 
 namespace hxtorch::detail {
 
@@ -11,9 +11,9 @@ std::unique_ptr<grenade::vx::backend::Connection>& getConnection()
 	return connection;
 }
 
-grenade::vx::ChipConfig& getChip()
+lola::vx::v2::Chip& getChip()
 {
-	static grenade::vx::ChipConfig chip;
+	static lola::vx::v2::Chip chip;
 	return chip;
 }
 

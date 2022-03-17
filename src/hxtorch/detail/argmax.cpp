@@ -1,10 +1,10 @@
 #include "hxtorch/detail/argmax.h"
 
 #include "grenade/vx/compute/argmax.h"
-#include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
+#include "lola/vx/v2/chip.h"
 
 namespace hxtorch::detail {
 

@@ -2,11 +2,11 @@
 
 #include "grenade/vx/compute/converting_relu.h"
 #include "grenade/vx/compute/relu.h"
-#include "grenade/vx/config.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
 #include "hxtorch/detail/util.h"
+#include "lola/vx/v2/chip.h"
 
 namespace hxtorch::detail {
 

@@ -2,13 +2,14 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
-#include "grenade/vx/config.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/detail/connection.h"
 #include "lola/vx/cerealization.h"
+#include "lola/vx/v2/chip.h"
 #include "stadls/vx/reinit_stack_entry.h"
 #include "stadls/vx/v2/dumper.h"
+#include "stadls/vx/v2/dumperdone.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_program_builder.h"
 #include "stadls/vx/v2/run.h"
@@ -27,7 +28,7 @@ namespace hxtorch {
 
 namespace {
 
-std::tuple<grenade::vx::ChipConfig const, stadls::vx::ReinitStackEntry> load_and_apply_calibration(
+std::tuple<lola::vx::v2::Chip const, stadls::vx::ReinitStackEntry> load_and_apply_calibration(
     std::string calibration_path, grenade::vx::backend::Connection& connection)
 {
 	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
@@ -53,7 +54,7 @@ std::tuple<grenade::vx::ChipConfig const, stadls::vx::ReinitStackEntry> load_and
 			throw error;
 		}
 	}
-	auto const chip = grenade::vx::convert_to_chip(cocos);
+	auto const chip = stadls::vx::v2::convert_to_chip(cocos);
 
 	auto calib_builder = stadls::vx::v2::generate(stadls::vx::v2::ExperimentInit()).builder;
 	calib_builder.merge_back(stadls::vx::v2::convert_to_builder(cocos));
@@ -74,7 +75,7 @@ void init_hardware_minimal()
 	auto init_generator = stadls::vx::v2::DigitalInit();
 	grenade::vx::backend::Connection connection(
 	    hxcomm::vx::get_connection_from_env(), init_generator);
-	grenade::vx::ChipConfig const chip;
+	lola::vx::v2::Chip const chip;
 	detail::getChip() = chip;
 	detail::getConnection() =
 	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
@@ -122,7 +123,7 @@ void init_hardware(CalibrationPath const& calibration_path)
 }
 
 
-grenade::vx::ChipConfig get_chip()
+lola::vx::v2::Chip get_chip()
 {
 	return detail::getChip();
 }

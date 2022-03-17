@@ -1,16 +1,17 @@
 #pragma once
 #include <memory>
 
-namespace grenade::vx {
-class ChipConfig;
-namespace backend {
+namespace grenade::vx::backend {
 class Connection;
-} // namespace backend
-} // namespace grenade::vx
+} // namespace grenade::vx::backend
 
 namespace stadls::vx {
 class ReinitStackEntry;
 } // namespace stadls::vx
+
+namespace lola::vx::v2 {
+class Chip;
+} // namespace lola::vx::v2
 
 namespace hxtorch::detail {
 
@@ -24,7 +25,7 @@ std::unique_ptr<grenade::vx::backend::Connection>& getConnection();
  * Get singleton chip configuration.
  * @return Reference to chip configuration
  */
-grenade::vx::ChipConfig& getChip();
+lola::vx::v2::Chip& getChip();
 
 /**
  * Get singleton calibration reinit program.

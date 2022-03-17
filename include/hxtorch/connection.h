@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/config.h"
+#include "lola/vx/v2/chip.h"
 #include <optional>
 #include <string>
 
@@ -52,7 +52,7 @@ void init_hardware_minimal();
 /**
  * Get copy of ChipConfig object
  */
-grenade::vx::ChipConfig get_chip();
+lola::vx::v2::Chip get_chip();
 
 /**
  * Release hardware resource.

@@ -1,13 +1,13 @@
 #include "hxtorch/detail/mac.h"
 
 #include "grenade/vx/compute/mac.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "hxtorch/constants.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
 #include "hxtorch/detail/mock.h"
+#include "lola/vx/v2/chip.h"
 
 #include "hate/timer.h"
 
