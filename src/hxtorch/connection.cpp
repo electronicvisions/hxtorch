@@ -63,7 +63,7 @@ std::tuple<lola::vx::v3::Chip const, stadls::vx::ReinitStackEntry> load_and_appl
 	// Register reinit so the calibration gets reappplied whenever we regain control of hw.
 	// On direct-access backends, this is a no-op.
 	auto reinit_calibration = connection.create_reinit_stack_entry();
-	reinit_calibration.set(calib, true);
+	reinit_calibration.set(calib, std::nullopt, true);
 	return std::make_tuple(std::move(chip), std::move(reinit_calibration));
 }
 
