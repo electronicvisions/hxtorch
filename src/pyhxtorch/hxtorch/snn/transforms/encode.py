@@ -1,6 +1,7 @@
 """
 Define transformations for spiking input coding
 """
+from typing import Optional
 import torch
 
 
@@ -122,3 +123,76 @@ class SpikeTimesToDense(torch.nn.Module):
             '(time_bins, color_channels, x0[, x1, ...])'.
         """
         return self._to_sparse(spikes).to_dense()
+
+
+class CoordinatesToSpikes(torch.nn.Module):
+
+    """ Convert values between 0 and 1 to spikes in a given timeframe """
+
+    # Allow dt for naming of time step width
+    # pylint: disable=invalid-name, too-many-arguments
+    def __init__(self, seq_length: int, t_early: float, t_late: float,
+                 dt: float = 1.e-6, t_bias: Optional[float] = None,
+                 device: torch.device = torch.device("cpu")) -> None:
+        """
+        Construct a coordinates-to-spikes converter. This converter takes
+        coordinate values in [0, 1] and maps them to spike times in
+        interval [t_early, t_late]. A spike is indicated by a 1 on a dense time
+        axis of length seq_length with temporal resolution dt. Further, it adds
+        a bias spike at time t_bias, if t_bias is not None.
+
+        :param seq_length: Number of time steps in the resulting time sequence.
+            The effective time length is given by seq_length * dt.
+        :param t_early: The earliest time a spike will occur.
+        :param t_late: The latest time a spike will occur.
+        :param dt: The temporal resolution.
+        :param t_bias: The time a bias spike occurs.
+        """
+        super().__init__()
+        self._seq_length = seq_length
+        self._t_early = t_early
+        self._t_late = t_late
+        self._t_bias = t_bias
+        self._dt = dt
+        self._dev = device
+        self.to(device)
+
+    def forward(self, coordinate_values: torch.Tensor) -> torch.Tensor:
+        """
+        Convert coordinate values of to dense spike tensor of zeros and ones.
+
+        :param coordinate_values: Tensor with values in [0, 1], shaped
+            (batch_size, num_channels)
+
+        :returns: Returns a dense tensor of shape (batch_size, seq_length,
+            num_channels)
+        """
+        times = self._t_early + coordinate_values * (
+            self._t_late - self._t_early)
+        batch_size, num_channels = times.shape
+        indices = torch.stack((
+            torch.arange(times.shape[0]).repeat_interleave(
+                times.shape[1]).to(self._dev),
+            (times.flatten() / self._dt).round(),
+            torch.arange(times.shape[1]).repeat(times.shape[0]).to(self._dev)
+        )).type(torch.long)
+
+        if not isinstance(times, torch.Tensor):
+            ones = torch.ones_like(
+                torch.tensor(times)).flatten().type(torch.float)
+        else:
+            ones = torch.ones_like(times).flatten().type(torch.float)
+
+        if self._t_bias is None:
+            spikes = torch.sparse_coo_tensor(
+                indices, ones, (batch_size, self._seq_length, num_channels))
+            spikes = spikes.to_dense()
+        else:
+            spikes = torch.sparse_coo_tensor(
+                indices, ones, (
+                    batch_size, self._seq_length, num_channels + 1))
+            spikes = spikes.to_dense()
+            bias_idx = int(self._t_bias / self._dt)
+            spikes[:, bias_idx, -1] = 1.
+
+        return spikes
