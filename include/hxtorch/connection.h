@@ -1,5 +1,5 @@
 #pragma once
-#include "lola/vx/v2/chip.h"
+#include "lola/vx/v3/chip.h"
 #include <optional>
 #include <string>
 
@@ -52,7 +52,7 @@ void init_hardware_minimal();
 /**
  * Get copy of ChipConfig object
  */
-lola::vx::v2::Chip get_chip();
+lola::vx::v3::Chip get_chip();
 
 /**
  * Release hardware resource.

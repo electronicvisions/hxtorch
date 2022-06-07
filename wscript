@@ -98,7 +98,7 @@ def build(bld):
         features = 'cxx cxxshlib pyext',
         source = 'src/hxtorch/hxtorch.cpp',
         target = '_hxtorch',
-        use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx_v2', 'PYBIND11HXTORCH', 'TORCH'],
+        use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
         defines = ['TORCH_EXTENSION_NAME=_hxtorch'],
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
@@ -129,7 +129,7 @@ def build(bld):
         target='hxtorch_hwtests',
         tests=bld.path.ant_glob('tests/hw/*.py'),
         features='use pytest',
-        use=['hxtorch', 'dlens_vx_v2'],
+        use=['hxtorch', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin/tests/hw',
         test_timeout=1000,
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE

@@ -9,9 +9,9 @@ namespace stadls::vx {
 class ReinitStackEntry;
 } // namespace stadls::vx
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 class Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace hxtorch::detail {
 
@@ -25,7 +25,7 @@ std::unique_ptr<grenade::vx::backend::Connection>& getConnection();
  * Get singleton chip configuration.
  * @return Reference to chip configuration
  */
-lola::vx::v2::Chip& getChip();
+lola::vx::v3::Chip& getChip();
 
 /**
  * Get singleton calibration reinit program.

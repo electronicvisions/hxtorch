@@ -3,7 +3,7 @@ import os
 
 import hxtorch
 from hxtorch.examples import minimal, mnist
-from dlens_vx_v2 import hxcomm
+from dlens_vx_v3 import hxcomm
 
 
 class MinimalExampleTest(unittest.TestCase):

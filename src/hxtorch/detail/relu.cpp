@@ -6,7 +6,7 @@
 #include "hxtorch/detail/conversion.h"
 #include "hxtorch/detail/inference_tracer.h"
 #include "hxtorch/detail/util.h"
-#include "lola/vx/v2/chip.h"
+#include "lola/vx/v3/chip.h"
 
 namespace hxtorch::detail {
 

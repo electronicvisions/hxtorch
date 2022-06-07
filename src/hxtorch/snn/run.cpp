@@ -5,7 +5,7 @@
 namespace hxtorch::snn {
 
 grenade::vx::IODataMap run(
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     grenade::vx::network::NetworkGraph const& network_graph,
     grenade::vx::IODataMap const& inputs,
     grenade::vx::ExecutionInstancePlaybackHooks& playback_hooks)
