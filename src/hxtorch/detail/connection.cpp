@@ -1,13 +1,13 @@
 #include "hxtorch/detail/connection.h"
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/jit_graph_executor.h"
 #include "lola/vx/v3/chip.h"
 
 namespace hxtorch::detail {
 
-std::unique_ptr<grenade::vx::backend::Connection>& getConnection()
+std::unique_ptr<grenade::vx::JITGraphExecutor>& getConnection()
 {
-	static std::unique_ptr<grenade::vx::backend::Connection> connection;
+	static std::unique_ptr<grenade::vx::JITGraphExecutor> connection;
 	return connection;
 }
 

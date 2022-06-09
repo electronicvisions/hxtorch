@@ -1,9 +1,9 @@
 #pragma once
 #include <memory>
 
-namespace grenade::vx::backend {
-class Connection;
-} // namespace grenade::vx::backend
+namespace grenade::vx {
+class JITGraphExecutor;
+} // namespace grenade::vx
 
 namespace stadls::vx {
 class ReinitStackEntry;
@@ -19,7 +19,7 @@ namespace hxtorch::detail {
  * Get singleton connection.
  * @return Reference to connection
  */
-std::unique_ptr<grenade::vx::backend::Connection>& getConnection();
+std::unique_ptr<grenade::vx::JITGraphExecutor>& getConnection();
 
 /**
  * Get singleton chip configuration.

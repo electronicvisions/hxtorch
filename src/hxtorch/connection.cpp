@@ -2,6 +2,7 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
+#include "grenade/vx/jit_graph_executor.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/detail/connection.h"
@@ -77,8 +78,9 @@ void init_hardware_minimal()
 	    hxcomm::vx::get_connection_from_env(), init_generator);
 	lola::vx::v3::Chip const chip;
 	detail::getChip() = chip;
-	detail::getConnection() =
-	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
+	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
 }
 
 
@@ -104,8 +106,9 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool spiking)
 
 	auto [chip, reinit] = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
-	detail::getConnection() =
-	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
+	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
 	detail::getReinitCalibration() =
 	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
@@ -116,8 +119,9 @@ void init_hardware(CalibrationPath const& calibration_path)
 
 	auto [chip, reinit] = load_and_apply_calibration(calibration_path.value, connection);
 	detail::getChip() = chip;
-	detail::getConnection() =
-	    std::make_unique<grenade::vx::backend::Connection>(std::move(connection));
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
+	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
 	detail::getReinitCalibration() =
 	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }

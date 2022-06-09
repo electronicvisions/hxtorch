@@ -1,4 +1,6 @@
 #include "hxtorch/snn/run.h"
+
+#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/run.h"
 #include "hxtorch/detail/connection.h"
 
@@ -14,8 +16,14 @@ grenade::vx::IODataMap run(
 		throw std::runtime_error("No connection present.");
 	}
 
-	return grenade::vx::network::run(
-	    *hxtorch::detail::getConnection(), config, network_graph, inputs, playback_hooks);
+	auto& executor = *hxtorch::detail::getConnection();
+	auto connection = executor.release_connection(halco::hicann_dls::vx::DLSGlobal());
+
+	auto ret = grenade::vx::network::run(connection, config, network_graph, inputs, playback_hooks);
+
+	executor.acquire_connection(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
+
+	return ret;
 }
 
 }
