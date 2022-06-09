@@ -1,7 +1,7 @@
 """
 Model class for spiking HX torch yinyang example
 """
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 from functools import partial
 import torch
 
@@ -27,6 +27,9 @@ class SNN(torch.nn.Module):
                  weight_init_output: Optional[Tuple[float, float]] = None,
                  weight_scale: float = 1., trace_scale: float = 1.,
                  input_repetitions: int = 1,
+                 synapse_func: Callable = F.linear,
+                 neuron_func: Callable = F.cuba_lif_integration,
+                 hidden_cadc_recording: bool = False,
                  device: torch.device = torch.device("cpu")) -> None:
         """
         Initialize the SNN.
@@ -50,6 +53,9 @@ class SNN(torch.nn.Module):
         :param weight_scale: The factor with which the software weights are
             scaled when mapped to hardware.
         :param input_repetitions: Number of times to repeat input channels.
+        :param synapse_func: Function to compute synapse output.
+        :param neuron_func: Function to compute neuron output and
+            provide backpropagation ability.
         :param device: The used PyTorch device used for tensor operations in
             software.
         """
@@ -73,6 +79,7 @@ class SNN(torch.nn.Module):
         # Input projection
         self.linear_h = hxsnn.Synapse(
             n_in * input_repetitions, n_hidden, experiment=self.exp,
+            func=synapse_func,
             transform=partial(
                 weight_transforms.linear_saturating, scale=weight_scale))
         # Initialize weights
@@ -83,9 +90,10 @@ class SNN(torch.nn.Module):
 
         # Hidden layer
         self.lif_h = hxsnn.Neuron(
-            n_hidden, experiment=self.exp, func=F.cuba_lif_integration,
+            n_hidden, experiment=self.exp, func=neuron_func,
             params=lif_params, trace_scale=trace_scale,
-            cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True)
+            cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True,
+            enable_cadc_recording=hidden_cadc_recording)
 
         # Output projection
         self.linear_o = hxsnn.Synapse(
@@ -132,7 +140,7 @@ class SNN(torch.nn.Module):
 
         # Forward
         c_h = self.linear_h(spikes_handle)
-        self.s_h = self.lif_h(c_h)  # Keep spikes for fire reg.
+        self.s_h = self.lif_h(c_h)
         c_o = self.linear_o(self.s_h)
         y_o = self.li_readout(c_o)
 

@@ -15,6 +15,8 @@ import torch
 from torch.utils.data import DataLoader
 
 import hxtorch
+from hxtorch.spiking.functional import (
+    linear, cuba_lif_integration, eventprop_synapse, eventprop_neuron)
 from hxtorch.examples.spiking.yinyang_model import SNN, Model
 from hxtorch.spiking.datasets.yinyang import YinYangDataset
 from hxtorch.spiking.transforms.decode import MaxOverTime
@@ -39,44 +41,45 @@ def get_parser() -> argparse.ArgumentParser:
         help="enable mock mode")
 
     # data
-    parser.add_argument("--testset-size", type=int, default=256)
-    parser.add_argument("--trainset-size", type=int, default=2048)
+    parser.add_argument("--testset-size", type=int, default=1000)
+    parser.add_argument("--trainset-size", type=int, default=5000)
 
     # encoding
-    parser.add_argument("--t-shift", type=float, default=-1.5e-6)
-    parser.add_argument("--t-bias", type=float, default=0e-6)
-    parser.add_argument("--t-early", type=float, default=0e-6)
-    parser.add_argument("--t-late", type=float, default=20e-6)
-    parser.add_argument("--t-sim", type=float, default=40e-6)
+    parser.add_argument("--t-shift", type=float, default=0e-6)
+    parser.add_argument("--t-bias", type=float, default=2e-6)
+    parser.add_argument("--t-early", type=float, default=2e-6)
+    parser.add_argument("--t-late", type=float, default=26e-6)
+    parser.add_argument("--t-sim", type=float, default=38e-6)
 
     # model
     parser.add_argument("--dt", type=float, default=1e-6)
     parser.add_argument("--n-hidden", type=int, default=120)
-    parser.add_argument("--tau-mem", type=float, default=8e-6)
-    parser.add_argument("--tau-syn", type=float, default=8e-6)
+    parser.add_argument("--tau-mem", type=float, default=6e-6)
+    parser.add_argument("--tau-syn", type=float, default=6e-6)
     parser.add_argument("--weight-init-hidden-mean", type=float, default=0.2)
     parser.add_argument("--weight-init-hidden-std", type=float, default=0.2)
-    parser.add_argument("--weight-init-out-mean", type=float, default=0.01)
+    parser.add_argument("--weight-init-out-mean", type=float, default=0.0)
     parser.add_argument("--weight-init-out-std", type=float, default=0.1)
 
     # training
-    parser.add_argument("--alpha", type=int, default=50)
+    parser.add_argument("--alpha", type=int, default=150)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument(
-        "--batch-size", type=int, default=64, metavar="<num samples>",
+        "--batch-size", type=int, default=50, metavar="<num samples>",
         help="input batch size for training")
-    parser.add_argument("--gamma", type=float, default=0.97)
-    parser.add_argument("--step-size", type=int, default=10)
-    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--gamma", type=float, default=0.5)
+    parser.add_argument("--step-size", type=int, default=50)
+    parser.add_argument("--lr", type=float, default=0.0005)
     parser.add_argument("--reg-bursts", type=float, default=0.0)
     parser.add_argument("--reg-weights-hidden", type=float, default=0.0)
-    parser.add_argument("--reg-readout", type=float, default=0.0)
+    parser.add_argument("--reg-readout", type=float, default=0.0004)
     parser.add_argument("--reg-weights-output", type=float, default=0.0)
+    parser.add_argument("--gradient-estimator", type=str, default="surrogate_gradient")
 
     # hw
     parser.add_argument("--readout-scaling", type=float, default=10.0)
-    parser.add_argument("--weight-scale", type=float, default=50.)
-    parser.add_argument("--trace-scale", type=float, default=1. / 45.)
+    parser.add_argument("--weight-scale", type=float, default=64.)
+    parser.add_argument("--trace-scale", type=float, default=1. / 50.)
     parser.add_argument(
         "--calibration-path", type=str, metavar="<path>",
         default=os.getenv("HXTORCH_CALIBRATION_PATH"),
@@ -107,6 +110,7 @@ def plot(train_loss, train_acc, test_loss, test_acc, args):
     axes[0].plot(epochs, np.array(train_loss), label="Training")
     axes[0].plot(epochs, np.array(test_loss), label="Testing")
     axes[0].legend()
+    axes[0].semilogy()
 
     # Accuracy
     axes[1].set_ylabel("Acc.")
@@ -114,8 +118,11 @@ def plot(train_loss, train_acc, test_loss, test_acc, args):
     axes[1].set_xlim(1, args.epochs)
     axes[1].plot(epochs, np.array(train_acc), label="Training")
     axes[1].plot(epochs, np.array(test_acc), label="Testing")
-    axes[1].legend()
 
+    axes[1].legend()
+    axes[1].semilogy()
+
+    fig.tight_layout()
     plt.savefig(args.plot_path)
 
 
@@ -144,6 +151,21 @@ def train(model: torch.nn.Module, loader: DataLoader,
     pbar = tqdm(total=len(loader), unit="batch", leave=False)
     for data, target in loader:
         model.zero_grad()
+        # clip hidden and rescale output weights to hardware range
+        if not args.mock:
+            with torch.no_grad():
+                # clamp to maximum possible weight (when scaled to HW)
+                limit = 63. / args.weight_scale
+                model.network.linear_h.weight.data.clamp_(-limit, limit)
+                # scale output weights to fit HW range
+                scale = min(
+                    63. / np.abs(
+                        model.network.linear_o.weight.cpu().detach()
+                    ).max(),
+                    args.weight_scale)
+                # reset partial
+                model.network.linear_o.weight_transform.keywords["scale"] \
+                    = scale
 
         scores = model(data.to(dev))
 
@@ -158,12 +180,12 @@ def train(model: torch.nn.Module, loader: DataLoader,
         loss += loss_b.item() / n_total
 
         # Train accuracy
-        pred = scores.cpu().argmax(dim=1)
+        pred = scores.detach().cpu().argmax(dim=1)
         acc_b = pred.eq(target.view_as(pred)).float().mean()
         acc += acc_b / n_total
 
         # Firing rates
-        rate_b = model.network.s_h.spikes.sum() / scores.shape[0]
+        rate_b = model.network.s_h.spikes.detach().sum() / scores.shape[0]
 
         pbar.set_postfix(
             epoch=f"{epoch}", loss=f"{loss_b.item():.4f}", acc=f"{acc_b:.4f}",
@@ -240,11 +262,26 @@ def main(args: argparse.Namespace) -> float:
     testset = YinYangDataset(size=args.testset_size, seed=41)
 
     train_loader = DataLoader(
-        trainset, batch_size=args.batch_size, shuffle=True)
+        trainset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(
         testset, batch_size=args.batch_size, shuffle=True)
     log.info("Finished loading datasets and dataloaders.")
 
+    hidden_cadc_recording = True
+    log.INFO(f"{args.gradient_estimator}")
+    if args.gradient_estimator == "surrogate_gradient":
+        synapse_func = linear
+        neuron_func = cuba_lif_integration
+    elif args.gradient_estimator == "eventprop":
+        synapse_func = eventprop_synapse
+        neuron_func = eventprop_neuron
+        hidden_cadc_recording = False
+    else:
+        log.ERROR("Please specify one of the currently supported gradient "
+                  "estimation algorithms, 'eventprop' and 'surrogate_gradient'."
+                  f" Your input: '{args.gradient_estimator}'")
+
+    # init model, optimizer and scheduler
     model = Model(
         CoordinatesToSpikes(
             seq_length=int(args.t_sim / args.dt),
@@ -271,9 +308,13 @@ def main(args: argparse.Namespace) -> float:
             weight_scale=args.weight_scale,
             trace_scale=args.trace_scale,
             input_repetitions=1 if args.mock else 5,
+            synapse_func=synapse_func,
+            neuron_func=neuron_func,
+            hidden_cadc_recording=hidden_cadc_recording,
             device=dev),
         MaxOverTime(),
         args.readout_scaling)
+    log.info("mock = ", args.mock)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(
