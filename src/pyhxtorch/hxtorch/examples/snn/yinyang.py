@@ -272,12 +272,18 @@ def main(args: argparse.Namespace) -> float:
 
     # Dataloaders
     train_loader = DataLoader(
-        trainset, batch_size=args.batch_size, shuffle=True)
+        trainset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(
         testset, batch_size=args.batch_size, shuffle=True)
     log.info("Finished loading datasets and dataloaders.")
 
     # init model, optimizer and scheduler
+    if args.surrogate_gradient:
+        synapse_func = torch.nn.functional.linear
+        neuron_func = snn.functional.lif_integration
+    else:
+        synapse_func = snn.functional.eventprop_synapse
+        neuron_func = snn.functional.EventPropNeuron
     model = Model(
         CoordinatesToSpikes(
             seq_length=int(args.t_sim / args.dt),
@@ -304,6 +310,9 @@ def main(args: argparse.Namespace) -> float:
             weight_scale=args.weight_scale,
             trace_scale=args.trace_scale,
             input_repetitions=1 if args.mock else 5,
+            synapse_func=synapse_func,
+            neuron_func=neuron_func,
+            hidden_cadc_recording=args.hidden_cadc_recording,
             device=dev),
         MaxOverTime(),
         args.readout_scaling)

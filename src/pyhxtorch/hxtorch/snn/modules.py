@@ -155,11 +155,15 @@ class HXModule(torch.nn.Module):
                 @staticmethod
                 def forward(  # pylint: disable=dangerous-default-value
                         ctx, *data, extra_kwargs=self.extra_kwargs):
+                    hw_result_shortened = (
+                        hw_data[0][:, :-1].to(input[0].device)
+                        if hw_data[0] is not None else None,
+                        hw_data[1][:, :-1].to(input[0].device)
+                        if hw_data[1] is not None else None)
                     ctx.extra_kwargs = extra_kwargs
                     ctx.save_for_backward(
-                        *data, *hw_data if hw_data is not None else None)
-                    return hw_data
-
+                        *data, *hw_result_shortened)
+                    return hw_result_shortened
             out = LocalAutograd.apply(*input, *self.extra_args)
         else:
             out = self.prepare_func(hw_data)(*input, *self.extra_args)
