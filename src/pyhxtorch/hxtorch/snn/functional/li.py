@@ -25,7 +25,7 @@ def li_integration(input: torch.Tensor, params: LIParams,
     with exponential synapses.
     Integrates according to:
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
-        v^{t+1} = dt / \tau_{mem} * (v_l - v^t) + i^{t+1} + v^t
+        v^{t+1} = dt / \tau_{mem} * (v_l - v^t + i^{t+1}) + v^t
 
     Assumes i^0, v^0 = 0.
 
@@ -53,7 +53,7 @@ def li_integration(input: torch.Tensor, params: LIParams,
         i = i * (1. - params.dt * params.tau_syn_inv) + input[:, ts]
 
         # Membrane
-        dv = params.dt * params.tau_mem_inv * (params.v_leak - v) + i
+        dv = params.dt * params.tau_mem_inv * (params.v_leak - v + i)
         v = Unterjubel.apply(dv + v, v_hw[:, ts + 1]) if hw_data else dv + v
 
         # Save data
