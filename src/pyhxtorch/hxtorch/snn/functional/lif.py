@@ -32,7 +32,7 @@ def lif_integration(input: torch.Tensor, params: LIFParams,
     spiking neurons with exponential synapses.
     Integrates according to:
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
-        v^{t+1} = dt / \tau_{men} * (v_l - v^t) + i^{t+1} + v^t
+        v^{t+1} = dt / \tau_{men} * (v_l - v^t + i^{t+1}) + v^t
         z^{t+1} = 1 if v^{t+1} > params.v_th
         v^{t+1} = params.v_reset if z^{t+1} == 1
 
@@ -66,7 +66,7 @@ def lif_integration(input: torch.Tensor, params: LIFParams,
         i = i * (1 - params.dt * params.tau_syn_inv) + input[:, ts]
 
         # Membrane
-        dv = params.dt * params.tau_mem_inv * (params.v_leak - v) + i
+        dv = params.dt * params.tau_mem_inv * (params.v_leak - v + i)
         v = Unterjubel.apply(dv + v, v_hw[:, ts + 1]) if hw_data else dv + v
 
         # Spikes
