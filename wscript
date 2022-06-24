@@ -4,6 +4,7 @@ import copy
 import site
 import os
 import re
+import sys
 from waflib.extras.symwaf2ic import get_toplevel_path
 
 def depends(dep):
@@ -45,6 +46,14 @@ def configure(cfg):
     includes_torch_csrc_api = [os.path.join(x, 'torch/include/torch/csrc/api/include') for x in site_packages]
     libpath_torch = [os.path.join(x, 'torch/lib') for x in site_packages]
     libnames = []
+    # if torch isn't available via site-packages, try sys.path/PYTHONPATH
+    if not os.path.exists(libpath_torch[0]):
+        libpath_torch = [os.path.join(x, 'torch/lib') for x in sys.path if 'torch' in x]
+        if len(libpath_torch) == 0:
+            cfg.fatal('PyTorch library directory not found')
+        elif len(libpath_torch) > 1:
+            cfg.fatal('More than one location for PyTorch libraries found: {}'.format(', '.join(libpath_torch)))
+        libpath_torch = libpath_torch[0]
     for fn in os.listdir(libpath_torch[0]):
         res = re.match('^lib(.+)\.so$', fn)
         libnames.append(res.group(1))
