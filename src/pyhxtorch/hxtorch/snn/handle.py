@@ -130,11 +130,12 @@ class NeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["spikes", "membrane"]
+    _carries = ["spikes", "v_cadc", "v_madc"]
     _obsv_state = "spikes"
 
     def __init__(self, spikes: Optional[torch.Tensor] = None,
-                 membrane: Optional[torch.Tensor] = None) -> None:
+                 v_cadc: Optional[torch.Tensor] = None,
+                 v_madc: Optional[torch.Tensor] = None) -> None:
         """
         Instantiate a neuron handle able to hold spike and membrane tensors.
 
@@ -143,24 +144,29 @@ class NeuronHandle(TensorHandle):
         """
         super().__init__()
         self.spikes = spikes
-        self.membrane = membrane
+        self.v_cadc = v_cadc
+        self.v_madc = v_madc
 
 
 class ReadoutNeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["membrane"]
-    _obsv_state = "membrane"
+    _carries = ["v_cadc", "v_madc"]
+    _obsv_state = "v_cadc"
 
-    def __init__(self, membrane: Optional[torch.Tensor] = None) -> None:
+    def __init__(self, v_cadc: Optional[torch.Tensor] = None,
+                 v_madc: Optional[torch.Tensor] = None) -> None:
         """
-        Instantiate a readout neuron handle able to hold a membrane tensor.
+        Instantiate a readout neuron handle able to hold MADC and CADC data.
+        This handle defines the CADC values as the observable state, this can
+        be changed by deriving this class.
 
         :param membrane: Optional membrane tensor.
         """
         super().__init__()
-        self.membrane = membrane
+        self.v_cadc = v_cadc
+        self.v_madc = v_madc
 
 
 class SynapseHandle(TensorHandle):

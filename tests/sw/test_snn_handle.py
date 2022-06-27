@@ -14,90 +14,105 @@ class TestHXHandle(unittest.TestCase):
         """
         # artificial data
         spikes = torch.randint(0, 2, size=(20, 10, 2), dtype=bool)
-        membrane = torch.rand(size=(20, 10, 2))
+        v_cadc = torch.rand(size=(20, 10, 2))
+        v_madc = torch.rand(size=(20, 10, 2))
 
         # test put
         handle = NeuronHandle()
-        handle.put(spikes, membrane)
+        handle.put(spikes, v_cadc, v_madc)
         self.assertTrue(torch.equal(spikes, handle.spikes))
-        self.assertTrue(torch.equal(membrane, handle.membrane))
+        self.assertTrue(torch.equal(v_cadc, handle.v_cadc))
+        self.assertTrue(torch.equal(v_madc, handle.v_madc))
 
         handle = NeuronHandle()
-        handle.put(membrane=membrane, spikes=spikes)
+        handle.put(v_madc=v_madc, v_cadc=v_cadc, spikes=spikes)
         self.assertTrue(torch.equal(spikes, handle.spikes))
-        self.assertTrue(torch.equal(membrane, handle.membrane))
+        self.assertTrue(torch.equal(v_cadc, handle.v_cadc))
+        self.assertTrue(torch.equal(v_madc, handle.v_madc))
 
         handle = NeuronHandle()
-        handle.put(membrane=membrane)
+        handle.put(v_cadc=v_cadc)
         self.assertTrue(handle.spikes is None)
-        self.assertTrue(torch.equal(membrane, handle.membrane))
+        self.assertTrue(handle.v_madc is None)
+        self.assertTrue(torch.equal(v_cadc, handle.v_cadc))
+
+        handle = NeuronHandle()
+        handle.put(v_madc=v_madc)
+        self.assertTrue(handle.spikes is None)
+        self.assertTrue(handle.v_cadc is None)
+        self.assertTrue(torch.equal(v_madc, handle.v_madc))
 
         handle = NeuronHandle()
         handle.put(spikes)
         self.assertTrue(torch.equal(spikes, handle.spikes))
-        self.assertTrue(handle.membrane is None)
+        self.assertTrue(handle.v_cadc is None)
+        self.assertTrue(handle.v_madc is None)
 
         with self.assertRaises(AssertionError):
             handle.put(
-                membrane=membrane, spikes=membrane, wrong=membrane)
+                v_cadc=v_cadc, spikes=v_madc, wrong=v_cadc)
         with self.assertRaises(AssertionError):
-            handle.put(membrane, spikes=membrane, wrong=membrane)
+            handle.put(v_cadc, spikes=v_cadc, wrong=v_cadc)
         with self.assertRaises(AssertionError):
-            handle.put(membrane, membrane, membrane)
+            handle.put(v_cadc, v_madc, v_madc, v_madc)
 
         # test holds
         handle = NeuronHandle()
-        handle.put(membrane=membrane)
-        self.assertTrue(handle.holds("membrane"))
+        handle.put(v_cadc=v_cadc)
+        self.assertTrue(handle.holds("v_cadc"))
         self.assertFalse(handle.holds("spikes"))
         self.assertFalse(handle.holds("wrong_key"))
 
         # test observable state
         handle = NeuronHandle()
-        handle.put(spikes, membrane)
+        handle.put(spikes, v_cadc, v_madc)
         self.assertTrue(torch.equal(spikes, handle.observable_state))
         self.assertTrue(torch.equal(handle.spikes, handle.observable_state))
-        handle.put(None, membrane)
+        handle.put(None, v_cadc)
         self.assertTrue(handle.observable_state is None)
 
     def test_readoutneuronhandle(self):
         """
-        TestXReadoutNeuronHandle
+        Test ReadoutNeuronHandle
         """
         # artificial data
-        membrane = torch.rand(size=(20, 10, 2))
+        v_cadc = torch.rand(size=(20, 10, 2))
+        v_madc = torch.rand(size=(20, 10, 2))
 
         # test put
         handle = ReadoutNeuronHandle()
-        handle.put(membrane)
-        self.assertTrue(torch.equal(membrane, handle.membrane))
+        handle.put(v_cadc, v_madc)
+        self.assertTrue(torch.equal(v_cadc, handle.v_cadc))
+        self.assertTrue(torch.equal(v_madc, handle.v_madc))
 
         handle = ReadoutNeuronHandle()
-        handle.put(membrane=membrane)
-        self.assertTrue(torch.equal(membrane, handle.membrane))
+        handle.put(v_cadc=v_cadc, v_madc=v_madc)
+        self.assertTrue(torch.equal(v_cadc, handle.v_cadc))
+        self.assertTrue(torch.equal(v_madc, handle.v_madc))
 
         handle = ReadoutNeuronHandle()
-        self.assertTrue(handle.membrane is None)
+        self.assertTrue(handle.v_cadc is None)
+        self.assertTrue(handle.v_madc is None)
 
         handle = ReadoutNeuronHandle()
         with self.assertRaises(AssertionError):
-            handle.put(membrane=membrane, spikes=membrane)
+            handle.put(v_cadc=v_cadc, v_madc=v_madc, spikes=v_cadc)
         with self.assertRaises(AssertionError):
-            handle.put(membrane, spikes=membrane)
+            handle.put(v_madc, spikes=v_cadc)
         with self.assertRaises(AssertionError):
-            handle.put(membrane, membrane)
+            handle.put(v_cadc, v_madc, v_cadc)
 
         # test holds
         handle = ReadoutNeuronHandle()
-        handle.put(membrane=membrane)
-        self.assertTrue(handle.holds("membrane"))
+        handle.put(v_cadc=v_cadc)
+        self.assertTrue(handle.holds("v_cadc"))
         self.assertFalse(handle.holds("wrong_key"))
 
         # test observable state
         handle = ReadoutNeuronHandle()
-        handle.put(membrane)
-        self.assertTrue(torch.equal(membrane, handle.observable_state))
-        self.assertTrue(torch.equal(handle.membrane, handle.observable_state))
+        handle.put(v_cadc, v_madc)
+        self.assertTrue(torch.equal(v_cadc, handle.observable_state))
+        self.assertTrue(torch.equal(handle.v_cadc, handle.observable_state))
         handle.put(None)
         self.assertTrue(handle.observable_state is None)
 
@@ -156,9 +171,9 @@ class TestHXHandle(unittest.TestCase):
         self.assertTrue(torch.equal(handle.spikes, data))
         self.assertEqual(handle.observable_state_identifier, "spikes")
 
-        handle.observable_state_identifier = "membrane"
+        handle.observable_state_identifier = "v_cadc"
         self.assertTrue(handle.observable_state is None)
-        self.assertEqual(handle.observable_state_identifier, "membrane")
+        self.assertEqual(handle.observable_state_identifier, "v_cadc")
 
 
 if __name__ == '__main__':

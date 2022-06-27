@@ -4,7 +4,7 @@ Test snn run function
 import unittest
 import torch
 from hxtorch.snn import run, Instance
-from hxtorch.snn.snn import Neuron, Synapse
+from hxtorch.snn.modules import Neuron, Synapse
 from hxtorch.snn.handle import NeuronHandle
 
 
@@ -14,7 +14,7 @@ class TestSNNRun(unittest.TestCase):
     def test_run(self):
         """ Test run in abstract case """
         # Instance
-        instance = Instance()
+        instance = Instance(mock=True)
 
         # Modules
         module1 = Neuron(10, instance, lambda x: x)
@@ -33,7 +33,7 @@ class TestSNNRun(unittest.TestCase):
         self.assertIsNone(h3.observable_state)
 
         # Run
-        run(instance)
+        run(instance, None)
 
         # Handles should be full now
         self.assertTrue(torch.equal(h1.observable_state, torch.zeros(10, 12)))
@@ -43,7 +43,7 @@ class TestSNNRun(unittest.TestCase):
     def test_run_realistic(self):
         """ Test run in realistiv scenario """
         # Instance
-        instance = Instance()
+        instance = Instance(mock=True)
 
         def syn_func(x, w, b):
             return x
@@ -74,7 +74,7 @@ class TestSNNRun(unittest.TestCase):
         self.assertIsNone(h6.observable_state)
 
         # Run
-        run(instance)
+        run(instance, None)
 
         # Handles should be full now
         self.assertTrue(torch.equal(h1.observable_state, torch.zeros(10, 5)))
