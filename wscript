@@ -48,7 +48,10 @@ def configure(cfg):
     libnames = []
     # if torch isn't available via site-packages, try sys.path/PYTHONPATH
     if not os.path.exists(libpath_torch[0]):
+        # find other possible paths
         libpath_torch = [os.path.join(x, 'torch/lib') for x in sys.path if 'torch' in x]
+        # filter on existance of path
+        libpath_torch = [x for x in libpath_torch if os.path.exists(x)]
         if len(libpath_torch) == 0:
             cfg.fatal('PyTorch library directory not found')
         elif len(libpath_torch) > 1:
