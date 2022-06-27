@@ -23,7 +23,10 @@
 #include "hxtorch/mock.h"
 #include "hxtorch/relu.h"
 
+#include "hxtorch/snn/extract_tensors.h"
 #include "hxtorch/snn/run.h"
+#include "hxtorch/snn/tensor_to_spike_times.h"
+#include "hxtorch/snn/weight_to_connection.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -182,7 +185,55 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	constants_defaults_module.attr("noise_std") = hxtorch::constants::defaults::noise_std;
 
 	auto m_snn = m.def_submodule("_snn");
+
+	pybind11::class_<hxtorch::snn::DataHandle>(m_snn, "DataHandle")
+	    .def(pybind11::init<torch::Tensor, float>(), pybind11::arg("data"), pybind11::arg("dt"))
+	    .def_property(
+	        "data", &hxtorch::snn::DataHandle::get_data, &hxtorch::snn::DataHandle::set_data);
+	pybind11::class_<hxtorch::snn::SpikeHandle>(m_snn, "SpikeHandle")
+	    .def(pybind11::init<torch::Tensor, float>(), pybind11::arg("data"), pybind11::arg("dt"))
+	    .def("get_data", &hxtorch::snn::SpikeHandle::get_data)
+	    .def(
+	        "set_data", &hxtorch::snn::DataHandle::set_data, pybind11::arg("data"),
+	        pybind11::arg("dt"))
+	    .def(
+	        "to_dense", static_cast<torch::Tensor (hxtorch::snn::SpikeHandle::*)(float)>(
+	                        &hxtorch::snn::SpikeHandle::to_dense));
+	pybind11::class_<hxtorch::snn::CADCHandle>(m_snn, "CADCHandle")
+	    .def(pybind11::init<torch::Tensor, float>(), pybind11::arg("data"), pybind11::arg("dt"))
+	    .def("get_data", &hxtorch::snn::CADCHandle::get_data)
+	    .def(
+	        "set_data", &hxtorch::snn::CADCHandle::set_data, pybind11::arg("data"),
+	        pybind11::arg("dt"))
+	    .def(
+	        "to_dense",
+	        static_cast<torch::Tensor (hxtorch::snn::CADCHandle::*)(float, std::string)>(
+	            &hxtorch::snn::CADCHandle::to_dense),
+	        pybind11::arg("dt"), pybind11::arg("mode") = "linear")
+	    .def(
+	        "to_dense",
+	        static_cast<std::tuple<torch::Tensor, float> (hxtorch::snn::CADCHandle::*)(
+	            std::string)>(&hxtorch::snn::CADCHandle::to_dense),
+	        pybind11::arg("mode") = "linear");
+	pybind11::class_<hxtorch::snn::MADCHandle>(m_snn, "MADCHandle")
+	    .def(pybind11::init<torch::Tensor, float>(), pybind11::arg("data"), pybind11::arg("dt"))
+	    .def_property(
+	        "data", &hxtorch::snn::MADCHandle::get_data, &hxtorch::snn::MADCHandle::set_data);
 	m_snn.def(
 	    "run", &hxtorch::snn::run, pybind11::arg("config"), pybind11::arg("network_graph"),
 	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
+	m_snn.def("weight_to_connection", &hxtorch::snn::weight_to_connection, pybind11::arg("weight"));
+
+	m_snn.def(
+	    "tensor_to_spike_times", &hxtorch::snn::tensor_to_spike_times, pybind11::arg("times"),
+	    pybind11::arg("dt"));
+	m_snn.def(
+	    "extract_spikes", &hxtorch::snn::extract_spikes, pybind11::arg("data"),
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
+	m_snn.def(
+	    "extract_cadc", &hxtorch::snn::extract_cadc, pybind11::arg("data"),
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
+	m_snn.def(
+	    "extract_madc", &hxtorch::snn::extract_madc, pybind11::arg("data"),
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
 }
