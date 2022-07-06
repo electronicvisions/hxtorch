@@ -56,7 +56,10 @@ def configure(cfg):
             cfg.fatal('PyTorch library directory not found')
         elif len(libpath_torch) > 1:
             cfg.fatal('More than one location for PyTorch libraries found: {}'.format(', '.join(libpath_torch)))
-        libpath_torch = libpath_torch[0]
+        # also use PYTHONPATH-based entries for include paths
+        includes_torch = [os.path.join(x, 'torch/include') for x in sys.path if 'torch' in x]
+        includes_torch_csrc_api = [os.path.join(x, 'torch/include/torch/csrc/api/include') for x in sys.path if 'torch' in x]
+
     for fn in os.listdir(libpath_torch[0]):
         res = re.match('^lib(.+)\.so$', fn)
         libnames.append(res.group(1))
