@@ -15,6 +15,7 @@ def depends(dep):
 
 def options(opt):
     opt.load('compiler_cxx')
+    opt.load('gtest')
     opt.load('test_base')
     opt.load('python')
     opt.load('pytest')
@@ -25,6 +26,7 @@ def options(opt):
 
 def configure(cfg):
     cfg.load('compiler_cxx')
+    cfg.load('gtest')
     cfg.load('test_base')
     cfg.load('python')
     cfg.check_python_version()
