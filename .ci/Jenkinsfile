@@ -32,7 +32,7 @@ try {
 	conditionalStage(name: "Module Deployment", skip: !deploy) {
 		runOnSlave(label: "frontend") {
 			inSingularity(app: "dls-nodev") {
-				deployModule([name: "hxtorch", source: "bin/ lib/ repos_log.txt"])
+				deployModule([name: "hxtorch", source: "bin/ lib/ include/ share/ repos_log.txt"])
 			}
 		}
 	}
