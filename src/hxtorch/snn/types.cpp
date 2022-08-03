@@ -56,6 +56,13 @@ torch::Tensor CADCHandle::to_dense(float dt, std::string mode)
 };
 
 
+// Specialization for CADCHandle returning raw data
+std::tuple<torch::Tensor, torch::Tensor> CADCHandle::to_raw()
+{
+	return detail::sparse_cadc_to_dense_raw(get_data());
+};
+
+
 // Dense tensor return if not dt is given
 std::tuple<torch::Tensor, float> CADCHandle::to_dense(std::string mode)
 {

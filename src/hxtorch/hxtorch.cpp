@@ -214,7 +214,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	        "to_dense",
 	        static_cast<std::tuple<torch::Tensor, float> (hxtorch::snn::CADCHandle::*)(
 	            std::string)>(&hxtorch::snn::CADCHandle::to_dense),
-	        pybind11::arg("mode") = "linear");
+	        pybind11::arg("mode") = "linear")
+	    .def("to_raw", &hxtorch::snn::CADCHandle::to_raw);
 	pybind11::class_<hxtorch::snn::MADCHandle>(m_snn, "MADCHandle")
 	    .def(pybind11::init<torch::Tensor, float>(), pybind11::arg("data"), pybind11::arg("dt"))
 	    .def_property(

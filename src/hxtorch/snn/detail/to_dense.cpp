@@ -189,4 +189,63 @@ torch::Tensor sparse_cadc_to_dense_nn(torch::Tensor const& data, float sparse_dt
 	return dense_samples;
 }
 
+
+std::tuple<torch::Tensor, torch::Tensor> sparse_cadc_to_dense_raw(torch::Tensor const& data)
+{
+	using namespace torch::indexing;
+
+	auto const& col_data = data.coalesce();
+	auto sparse_indices = col_data.indices();
+	auto sparse_values = col_data.values();
+
+	int min_size = -1;
+
+	std::vector<std::vector<torch::Tensor>> cadc_data;
+	std::vector<std::vector<torch::Tensor>> cadc_times;
+
+	for (int b = 0; b < col_data.sizes()[0]; ++b) {
+		auto const& b_indices =
+		    sparse_indices.index({Slice(), sparse_indices.index({0, Slice()}) == b});
+		auto const& b_values = sparse_values.index({sparse_indices.index({0, Slice()}) == b});
+
+		std::vector<torch::Tensor> b_data;
+		std::vector<torch::Tensor> b_times;
+		for (int n = 0; n < col_data.sizes()[2]; ++n) {
+			auto const& n_entry = b_indices.index({Slice(), b_indices.index({2, Slice()}) == n});
+			auto const& n_values = b_values.index({b_indices.index({2, Slice()}) == n});
+			b_data.push_back(n_values);
+			b_times.push_back(n_entry.index({1, Slice()}));
+			// update min size
+			if (min_size < 0) {
+				min_size = n_entry.sizes()[1];
+			}
+			min_size = n_entry.sizes()[1] < min_size ? n_entry.sizes()[1] : min_size;
+		}
+		cadc_data.push_back(b_data);
+		cadc_times.push_back(b_times);
+	}
+
+	torch::Tensor dense_samples = torch::empty(
+	    {col_data.sizes()[0], min_size, col_data.sizes()[2]},
+	    torch::TensorOptions().dtype(torch::kFloat));
+	auto a_dense_samples = dense_samples.accessor<float, 3>();
+	torch::Tensor dense_times = torch::empty(
+	    {col_data.sizes()[0], min_size, col_data.sizes()[2]},
+	    torch::TensorOptions().dtype(torch::kInt));
+	auto a_dense_times = dense_times.accessor<int, 3>();
+
+	for (int b = 0; b < col_data.sizes()[0]; ++b) {
+		auto const& b_data = cadc_data.at(b);
+		auto const& b_times = cadc_times.at(b);
+		for (int n = 0; n < col_data.sizes()[2]; ++n) {
+			for (int t = 0; t < min_size; ++t) {
+				a_dense_samples[b][t][n] = b_data.at(n)[t].item().to<float>();
+				a_dense_times[b][t][n] = b_times.at(n)[t].item().to<int>();
+			}
+		}
+	}
+
+	return std::make_tuple(dense_samples, dense_times);
+}
+
 } // namespace hxtorch::snn::detail
