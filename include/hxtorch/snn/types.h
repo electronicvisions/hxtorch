@@ -92,6 +92,12 @@ public:
 	 * average time step.
 	 */
 	std::tuple<torch::Tensor, float> to_dense(std::string mode = "linear");
+
+	/* Transform the sparse data into a dense tensor holding raw data
+	 * @returns Returns a tuple of a tensor holding the CADC data and a tensor holding the
+	 * corresponding timestamps.
+	 */
+	std::tuple<torch::Tensor, torch::Tensor> to_raw();
 };
 
 

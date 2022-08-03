@@ -29,4 +29,11 @@ torch::Tensor sparse_cadc_to_dense_linear(torch::Tensor const& data, float spars
  */
 torch::Tensor sparse_cadc_to_dense_nn(torch::Tensor const& data, float sparse_dt, float dt);
 
+/* Convert sparse CADC tensor to a dense raw-data representation
+ * CADC values remain untouched but are shortened along the time dimension, such that all neurons
+ * have the same number of CADC samples.
+ * @param data Sparse tensor holding the CADC events
+ */
+std::tuple<torch::Tensor, torch::Tensor> sparse_cadc_to_dense_raw(torch::Tensor const& data);
+
 } // namespace hxtorch::snn::detail
