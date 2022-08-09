@@ -325,13 +325,15 @@ class Neuron(HXModule):
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
-                 trace_offset: Union[torch.Tensor, float] = 0.,
-                 trace_scale: Union[torch.Tensor, float] = 1.,
+                 trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                                     torch.Tensor, float] = 0.,
+                 trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                                    torch.Tensor, float] = 1.,
                  interpolation_mode: str = "linear") -> None:
         """
         Initialize a Neuron. This module creates a population of spiking
         neurons of size `size`. This module has a internal spiking mask, which
-        allows to disable the event ouput and spiking recording of specific
+        allows to disable the event ouput and spike recordings of specific
         neurons within the layer. This is particularly useful for dropout.
 
         :param size: Size of the population.
@@ -355,6 +357,33 @@ class Neuron(HXModule):
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
+        :param trace_offset: The value by which the measured CADC traces are
+            shifted before the scaling is applied. If this offset is given as
+            float the same value is applied to all neuron traces in this
+            population. One can also provide a torch tensor holding one offset
+            for each individual neuron in this population. The corresponding
+            tensor has to be of size `size`. Further, the offsets can be
+            supplied in a dictionary where the keys are the hardware neuron
+            coordinates and the values are the offsets, i.e.
+            Dict[AtomicNeuronOnDLS, float]. The dictionary has to provide one
+            coordinate for each hardware neuron represented by this population,
+            but might also hold neuron coordinates that do not correspond to
+            this layer. The layer-specific offsets are then picked and applied
+            implicitly.
+        :param trace_scale: The value by which the measured CADC traces are
+            scaled after the offset is applied. If this scale is given as
+            float all neuron traces are scaled with the same value population.
+            One can also provide a torch tensor holding one scale for each
+            individual neuron in this population. The corresponding tensor has
+            to be of size `size`. Further, the scales can be supplied in a
+            dictionary where the keys are the hardware neuron coordinates and
+            the values are the scales, i.e. Dict[AtomicNeuronOnDLS, float]. The
+            dictionary has to provide one coordinate for each hardware neuron
+            represented by this population, but might also hold neuron
+            coordinates that do not correspond to this layer. The layer-
+            specific scales are then picked and applied implicitly.
+        :param interpolation_mode: The method used to interpolate the measured
+            CADC traces onto the given time grid.
         """
         super().__init__(instance=instance, func=func)
 
@@ -369,8 +398,9 @@ class Neuron(HXModule):
         self._mask: Optional[torch.Tensor] = None
         self.unit_ids: Optional[np.ndarray] = None
 
-        self.offset = trace_offset
         self.scale = trace_scale
+        self.offset = trace_offset
+
         self.interpolation_mode = interpolation_mode
 
     def register_hw_entity(self) -> None:
@@ -381,8 +411,31 @@ class Neuron(HXModule):
             self.instance.id_counter, self.instance.id_counter + self.size)
         self.instance.neuron_placement.register_id(self.unit_ids)
         self.instance.id_counter += self.size
-        # self.instance.populations.add(self.instance.modules.get_node(self))
         self.instance.register_population(self)
+
+        # Handle offset
+        if isinstance(self.offset, torch.Tensor):
+            assert self.offset.shape[0] == self.size
+        if isinstance(self.offset, dict):
+            # Get populations HW neurons
+            coords = self.instance.neuron_placement.id2atomicneuron(
+                self.unit_ids)
+            offset = torch.zeros(self.size)
+            for i, nrn in enumerate(coords):
+                offset[i] = self.offset[nrn]
+            self.offset = offset
+
+        # Handle scale
+        if isinstance(self.scale, torch.Tensor):
+            assert self.scale.shape[0] == self.size
+        if isinstance(self.scale, dict):
+            # Get populations HW neurons
+            coords = self.instance.neuron_placement.id2atomicneuron(
+                self.unit_ids)
+            scale = torch.zeros(self.size)
+            for i, nrn in enumerate(coords):
+                scale[i] = self.scale[nrn]
+            self.scale = scale
 
         if self._enable_madc_recording:
             if self.instance.has_madc_recording:
@@ -556,8 +609,8 @@ class Neuron(HXModule):
             cadc = hw_cadc.to_dense(
                 self.instance.dt, mode=self.interpolation_mode)
             # Offset and scale
-            cadc *= self.scale
             cadc -= self.offset
+            cadc *= self.scale
 
         # Get spikes
         if self._enable_spike_recording:
@@ -589,8 +642,10 @@ class ReadoutNeuron(Neuron):
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
-                 trace_offset: Union[torch.Tensor, float] = 0.,
-                 trace_scale: Union[torch.Tensor, float] = 1.,
+                 trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                                     torch.Tensor, float] = 0.,
+                 trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                                    torch.Tensor, float] = 1.,
                  interpolation_mode: str = "linear") -> None:
         """
         Initialize a ReadoutNeuron. This module creates a population of non-
@@ -605,6 +660,43 @@ class ReadoutNeuron(Neuron):
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
             object will get injected automatically.
+        :param enable_cadc_recording: Enables or disables parallel sampling of
+            the populations membrane trace via the CADC. A maximum sample rate
+            of 1.7us is possible.
+        :param enable_madc_recording: Enables or disables the recording of the
+            neurons `record_neuron_id` membrane trace via the MADC. Only a
+            single neuron can be recorded. This membrane traces is samples with
+            a significant higher resolution as with the CADC.
+        :param record_neuron_id: The in-population neuron index of the neuron
+            to be recorded with the MADC. This has only an effect when
+            `enable_madc_recording` is enabled.
+        :param trace_offset: The value by which the measured CADC traces are
+            shifted before the scaling is applied. If this offset is given as
+            float the same value is applied to all neuron traces in this
+            population. One can also provide a torch tensor holding one offset
+            for each individual neuron in this population. The corresponding
+            tensor has to be of size `size`. Further, the offsets can be
+            supplied in a dictionary where the keys are the hardware neuron
+            coordinates and the values are the offsets, i.e.
+            Dict[AtomicNeuronOnDLS, float]. The dictionary has to provide one
+            coordinate for each hardware neuron represented by this population,
+            but might also hold neuron coordinates that do not correspond to
+            this layer. The layer-specific offsets are then picked and applied
+            implicitly.
+        :param trace_scale: The value by which the measured CADC traces are
+            scaled after the offset is applied. If this scale is given as
+            float all neuron traces are scaled with the same value population.
+            One can also provide a torch tensor holding one scale for each
+            individual neuron in this population. The corresponding tensor has
+            to be of size `size`. Further, the scales can be supplied in a
+            dictionary where the keys are the hardware neuron coordinates and
+            the values are the scales, i.e. Dict[AtomicNeuronOnDLS, float]. The
+            dictionary has to provide one coordinate for each hardware neuron
+            represented by this population, but might also hold neuron
+            coordinates that do not correspond to this layer. The layer-
+            specific scales are then picked and applied implicitly.
+        :param interpolation_mode: The method used to interpolate the measured
+            CADC traces onto the given time grid.
         """
         super().__init__(
             size, instance, func, params, False, enable_cadc_recording,
@@ -666,8 +758,8 @@ class ReadoutNeuron(Neuron):
             cadc = hw_cadc.to_dense(
                 self.instance.dt, mode=self.interpolation_mode)
             # Offset and scale
-            cadc *= self.scale
             cadc -= self.offset
+            cadc *= self.scale
 
         # Get madc trace
         if self._enable_madc_recording:
