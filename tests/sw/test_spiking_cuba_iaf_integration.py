@@ -185,7 +185,7 @@ class TestIAFIntegration(unittest.TestCase):
         params = CUBAIAFParams(
             tau_mem=6e-6,
             tau_syn=6e-6,
-            refractory_time=0e-6,
+            refractory_time=1e-6,
             threshold=1.,
             reset=-0.1)
 

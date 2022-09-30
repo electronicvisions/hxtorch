@@ -161,7 +161,9 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
             params, dt)
 
         # Refractory update
-        z, v, ref_state = refractory_update(z, v, ref_state, params, dt)
+        z, v, ref_state = refractory_update(
+            z, v, z_hw[ts] if z_hw is not None else None,
+            v_cadc[ts] if v_cadc is not None else None, ref_state, params, dt)
 
         # Save data
         spikes.append(z)
