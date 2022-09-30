@@ -2,7 +2,12 @@
 Test snn.HXNeuron
 """
 import unittest
+from pathlib import Path
+
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
 from dlens_vx_v3 import lola
 import hxtorch
 from hxtorch import snn
@@ -397,6 +402,7 @@ class HWTestCase(unittest.TestCase):
     """ HW setup """
 
     dt = 1.0e-6
+    plot_path = Path(__file__).parent.joinpath("plots")
 
     @classmethod
     def setUpClass(cls):
@@ -485,16 +491,13 @@ class TestNeuron(HWTestCase):
             - Ensure correct order.
         """
         instance = snn.Instance(dt=self.dt)
-
         # Modules
         linear = snn.Synapse(10, 10, instance=instance)
         lif = snn.Neuron(10, instance=instance)
-
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
             linear.weight.data[idx, idx] = 63
-
         # Inputs
         spikes = torch.zeros(110, 10, 10)
         for idx in range(10):
@@ -673,6 +676,173 @@ class TestReadoutNeuron(HWTestCase):
     def test_events_on_membrane(self):
         """
         Test whether events arrive at desired membrane.
+        """
+        pass
+
+
+class TestIAFNeuron(HWTestCase):
+    """ Test hxtorch.snn.modules.IAFNeuron """
+
+    def test_output_type(self):
+        """
+        Test neuron returns the expected handle
+        """
+        instance = snn.Instance()
+        neuron = snn.IAFNeuron(44, instance)
+        # Test output handle
+        neuron_handle = neuron(snn.SynapseHandle(torch.zeros(10, 44)))
+        self.assertTrue(isinstance(neuron_handle, snn.NeuronHandle))
+        self.assertIsNone(neuron_handle.spikes)
+        self.assertIsNone(neuron_handle.v_cadc)
+        self.assertIsNone(neuron_handle.v_madc)
+
+    def test_record_spikes(self):
+        """
+        Test spike recording with bypass mode.
+        """
+        # Enable bypass
+        instance = snn.Instance(dt=self.dt)
+        instance.initial_config = lola.Chip.default_neuron_bypass
+        # Modules
+        linear = snn.Synapse(10, 10, instance=instance)
+        lif = snn.IAFNeuron(
+            10, params=snn.functional.CUBAIAFParams(0./10e-6, 0./10e-6),
+            enable_cadc_recording=False, instance=instance)
+        # Weights
+        linear.weight.data.fill_(0.)
+        for idx in range(10):
+            linear.weight.data[idx, idx] = 63
+        # Inputs
+        spikes = torch.zeros(110, 10, 10)
+        for idx in range(10):
+            spikes[idx * 10 + 5, :, idx] = 1
+        # Forward
+        i_handle = linear(snn.NeuronHandle(spikes))
+        s_handle = lif(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.v_cadc is None)
+        self.assertTrue(s_handle.v_madc is None)
+
+        # Execute
+        snn.run(instance, 110)
+
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110 + 1, 10, 10])))
+        self.assertTrue(s_handle.v_cadc is None)
+        self.assertTrue(s_handle.v_madc is None)
+
+        # Assert data
+        spike_times = torch.nonzero(s_handle.spikes)
+        self.assertEqual(spike_times.shape[0], 10 * 10)
+
+        i = 0
+        for nrn in range(10):
+            for b in range(10):
+                self.assertEqual(b, spike_times[i, 1])
+                self.assertEqual(5 + 10 * nrn, spike_times[i, 0])
+                self.assertEqual(nrn, spike_times[i, 2])
+                i += 1
+
+    def test_record_cadc(self):
+        """
+        Test CADC recording.
+        TODO:
+            - Ensure correct order.
+        """
+        instance = snn.Instance(dt=self.dt)
+        # Modules
+        linear = snn.Synapse(10, 10, instance=instance)
+        lif = snn.IAFNeuron(
+            10, enable_cadc_recording=True, instance=instance)
+        # Weights
+        linear.weight.data.fill_(0.)
+        for idx in range(10):
+            linear.weight.data[idx, idx] = 50
+        # Inputs
+        spikes = torch.zeros(110, 10, 10)
+        for idx in range(10):
+            spikes[idx * 10 + 5, :, idx] = 1
+        # Forward
+        i_handle = linear(snn.NeuronHandle(spikes))
+        s_handle = lif(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.v_cadc is None)
+        self.assertTrue(s_handle.v_madc is None)
+
+        # Execute
+        snn.run(instance, 110)
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110 + 1, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor([110 + 1, 10, 10])))
+        self.assertTrue(s_handle.v_madc is None)
+
+        # plot
+        self.plot_path.mkdir(exist_ok=True)
+        trace = s_handle.v_cadc[:, 0].detach().numpy()
+        fig, ax = plt.subplots()
+        ax.plot(
+            np.arange(0., trace.shape[0]), trace)
+        plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics.png"))
+
+    def test_record_madc(self):
+        """
+        Test MADC recording.
+
+        TODO:
+            - Ensure correct neuron is recorded.
+        """
+        instance = snn.Instance(dt=self.dt)
+        linear = snn.Synapse(10, 10, instance=instance)
+        lif = snn.IAFNeuron(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            instance=instance)
+        spikes = torch.zeros(110, 10, 10)
+        i_handle = linear(snn.NeuronHandle(spikes))
+        lif(i_handle)
+        # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
+        with self.assertRaises(NotImplementedError):
+            snn.run(instance, 110)
+        # Only one module can record
+        instance = snn.Instance(dt=self.dt)
+        linear_1 = snn.Synapse(10, 10, instance=instance)
+        lif_1 = snn.IAFNeuron(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            instance=instance)
+        linear_2 = snn.Synapse(10, 10, instance=instance)
+        lif_2 = snn.IAFNeuron(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            instance=instance)
+        spikes = torch.zeros(110, 10, 10)
+        i_handle_1 = linear_1(snn.NeuronHandle(spikes))
+        s_handle_1 = lif_1(i_handle_1)
+        i_handle_2 = linear_2(s_handle_1)
+        lif_2(i_handle_2)
+        # Execute
+        with self.assertRaises(RuntimeError):  # Expect RuntimeError
+            snn.run(instance, 110)
+
+    def test_events_on_membrane(self):
+        """
+        Test whether events arrive at desired membrane.
+        """
+        pass
+
+    def test_neuron_spikes(self):
+        """
+        Test whether correct neuron does spike.
         """
         pass
 
