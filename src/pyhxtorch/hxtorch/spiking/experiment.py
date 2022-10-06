@@ -535,7 +535,7 @@ class Experiment(BaseExperiment):
 
         # In mock-mode nothing to do here
         if self.mock:
-            return {}
+            return {}, None
 
         # Register HW entity
         for module in self.modules.nodes:
@@ -576,4 +576,4 @@ class Experiment(BaseExperiment):
 
         self.modules.reset_changed_since_last_run()
 
-        return hw_data
+        return hw_data, outputs.execution_time_info

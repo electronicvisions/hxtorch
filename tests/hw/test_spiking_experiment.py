@@ -78,12 +78,12 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(len(experiment.modules.nodes), 2)
         # Get results -> In mock there are no hardware results
         results = experiment.get_hw_results(10)
-        self.assertEqual(results, dict())
+        self.assertEqual(results, (dict(), None))
         # No input node should be injected
         self.assertEqual(len(experiment.modules.nodes), 2)
         # Do it again -> This should not change anything
         results = experiment.get_hw_results(10)
-        self.assertEqual(results, dict())
+        self.assertEqual(results, (dict(), None))
         self.assertEqual(len(experiment.modules.nodes), 2)
 
         # HW mode
@@ -96,7 +96,7 @@ class TestExperiment(unittest.TestCase):
         handle1 = module1(input_handle)
         module2(handle1)
         self.assertEqual(len(experiment.modules.nodes), 2)
-        results = experiment.get_hw_results(10)
+        results, _ = experiment.get_hw_results(10)
         self.assertEqual(len(experiment.modules.nodes), 3)
         self.assertEqual(len(experiment._populations), 2)
         self.assertEqual(len(experiment._projections), 1)
@@ -106,7 +106,7 @@ class TestExperiment(unittest.TestCase):
             self.assertIsNotNone(results.get(pop.descriptor))
 
         # Execute again -> should still work as expected, in training we also
-        results = experiment.get_hw_results(10)
+        results, _ = experiment.get_hw_results(10)
         self.assertEqual(len(experiment.modules.nodes), 3)
         self.assertEqual(len(experiment._populations), 2)
         self.assertEqual(len(experiment._projections), 1)
@@ -136,7 +136,7 @@ class TestExperiment(unittest.TestCase):
 
         # Six modules should now be registered
         self.assertEqual(len(experiment.modules.nodes), 6)
-        results = experiment.get_hw_results(20)
+        results, _ = experiment.get_hw_results(20)
         self.assertEqual(len(experiment.modules.nodes), 7)
         self.assertEqual(len(experiment._populations), 4)
         self.assertEqual(len(experiment._projections), 3)
