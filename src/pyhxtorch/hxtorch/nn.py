@@ -227,7 +227,7 @@ class ConvNd(MACLayer, torch.nn.modules.conv._ConvNd):  # pylint: disable=protec
             raise ValueError("More than 1 group is currently not supported.")
 
         if any(self.padding):
-            expanded_padding = list()
+            expanded_padding = []
             for padding_element in self.padding[::-1]:
                 expanded_padding.append(padding_element)
                 expanded_padding.append(padding_element)

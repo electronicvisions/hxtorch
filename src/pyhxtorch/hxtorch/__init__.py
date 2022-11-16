@@ -1,6 +1,6 @@
 from _hxtorch import *
-from hxtorch import nn
 import pylogging as logger
+from hxtorch import nn
 
 logger.reset()
 logger.default_config(level=logger.LogLevel.WARN)

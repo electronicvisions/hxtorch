@@ -34,7 +34,7 @@ class NeuronPlacement:
     def __init__(self, permutation: List[int] = None) -> None:
         if permutation is None:
             permutation = self.default_permutation
-        self._id_2_an = dict()
+        self._id_2_an = {}
         self._permutation = self._check_and_transform(permutation)
 
     def register_id(self, neuron_id: int) -> None:
@@ -134,7 +134,7 @@ class Instance(BaseInstance):
         super().__init__(ModuleManager(), mock=mock, dt=dt)
 
         # Recording
-        self.cadc_recording = dict()
+        self.cadc_recording = {}
         self.has_madc_recording = False
 
         # Grenade stuff
@@ -162,7 +162,7 @@ class Instance(BaseInstance):
         """
         self.modules.clear()
 
-        self.cadc_recording = dict()
+        self.cadc_recording = {}
         self.has_madc_recording = False
 
         self.grenade_network = None
@@ -373,7 +373,7 @@ class Instance(BaseInstance):
 
         # Data maps
         data_map: Dict[
-            grenade.PopulationsDescriptor, Tuple[torch.Tensor]] = dict()  # pylint: disable=c-extension-no-member
+            grenade.PopulationsDescriptor, Tuple[torch.Tensor]] = {}  # pylint: disable=c-extension-no-member
 
         # Map populations to data
         for pop in self.modules.populations:
@@ -439,7 +439,7 @@ class Instance(BaseInstance):
 
         # In mock-mode nothing to do here
         if self.mock:
-            return dict()
+            return {}
 
         # Register HW entity
         for node in self.modules:
