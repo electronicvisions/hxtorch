@@ -14,7 +14,7 @@ import pygrenade_vx as grenade
 import _hxtorch
 import hxtorch
 import hxtorch.snn.modules as snn_module
-import hxtorch.snn.handle as handle
+from hxtorch.snn import handle
 from hxtorch.snn.backend.nodes import Node
 from hxtorch.snn.backend.module_manager import BaseModuleManager, ModuleManager
 

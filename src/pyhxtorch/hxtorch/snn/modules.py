@@ -44,7 +44,7 @@ class HXModule(torch.nn.Module):
         self._func = func
         self.instance = instance
         self.extra_args: Tuple[Any] = tuple()
-        self.extra_kwargs: Dict[str, Any] = dict()
+        self.extra_kwargs: Dict[str, Any] = {}
         self.size: int = None
         self._changed_since_last_run = True
 

@@ -5,7 +5,7 @@ from typing import Optional, Tuple, List, Union
 
 import pygrenade_vx as grenade
 import hxtorch.snn.modules as snn_module
-import hxtorch.snn.handle as handle
+from hxtorch.snn import handle
 
 
 class Node:
@@ -33,8 +33,8 @@ class Node:
         # TODO: Maybe the handles can be moved to HXModule
         self.input_handle = input_handle
         self.output_handle = output_handle
-        self.pre: List['Node'] = list()
-        self.post: List['Node'] = list()
+        self.pre: List['Node'] = []
+        self.post: List['Node'] = []
         self.descriptor: Union[
             grenade.PopulationDescriptor,
             Tuple[grenade.ProjectionDescriptor]] = None

@@ -5,7 +5,7 @@ from typing import Dict, Tuple, List, Union, Set
 from abc import ABC, abstractmethod
 
 import hxtorch.snn.modules as snn_module
-import hxtorch.snn.handle as handle
+from hxtorch.snn import handle
 from hxtorch.snn.backend.nodes import Node
 
 
@@ -19,7 +19,7 @@ class BaseModuleManager(ABC):
 
     def __init__(self) -> None:
         """ """
-        self._nodes: List[Node] = list()
+        self._nodes: List[Node] = []
 
     def __str__(self):
         """ Add proper object string """
@@ -94,7 +94,7 @@ class BaseModuleManager(ABC):
 
     def clear(self) -> None:
         """ Delete all nodes from the graph. """
-        self._nodes = list()
+        self._nodes = []
 
     def leafs(self) -> List[Node]:
         """
@@ -142,7 +142,7 @@ class BaseModuleManager(ABC):
 
         :param module: The module to check if an node exists for.
         """
-        return bool(len([n for n in self if n.module == module]))
+        return len([n for n in self if n.module == module]) > 0
 
     def pre_populations(self, node: List[Node]) -> Node:
         """
@@ -158,7 +158,7 @@ class BaseModuleManager(ABC):
         # List of pre-nodes to check
         nodes = node.pre.copy()
         # List of actual pre-populations
-        pre_pops = list()
+        pre_pops = []
 
         while True:
             # No pre-nodes left
@@ -190,7 +190,7 @@ class BaseModuleManager(ABC):
         # List of post-nodes to check
         nodes = node.post.copy()
         # List of actual post-populations
-        post_pops = list()
+        post_pops = []
 
         while True:
             # No post-nodes left
@@ -226,10 +226,10 @@ class ModuleManager(BaseModuleManager):
         Initialize a `Modules` object. This object holds a list of `nodes`.
         """
         super().__init__()
-        # self._nodes: List[Node] = list()
+        # self._nodes: List[Node] = []
         self.populations: Set[Node] = set()
         self.projections: Set[Node] = set()
-        self._input_populations: Dict[Node, Node] = dict()
+        self._input_populations: Dict[Node, Node] = {}
 
     def clear(self) -> None:
         """
@@ -238,7 +238,7 @@ class ModuleManager(BaseModuleManager):
         super().clear()
         self.populations = set()
         self.projections = set()
-        self._input_populations = dict()
+        self._input_populations = {}
 
     def _set_dropout_mask(self) -> None:
         """
@@ -286,8 +286,8 @@ class ModuleManager(BaseModuleManager):
         input_nodes = [
             n for n in self._nodes if isinstance(
                 n.module, self._projection_types)  # pylint: disable=no-member
-            and n not in self._input_populations.keys()
-            and any([h not in output_handles for h in n.input_handle])]
+            and n not in self._input_populations
+            and any(h not in output_handles for h in n.input_handle)]
 
         # Register nodes preceding those input nodes
         for node in input_nodes:
@@ -380,7 +380,7 @@ class ModuleManager(BaseModuleManager):
 
         :return: Returns the ordered list.
         """
-        ordered_nodes = list()
+        ordered_nodes = []
 
         # Nodes that are inputs
         input_nodes = self.inputs()
