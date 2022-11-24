@@ -162,7 +162,7 @@ def build(bld):
 
     bld(
         target = 'hxtorch_cpp_swtests',
-        features = 'gtest cxx cxxprogram',
+        features = 'gtest cxx cxxprogram pyembed',
         source = bld.path.ant_glob('tests/sw/test-*.cpp'),
         use = ['hxtorch_cpp', 'GTEST'],
         linkflags = '-Wl,-z,defs',
