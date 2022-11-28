@@ -329,6 +329,7 @@ class Neuron(HXModule):
                                      torch.Tensor, float] = 0.,
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
+                 cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear") -> None:
         """
         Initialize a Neuron. This module creates a population of spiking
@@ -382,6 +383,12 @@ class Neuron(HXModule):
             represented by this population, but might also hold neuron
             coordinates that do not correspond to this layer. The layer-
             specific scales are then picked and applied implicitly.
+        :param cadc_time_shift: An integer indicating by how many time steps
+            the CADC values are shifted in time. A positive value shifts later
+            CADC samples to earlier times and vice versa for a negative value.
+        :param shift_cadc_to_first: A boolean indicating that the first
+            measured CADC value is used as an offset. Note, this disabled the
+            param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
         """
@@ -400,6 +407,8 @@ class Neuron(HXModule):
 
         self.scale = trace_scale
         self.offset = trace_offset
+        self.cadc_time_shift = cadc_time_shift
+        self.shift_cadc_to_first = shift_cadc_to_first
 
         self.interpolation_mode = interpolation_mode
 
@@ -606,11 +615,30 @@ class Neuron(HXModule):
 
         # Get cadc samples
         if self._enable_cadc_recording:
+            # Get dense representation
             cadc = hw_cadc.to_dense(
                 self.instance.dt, mode=self.interpolation_mode)
-            # Offset and scale
-            cadc -= self.offset
+
+            # Offset CADC traces
+            if self.shift_cadc_to_first:
+                cadc = cadc - cadc[:, 0, :].unsqueeze(1)
+            else:
+                cadc -= self.offset
+
+            # Scale CADC traces
             cadc *= self.scale
+
+            # Shift CADC samples in time
+            if self.cadc_time_shift != 0:
+                cadc = torch.roll(cadc, shifts=-self.cadc_time_shift, dims=1)
+            # If shift is to earlier times, we pad with last CADC value
+            if self.cadc_time_shift > 0:
+                cadc[:, -self.cadc_time_shift:, :] = \
+                    cadc[:, -self.cadc_time_shift - 1, :].unsqueeze(1)
+            # If shift is to later times, we pad with first CADC value
+            if self.cadc_time_shift < 0:
+                cadc[:, :-self.cadc_time_shift, :] = \
+                    cadc[:, -self.cadc_time_shift, :].unsqueeze(1)
 
         # Get spikes
         if self._enable_spike_recording:
@@ -646,6 +674,7 @@ class ReadoutNeuron(Neuron):
                                      torch.Tensor, float] = 0.,
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
+                 cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear") -> None:
         """
         Initialize a ReadoutNeuron. This module creates a population of non-
@@ -695,13 +724,19 @@ class ReadoutNeuron(Neuron):
             represented by this population, but might also hold neuron
             coordinates that do not correspond to this layer. The layer-
             specific scales are then picked and applied implicitly.
+        :param cadc_time_shift: An integer indicating by how many time steps
+            the CADC values are shifted in time. A positive value shifts later
+            CADC samples to earlier times and vice versa for a negative value.
+        :param shift_cadc_to_first: A boolean indicating that the first
+            measured CADC value is used as an offset. Note, this disabled the
+            param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
         """
         super().__init__(
             size, instance, func, params, False, enable_cadc_recording,
             enable_madc_recording, record_neuron_id, trace_offset, trace_scale,
-            interpolation_mode)
+            cadc_time_shift, shift_cadc_to_first, interpolation_mode)
 
     def configure_hw_entity(self, neuron_id: int,
                             atomic_neuron: lola.AtomicNeuron) \
@@ -751,20 +786,9 @@ class ReadoutNeuron(Neuron):
         :returns: Returns a tuple of optional torch.Tensors holding the
             hardware data (madc or cadc,)
         """
-        cadc, madc = None, None
-
-        # Get cadc samples
-        if self._enable_cadc_recording:
-            cadc = hw_cadc.to_dense(
-                self.instance.dt, mode=self.interpolation_mode)
-            # Offset and scale
-            cadc -= self.offset
-            cadc *= self.scale
-
-        # Get madc trace
-        if self._enable_madc_recording:
-            raise NotImplementedError(
-                "MADCHandle to dense torch Tensor is not implemented yet.")
+        # No spikes here
+        assert not self._enable_spike_recording
+        _, cadc, madc = super().post_process(hw_spikes, hw_cadc, hw_madc)
 
         return cadc, madc
 
