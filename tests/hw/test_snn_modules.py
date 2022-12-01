@@ -13,20 +13,6 @@ hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
 class TestHXModules(unittest.TestCase):
     """ Test HXModule """
 
-    def test_is_autograd_function(self):
-        """
-        Test member _is_autograd_fn returns properly.
-        """
-        # No autograd function is used
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, lambda x: x)
-        self.assertFalse(module._is_autograd_fn())
-
-        # Autograd function is used
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, torch.autograd.Function)
-        self.assertTrue(module._is_autograd_fn())
-
     def test_forward(self):
         """
         Test Synapse returns the expected handle and registers module
@@ -58,8 +44,8 @@ class TestHXModules(unittest.TestCase):
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, func)
         module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.prepare_func("hw_result")
-        output, params, result_ret = new_func(None)
+        new_func = module.func
+        output, params, result_ret = new_func((None,), "hw_result")
         self.assertEqual(params, "new_params")
         self.assertEqual(result_ret, "hw_result")
         self.assertIsNone(output)
@@ -71,8 +57,8 @@ class TestHXModules(unittest.TestCase):
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, func)
         module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.prepare_func(None)
-        output, params_ret = new_func(None)
+        new_func = module.func
+        output, params_ret = new_func((None,))
         self.assertEqual(params_ret, "new_params")
         self.assertIsNone(output)
 
@@ -83,8 +69,8 @@ class TestHXModules(unittest.TestCase):
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, func)
         module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.prepare_func("hw_result")
-        output, result_ret = new_func(None)
+        new_func = module.func
+        output, result_ret = new_func((None,), "hw_result")
         self.assertEqual(result_ret, "hw_result")
         self.assertIsNone(output)
 
@@ -99,8 +85,8 @@ class TestHXModules(unittest.TestCase):
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, Func)
         module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.prepare_func("hw_result")
-        output, params, result_ret = new_func(None)
+        new_func = module.func
+        output, params, result_ret = new_func((None,), "hw_result")
         self.assertEqual(params, "new_params")
         self.assertEqual(result_ret, "hw_result")
         self.assertIsNone(output)
@@ -116,8 +102,8 @@ class TestHXModules(unittest.TestCase):
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, Func)
         module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.prepare_func("hw_result")
-        output, params = new_func(None)
+        new_func = module.func
+        output, params = new_func((None,), "hw_result")
         self.assertEqual(params, "new_params")
         self.assertIsNone(output)
 
@@ -131,8 +117,8 @@ class TestHXModules(unittest.TestCase):
 
         instance = snn.Instance(mock=True)
         module = snn.HXModule(instance, Func)
-        new_func = module.prepare_func("hw_result")
-        output, hw_result = new_func(None)
+        new_func = module.func
+        output, hw_result = new_func((None,), "hw_result")
         self.assertEqual(hw_result, "hw_result")
         self.assertIsNone(output)
 

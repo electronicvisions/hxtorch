@@ -40,12 +40,28 @@ class HXModule(torch.nn.Module):
         """
         super().__init__()
 
-        self._func = func
         self.instance = instance
+        self.func = func
         self.extra_args: Tuple[Any] = tuple()
         self.extra_kwargs: Dict[str, Any] = {}
         self.size: int = None
         self._changed_since_last_run = True
+        self._func_is_wrapped = False
+
+    @property
+    def func(self) -> Callable:
+        if not self._func_is_wrapped:
+            self._func = self._prepare_func(self._func)
+            self._func_is_wrapped = True
+        return self._func
+
+    @func.setter
+    def func(self, function: Callable) -> None:
+        """ Assign a PyTorch-differentiable function to the module.
+
+        :param function: The function describing the modules f"""
+        self._func = function
+        self._func_is_wrapped = False
 
     @property
     def changed_since_last_run(self) -> bool:
@@ -75,44 +91,83 @@ class HXModule(torch.nn.Module):
         """
         raise NotImplementedError()
 
-    def _is_autograd_fn(self) -> bool:
-        """
-        Determines whether the used function `func` is an autograd function or
-        not.
+    def _wrap_func(self, function):
+        # Signature for wrapping
+        signature = inspect.signature(function)
 
-        :returns: Returns whether `func` is an autograd function.
-        """
-        return isinstance(self._func, torch.autograd.function.FunctionMeta)
-
-    def prepare_func(self, hw_data: torch.Tensor) -> Callable:
-        """
-        Strips `param` and `hw_result` arguments from self._func. This allows
-        having a more general signature of self._func in `exec_forward`.
-
-        :param hw_result: HW observables returned from grenade.
-
-        :returns: Returns the memeber 'func(..., params=..., hw_result=...)'
-            stripped down to 'func(...).
-        """
-        self.extra_kwargs.update({"hw_data": hw_data})
-        if self._is_autograd_fn():
-            class LocalAutograd(self._func):
-                pass
-            local_func = LocalAutograd
-            signature = inspect.signature(local_func.forward)
-            for key, value in self.extra_kwargs.items():
-                if key in signature.parameters:
-                    local_func.forward = partial(
-                        local_func.forward, **{key: value})
-            return local_func.apply
-
-        signature = inspect.signature(self._func)
-        local_func = self._func
+        # Wrap all kwargs except for hw_data
         for key, value in self.extra_kwargs.items():
-            if key in signature.parameters:
-                local_func = partial(local_func, **{key: value})
+            if key in signature.parameters and key != "hw_data":
+                function = partial(function, **{key: value})
 
-        return local_func
+        return function, signature
+
+    # pylint: disable=function-redefined, unused-argument
+    def _prepare_func(self, function) -> Callable:
+        """
+        Strips all args and kwargs excluding `input` and `hw_data` from
+        self._func. If self._func does not have an `hw_data` keyword argument
+        the prepared function will have it. This unifies the signature of all
+        functions used in `exec_forward` to `func(input, hw_data=...)`.
+        :param function: The function to be used for building the PyTorch
+            graph.
+        :returns: Returns the member 'func(input, *args, **kwrags,
+            hw_data=...)' stripped down to 'func(input, hw_data=...).
+        """
+        is_autograd_func = isinstance(
+            function, torch.autograd.function.FunctionMeta)
+
+        # In case of HW execution and func is autograd func we override forward
+        if is_autograd_func and not self.instance.mock:
+            def func(*inputs, hw_data):
+                class LocalAutograd(function):
+                    @staticmethod
+                    def forward(  # pylint: disable=dangerous-default-value
+                            ctx, *data, extra_kwargs=self.extra_kwargs):
+                        ctx.extra_kwargs = extra_kwargs
+                        ctx.save_for_backward(
+                            *data, *hw_data if hw_data is not None else None)
+                        return hw_data
+                return LocalAutograd.apply(*inputs, *self.extra_args)
+
+            return func
+
+        # In case of SW execution and func is autograd func we use forward
+        if is_autograd_func and self.instance.mock:
+            # Make new autograd to not change the original one
+            class LocalAutograd(function):
+                pass
+            LocalAutograd.forward, signature = self._wrap_func(
+                LocalAutograd.forward)
+
+            # Wrap HW data on demand
+            if "hw_data" in signature.parameters:
+                def func(inputs, hw_data=None):
+                    # TODO: Is repeatitively calling 'partial' an issue?
+                    # We need to wrap keyword argument here in order for apply
+                    # to work
+                    LocalAutograd.forward = partial(
+                        LocalAutograd.forward, hw_data=hw_data)
+                    return LocalAutograd.apply(*inputs, *self.extra_args)
+            else:
+                def func(inputs, hw_data=None):
+                    return LocalAutograd.apply(*inputs, *self.extra_args)
+
+            return func
+
+        # In case of HW or SW execution but no autograd func we inject hw data
+        # as keyword argument
+        local_func, signature = self._wrap_func(function)
+
+        # Wrap HW data on demand
+        if "hw_data" in signature.parameters:
+            def func(inputs, hw_data=None):
+                return local_func(*inputs, *self.extra_args, hw_data=hw_data)
+        else:
+            def func(inputs, hw_data=None):
+                return local_func(*inputs, *self.extra_args)
+
+        return func
 
     # Allow redefinition of builtin in order to be consistent with PyTorch
     # pylint: disable=redefined-builtin
@@ -148,20 +203,8 @@ class HXModule(torch.nn.Module):
             input = (input,)
         input = tuple(handle.observable_state for handle in input)
 
-        if self._is_autograd_fn() and not self.instance.mock:
-
-            class LocalAutograd(self._func):
-                @staticmethod
-                def forward(  # pylint: disable=dangerous-default-value
-                        ctx, *data, extra_kwargs=self.extra_kwargs):
-                    ctx.extra_kwargs = extra_kwargs
-                    ctx.save_for_backward(
-                        *data, *hw_data if hw_data is not None else None)
-                    return hw_data
-
-            out = LocalAutograd.apply(*input, *self.extra_args)
-        else:
-            out = self.prepare_func(hw_data)(*input, *self.extra_args)
+        # Forwards function
+        out = self.func(input, hw_data=hw_data)
 
         # We need to unpack into `Handle.put` otherwise we get Tuple[Tuple]
         # in `put`, however, func should not be limited to return type 'tuple'
