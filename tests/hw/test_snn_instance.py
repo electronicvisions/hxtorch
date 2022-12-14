@@ -91,7 +91,6 @@ class TestInstance(unittest.TestCase):
         self.assertEqual(len(instance.modules), 2)
         # Get results -> In mock there are no hardware results
         results = instance.get_hw_results(10)
-        print("First")
         # Test
         self.assertEqual(len(instance.modules), 3)  # InputNeuron added
         self.assertEqual(len(instance.modules.populations), 2)
@@ -108,10 +107,7 @@ class TestInstance(unittest.TestCase):
         module2(handle1)
         self.assertEqual(len(instance.modules), 3)  # InputNeuron still added
         # Get results -> In mock there are no hardware results
-        print("Second")
-        print(instance.modules)
         results = instance.get_hw_results(10)
-        print("Second")
         # Test
         self.assertEqual(len(instance.modules), 3)  # InputNeuron still added
         self.assertEqual(len(instance.modules.populations), 2)
@@ -132,19 +128,18 @@ class TestInstance(unittest.TestCase):
         module6 = Neuron(10, instance, lambda x: x)
 
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((10, 20, 10)))
+        input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
         handle1 = module1(input_handle)
         handle2 = module2(handle1)
         handle3 = module3(handle2)
         handle4 = module4(handle3)
         handle5 = module5(handle4)
         module6(handle5)
-        print(instance.modules)
 
         # Two modules should now be registered
         self.assertEqual(len(instance.modules), 6)
         # Get results -> In mock there are no hardware results
-        results = instance.get_hw_results(10)
+        results = instance.get_hw_results(20)
         # Test
         self.assertEqual(len(instance.modules), 7)  # InputNeuron added
         self.assertEqual(len(instance.modules.populations), 4)

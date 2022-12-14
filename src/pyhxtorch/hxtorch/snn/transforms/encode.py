@@ -85,14 +85,14 @@ class SpikeTimesToSparseTensor(torch.nn.Module):
         mesh = torch.meshgrid([torch.arange(s) for s in spikes.shape])
 
         indices = torch.stack(
+            bins.to(dev)[mask].reshape(-1),
             (mesh[0].to(dev)[mask].reshape(-1),
-             bins.to(dev)[mask].reshape(-1),
              *(mesh[i].to(dev)[mask].reshape(-1)
                for i in range(1, len(mesh)))))
 
         sparse_spikes = torch.sparse_coo_tensor(
             indices, torch.ones(indices.shape[1]).to(dev),
-            (spikes.shape[0], self._size, *spikes.shape[1:]), dtype=int)
+            (self._size, spikes.shape[0], *spikes.shape[1:]), dtype=int)
 
         return sparse_spikes
 
@@ -171,9 +171,9 @@ class CoordinatesToSpikes(torch.nn.Module):
             self._t_late - self._t_early)
         batch_size, num_channels = times.shape
         indices = torch.stack((
+            (times.flatten() / self._dt).round(),
             torch.arange(times.shape[0]).repeat_interleave(
                 times.shape[1]).to(self._dev),
-            (times.flatten() / self._dt).round(),
             torch.arange(times.shape[1]).repeat(times.shape[0]).to(self._dev)
         )).type(torch.long)
 
@@ -185,14 +185,14 @@ class CoordinatesToSpikes(torch.nn.Module):
 
         if self._t_bias is None:
             spikes = torch.sparse_coo_tensor(
-                indices, ones, (batch_size, self._seq_length, num_channels))
+                indices, ones, (self._seq_length, batch_size, num_channels))
             spikes = spikes.to_dense()
         else:
             spikes = torch.sparse_coo_tensor(
                 indices, ones, (
-                    batch_size, self._seq_length, num_channels + 1))
+                    self._seq_length, batch_size, num_channels + 1))
             spikes = spikes.to_dense()
             bias_idx = int(self._t_bias / self._dt)
-            spikes[:, bias_idx, -1] = 1.
+            spikes[bias_idx, :, -1] = 1.
 
         return spikes

@@ -35,31 +35,30 @@ def li_integration(input: torch.Tensor, params: LIParams,
     :return: Returns the membrane trace in shape (batch, time, neurons).
     """
     dev = input.device
-    shape = input.shape
+    T, bs, ps = input.shape
     i, v = torch.tensor(0.).to(dev), \
-        torch.empty(shape[0], shape[2]).fill_(params.v_leak).to(dev)
+        torch.empty(bs, ps).fill_(params.v_leak).to(dev)
 
     if hw_data:
         v_hw = hw_data[0].to(dev)  # Use CADC values
-        T = min(v_hw.shape[1], shape[1])
+        T = min(v_hw.shape[1], T)
         # Initialize with first measurement
-        membrane = [v_hw[:, 0]]
+        membrane = [v_hw[0]]
     else:
         membrane = [v]
-        T = shape[1]
 
     for ts in range(T - 1):
         # Current
-        i = i * (1. - params.dt * params.tau_syn_inv) + input[:, ts]
+        i = i * (1. - params.dt * params.tau_syn_inv) + input[ts]
 
         # Membrane
         dv = params.dt * params.tau_mem_inv * (params.v_leak - v + i)
-        v = Unterjubel.apply(dv + v, v_hw[:, ts + 1]) if hw_data else dv + v
+        v = Unterjubel.apply(dv + v, v_hw[ts + 1]) if hw_data else dv + v
 
         # Save data
         membrane.append(v)
 
-    return torch.stack(membrane).transpose(0, 1)
+    return torch.stack(membrane)
 
 
 class LI(torch.autograd.Function):

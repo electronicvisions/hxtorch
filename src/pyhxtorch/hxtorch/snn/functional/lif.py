@@ -47,31 +47,29 @@ def lif_integration(input: torch.Tensor, params: LIFParams,
         Both tensors are of shape (batch, time, neurons).
     """
     dev = input.device
-    shape = input.shape
-    z, i, v = torch.zeros(shape[0], shape[2]).to(dev), \
-        torch.tensor(0.).to(dev), \
-        torch.empty(shape[0], shape[2]).fill_(params.v_leak).to(dev)
+    T, bs, ps = input.shape
+    z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
+        torch.empty(bs, ps).fill_(params.v_leak).to(dev)
 
     if hw_data:
         z_hw = hw_data[0].to(dev)
         v_hw = hw_data[1].to(dev)  # Use CADC values
-        spikes, membrane = [z_hw[:, 0]], [v_hw[:, 0]]
-        T = min(v_hw.shape[1], shape[1])
+        spikes, membrane = [z_hw[0]], [v_hw[0]]
+        T = min(v_hw.shape[0], T)
     else:
         spikes, membrane = [z], [v]
-        T = shape[1]
 
     for ts in range(T - 1):
         # Current
-        i = i * (1 - params.dt * params.tau_syn_inv) + input[:, ts]
+        i = i * (1 - params.dt * params.tau_syn_inv) + input[ts]
 
         # Membrane
         dv = params.dt * params.tau_mem_inv * (params.v_leak - v + i)
-        v = Unterjubel.apply(dv + v, v_hw[:, ts + 1]) if hw_data else dv + v
+        v = Unterjubel.apply(dv + v, v_hw[ts + 1]) if hw_data else dv + v
 
         # Spikes
         spike = params.activation.apply(v - params.v_th, params.alpha)
-        z = Unterjubel.apply(spike, z_hw[:, ts + 1]) if hw_data else spike
+        z = Unterjubel.apply(spike, z_hw[ts + 1]) if hw_data else spike
 
         # Reset
         if not hw_data:
@@ -81,8 +79,7 @@ def lif_integration(input: torch.Tensor, params: LIFParams,
         spikes.append(z)
         membrane.append(v)
 
-    return torch.stack(spikes).transpose(0, 1), \
-        torch.stack(membrane).transpose(0, 1)
+    return torch.stack(spikes), torch.stack(membrane)
 
 
 class LIF(torch.autograd.Function):

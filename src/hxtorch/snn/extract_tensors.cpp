@@ -70,8 +70,8 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
 				auto const& [in_pop_id, descriptor] = label_lookup.at(label);
 				auto& [value, index] = indices[descriptor];
 				if (static_cast<int64_t>(spike.chip_time.value()) <= runtime) {
-					index.at(0).push_back(static_cast<int64_t>(b));
-					index.at(1).push_back(static_cast<int64_t>(spike.chip_time.value()));
+					index.at(0).push_back(static_cast<int64_t>(spike.chip_time.value()));
+					index.at(1).push_back(static_cast<int64_t>(b));
 					index.at(2).push_back(static_cast<int64_t>(in_pop_id));
 					value.push_back(1);
 				}
@@ -101,7 +101,7 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
 
 		torch::Tensor spike_tensor = torch::sparse_coo_tensor(
 		    indicies_tensor, values_tensor.clone(),
-		    {static_cast<int>(data.batch_size()), runtime + 1,
+		    {runtime + 1, static_cast<int>(data.batch_size()),
 		     static_cast<int>(
 		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
 		             .neurons.size())},
@@ -151,8 +151,8 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
 	for (size_t b = 0; b < samples.size(); ++b) {
 		for (auto const& sample : samples.at(b)) {
 			if (static_cast<int64_t>(sample.chip_time.value()) <= runtime) {
-				index.at(0).push_back(static_cast<int64_t>(b));
-				index.at(1).push_back(static_cast<int64_t>(sample.chip_time.value()));
+				index.at(0).push_back(static_cast<int64_t>(sample.chip_time.value()));
+				index.at(1).push_back(static_cast<int64_t>(b));
 				index.at(2).push_back(static_cast<int64_t>(recording.index));
 				value.push_back(static_cast<int16_t>(sample.value.value()));
 			}
@@ -180,7 +180,7 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
 	// create sparse COO tensor
 	torch::Tensor madc_tensor = torch::sparse_coo_tensor(
 	    indicies_tensor, values_tensor.clone(),
-	    {static_cast<int>(data.batch_size()), runtime + 1,
+	    {runtime + 1, static_cast<int>(data.batch_size()),
 	     static_cast<int>(
 	         std::get<Population>(network_graph.get_network()->populations.at(recording.population))
 	             .neurons.size())},
@@ -258,8 +258,8 @@ std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
 						    column.toNeuronColumnOnDLS(), row)];
 						auto& [value, index] = indices[neuron.population];
 						if (static_cast<int64_t>(sample.chip_time.value()) <= runtime) {
-							index.at(0).push_back(static_cast<int64_t>(b));
-							index.at(1).push_back(static_cast<int64_t>(sample.chip_time.value()));
+							index.at(0).push_back(static_cast<int64_t>(sample.chip_time.value()));
+							index.at(1).push_back(static_cast<int64_t>(b));
 							index.at(2).push_back(static_cast<int64_t>(neuron.index));
 							value.push_back(
 							    static_cast<int32_t>(static_cast<int8_t>(sample.data.at(j) + 128)));
@@ -294,7 +294,7 @@ std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
 
 		torch::Tensor cadc_tensor = torch::sparse_coo_tensor(
 		    indicies_tensor, values_tensor.clone(),
-		    {static_cast<int>(data.batch_size()), runtime + 1,
+		    {runtime + 1, static_cast<int>(data.batch_size()),
 		     static_cast<int>(
 		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
 		             .neurons.size())},

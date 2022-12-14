@@ -663,7 +663,7 @@ class Neuron(HXModule):
 
             # Offset CADC traces
             if self.shift_cadc_to_first:
-                cadc = cadc - cadc[:, 0, :].unsqueeze(1)
+                cadc = cadc - cadc[0].unsqueeze(0)
             else:
                 cadc -= self.offset
 
@@ -672,15 +672,15 @@ class Neuron(HXModule):
 
             # Shift CADC samples in time
             if self.cadc_time_shift != 0:
-                cadc = torch.roll(cadc, shifts=-self.cadc_time_shift, dims=1)
+                cadc = torch.roll(cadc, shifts=-self.cadc_time_shift, dims=0)
             # If shift is to earlier times, we pad with last CADC value
             if self.cadc_time_shift > 0:
-                cadc[:, -self.cadc_time_shift:, :] = \
-                    cadc[:, -self.cadc_time_shift - 1, :].unsqueeze(1)
+                cadc[-self.cadc_time_shift:] = \
+                    cadc[-self.cadc_time_shift - 1].unsqueeze(0)
             # If shift is to later times, we pad with first CADC value
             if self.cadc_time_shift < 0:
-                cadc[:, :-self.cadc_time_shift, :] = \
-                    cadc[:, -self.cadc_time_shift, :].unsqueeze(1)
+                cadc[:-self.cadc_time_shift] = \
+                    cadc[-self.cadc_time_shift].unsqueeze(0)
 
         # Get spikes
         if self._enable_spike_recording:

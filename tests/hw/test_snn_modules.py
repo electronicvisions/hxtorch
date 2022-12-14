@@ -263,9 +263,9 @@ class TestNeuron(HWTestCase):
             linear.weight.data[idx, idx] = 63
 
         # Inputs
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         for idx in range(10):
-            spikes[:, idx * 10 + 5, idx] = 1
+            spikes[idx * 10 + 5, :, idx] = 1
 
         # Forward
         i_handle = linear(snn.NeuronHandle(spikes))
@@ -283,7 +283,7 @@ class TestNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
-                torch.tensor([10, 110 + 1, 10])))
+                torch.tensor([110 + 1, 10, 10])))
         self.assertTrue(s_handle.v_cadc is None)
         self.assertTrue(s_handle.v_madc is None)
 
@@ -292,10 +292,10 @@ class TestNeuron(HWTestCase):
         self.assertEqual(spike_times.shape[0], 10 * 10)
 
         i = 0
-        for b in range(10):
-            for nrn in range(10):
-                self.assertEqual(b, spike_times[i, 0])
-                self.assertEqual(5 + 10 * nrn, spike_times[i, 1])
+        for nrn in range(10):
+            for b in range(10):
+                self.assertEqual(b, spike_times[i, 1])
+                self.assertEqual(5 + 10 * nrn, spike_times[i, 0])
                 self.assertEqual(nrn, spike_times[i, 2])
                 i += 1
 
@@ -318,9 +318,9 @@ class TestNeuron(HWTestCase):
             linear.weight.data[idx, idx] = 63
 
         # Inputs
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         for idx in range(10):
-            spikes[:, idx * 10 + 5, idx] = 1
+            spikes[idx * 10 + 5, :, idx] = 1
 
         # Forward
         i_handle = linear(snn.NeuronHandle(spikes))
@@ -338,11 +338,11 @@ class TestNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
-                torch.tensor([10, 110 + 1, 10])))
+                torch.tensor([110 + 1, 10, 10])))
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.v_cadc.shape),
-                torch.tensor([10, 110 + 1, 10])))
+                torch.tensor([110 + 1, 10, 10])))
         self.assertTrue(s_handle.v_madc is None)
 
     def test_record_madc(self):
@@ -358,7 +358,7 @@ class TestNeuron(HWTestCase):
             10, enable_madc_recording=True, record_neuron_id=1,
             instance=instance)
 
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         i_handle = linear(snn.NeuronHandle(spikes))
         lif(i_handle)
 
@@ -377,7 +377,7 @@ class TestNeuron(HWTestCase):
             10, enable_madc_recording=True, record_neuron_id=1,
             instance=instance)
 
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         i_handle_1 = linear_1(snn.NeuronHandle(spikes))
         s_handle_1 = lif_1(i_handle_1)
         i_handle_2 = linear_2(s_handle_1)
@@ -430,9 +430,9 @@ class TestReadoutNeuron(HWTestCase):
         for idx in range(10):
             linear.weight.data[idx, idx] = 63
 
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         for idx in range(10):
-            spikes[:, idx * 10 + 5, idx] = 1
+            spikes[idx * 10 + 5, :, idx] = 1
 
         i_handle = linear(snn.NeuronHandle(spikes))
         v_handle = li(i_handle)
@@ -447,7 +447,7 @@ class TestReadoutNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(v_handle.v_cadc.shape),
-                torch.tensor([10, 110 + 1, 10])))
+                torch.tensor([110 + 1, 10, 10])))
         self.assertTrue(v_handle.v_madc is None)
 
     def test_record_madc(self):
@@ -463,7 +463,7 @@ class TestReadoutNeuron(HWTestCase):
             10, enable_madc_recording=True, record_neuron_id=1,
             instance=instance)
 
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         i_handle = linear(snn.NeuronHandle(spikes))
         li(i_handle)
 
@@ -482,7 +482,7 @@ class TestReadoutNeuron(HWTestCase):
             10, enable_madc_recording=True, record_neuron_id=1,
             instance=instance)
 
-        spikes = torch.zeros(10, 110, 10)
+        spikes = torch.zeros(110, 10, 10)
         i_handle_1 = linear_1(snn.NeuronHandle(spikes))
         v_handle_1 = li_1(i_handle_1)
         i_handle_2 = linear_2(v_handle_1)

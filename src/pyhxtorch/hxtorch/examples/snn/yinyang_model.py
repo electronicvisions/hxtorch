@@ -128,7 +128,7 @@ class SNN(torch.nn.Module):
         y_o = self.li_readout(c_o)
 
         # Execute on hardware
-        hxtorch.snn.run(self.instance, spikes.shape[1])
+        hxtorch.snn.run(self.instance, spikes.shape[0])
 
         return y_o.v_cadc
 
@@ -194,7 +194,7 @@ class Model(torch.nn.Module):
 
         # bursts (hidden spikes) regularization
         reg += reg_bursts * torch.mean(
-            torch.sum(self.network.s_h.spikes, dim=1) ** 2.)
+            torch.sum(self.network.s_h.spikes, dim=0) ** 2.)
         # weight regularization
         reg += reg_w_hidden * torch.mean(self.network.linear_h.weight ** 2.)
         reg += reg_w_output * torch.mean(self.network.linear_o.weight ** 2.)

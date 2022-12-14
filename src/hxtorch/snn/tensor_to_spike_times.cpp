@@ -17,11 +17,11 @@ std::vector<std::vector<std::vector<float>>> tensor_to_spike_times(torch::Tensor
 		throw std::runtime_error("Given data tensor has size = 0 along one dimension.");
 	}
 
-	std::vector<std::vector<std::vector<float>>> gtimes(times.sizes()[0]);
+	std::vector<std::vector<std::vector<float>>> gtimes(times.sizes()[1]);
 
-	for (int b = 0; b < times.sizes()[0]; ++b) {
+	for (int b = 0; b < times.sizes()[1]; ++b) {
 		gtimes.at(b).resize(times.sizes()[2]);
-		auto const& batch_element = times.index({b});
+		auto const& batch_element = times.index({torch::indexing::Slice(), b});
 		auto batch_times = torch::nonzero(batch_element);
 
 		for (int spike = 0; spike < batch_times.sizes()[0]; ++spike) {

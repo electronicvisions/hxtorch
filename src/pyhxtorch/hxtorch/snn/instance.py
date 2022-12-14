@@ -306,7 +306,7 @@ class Instance(BaseInstance):
 
         # Make sure all batch sizes are equal
         sizes = [
-            node.input_handle[0].observable_state.shape[0] for node in
+            node.input_handle[0].observable_state.shape[1] for node in
             self.modules.inputs()]
         assert all(sizes)
         self._batch_size = sizes[0]

@@ -22,7 +22,7 @@ class MaxOverTime(torch.nn.Module):
             expected shape: (batch_size, time_length, population_size)
         :return: Returns the tensor holding the max-over-time values.
         """
-        return torch.amax(input, 1)
+        return torch.amax(input, 0)
 
 
 class SumOverTime(torch.nn.Module):
@@ -43,7 +43,7 @@ class SumOverTime(torch.nn.Module):
             expected shape: (batch_size, time_length, population_size)
         :return: Returns the tensor holding the sum-over-time values.
         """
-        return torch.sum(input, 1)
+        return torch.sum(input, 0)
 
 
 class MeanOverTime(torch.nn.Module):
@@ -65,4 +65,4 @@ class MeanOverTime(torch.nn.Module):
             expected shape: (batch_size, time_length, population_size)
         :return: Returns the tensor holding the mean-over-time values.
         """
-        return torch.mean(input, 1)
+        return torch.mean(input, 0)
