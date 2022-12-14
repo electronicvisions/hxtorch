@@ -362,7 +362,8 @@ class Neuron(HXModule):
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
-                 params: Optional[Union[F.LIFParams, F.LIParams]] = None,
+                 params: Optional[
+                     Union[F.CUBALIFParams, F.CUBALIParams]] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
@@ -708,7 +709,7 @@ class ReadoutNeuron(Neuron):
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function] = F.LI,
-                 params: Optional[F.LIParams] = None,
+                 params: Optional[F.CUBALIParams] = None,
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,

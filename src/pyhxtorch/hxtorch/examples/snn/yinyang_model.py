@@ -53,9 +53,9 @@ class SNN(torch.nn.Module):
         super().__init__()
 
         # Neuron parameters
-        lif_params = F.LIFParams(
+        lif_params = F.CUBALIFParams(
             1. / tau_mem, 1. / tau_syn, dt=dt, alpha=alpha)
-        li_params = F.LIParams(1. / tau_mem, 1. / tau_syn, dt=dt)
+        li_params = F.CUBALIParams(1. / tau_mem, 1. / tau_syn, dt=dt)
 
         # Instance to work on
         self.instance = snn.Instance(mock=mock, dt=dt)
@@ -80,7 +80,7 @@ class SNN(torch.nn.Module):
 
         # Hidden layer
         self.lif_h = snn.Neuron(
-            n_hidden, instance=self.instance, func=F.lif_integration,
+            n_hidden, instance=self.instance, func=F.cuba_lif_integration,
             params=lif_params, trace_scale=trace_scale,
             cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True)
 
@@ -92,7 +92,7 @@ class SNN(torch.nn.Module):
 
         # Readout layer
         self.li_readout = snn.ReadoutNeuron(
-            n_out, instance=self.instance, func=F.li_integration,
+            n_out, instance=self.instance, func=F.cuba_li_integration,
             params=li_params, trace_scale=trace_scale,
             cadc_time_shift=trace_shift_out, shift_cadc_to_first=True)
         # Initialize weights
