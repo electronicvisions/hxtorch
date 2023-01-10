@@ -23,12 +23,11 @@ class TestLIFIntegration(unittest.TestCase):
         """ Test CUBA LIF integration """
         # Params
         params = CUBALIFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
+            tau_mem_inv=1./6e-6,
+            tau_syn_inv=1./6e-6,
             tau_ref=1e-6,
             v_th=0.7,
-            v_reset=-0.1,
-            dt=1e-6)
+            v_reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -39,7 +38,7 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_lif_integration(graded_spikes, params)
+        spikes, membrane = cuba_lif_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -64,12 +63,11 @@ class TestLIFIntegration(unittest.TestCase):
         """ Test CUBA LIF integration with hardware data """
         # Params
         params = CUBALIFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
+            tau_mem_inv=1./6e-6,
+            tau_syn_inv=1./6e-6,
             tau_ref=0e-6,
             v_th=1.,
-            v_reset=-0.1,
-            dt=1e-6)
+            v_reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -80,7 +78,7 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_lif_integration(graded_spikes, params)
+        spikes, membrane = cuba_lif_integration(graded_spikes, params, dt=1e-6)
 
         # Add jitter
         membrane += torch.rand(membrane.shape) * 0.05
@@ -91,7 +89,7 @@ class TestLIFIntegration(unittest.TestCase):
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes_hw, membrane_hw = cuba_lif_integration(
-            graded_spikes, params, hw_data=(spikes, membrane))
+            graded_spikes, params, hw_data=(spikes, membrane), dt=1e-6)
 
         # Shapes
         self.assertTrue(

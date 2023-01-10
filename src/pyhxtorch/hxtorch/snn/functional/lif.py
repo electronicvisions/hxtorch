@@ -1,9 +1,10 @@
 """
 Leaky-integrate and fire neurons
 """
-from typing import Callable, NamedTuple, Tuple, Optional
+from typing import NamedTuple, Tuple, Optional
 import torch
-from hxtorch.snn.functional.superspike import SuperSpike
+
+from hxtorch.snn.functional.threshold import threshold
 from hxtorch.snn.functional.unterjubel import Unterjubel
 
 
@@ -18,14 +19,15 @@ class CUBALIFParams(NamedTuple):
     v_th: torch.Tensor = torch.tensor(1.)
     v_reset: torch.Tensor = torch.tensor(0.)
     alpha: float = 50.0
-    dt: float = torch.tensor(1.0)  # pylint: disable=invalid-name
-    activation: Callable = SuperSpike
+    method: str = "superspike"
 
 
 # Allow redefining builtin for PyTorch consistancy
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
-def cuba_lif_integration(input: torch.Tensor, params: CUBALIFParams,
-                         hw_data: Optional[torch.Tensor] = None) \
+def cuba_lif_integration(input: torch.Tensor,
+                         params: CUBALIFParams,
+                         hw_data: Optional[torch.Tensor] = None,
+                         dt: float = 1e-6) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Leaky-integrate and fire neuron integration for realization of simple
@@ -43,6 +45,7 @@ def cuba_lif_integration(input: torch.Tensor, params: CUBALIFParams,
 
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIFParams object holding neuron prameters.
+    :param dt: Step width of integration.
 
     :return: Returns the spike trains in shape and membrane trace as a tuple.
         Both tensors are of shape (batch, time, neurons).
@@ -60,15 +63,15 @@ def cuba_lif_integration(input: torch.Tensor, params: CUBALIFParams,
 
     for ts in range(T):
         # Membrane decay
-        dv = params.dt * params.tau_mem_inv * ((params.v_leak - v) + i)
+        dv = dt * params.tau_mem_inv * ((params.v_leak - v) + i)
         v = Unterjubel.apply(v + dv, v_hw[ts]) if hw_data else v + dv
 
         # Current
-        di = -params.dt * params.tau_syn_inv * i
+        di = -dt * params.tau_syn_inv * i
         i = i + di + input[ts]
 
         # Spikes
-        spike = params.activation.apply(v - params.v_th, params.alpha)
+        spike = threshold(v - params.v_th, params.method, params.alpha)
         z = Unterjubel.apply(spike, z_hw[ts]) if hw_data else spike
 
         # Reset

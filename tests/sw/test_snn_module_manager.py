@@ -195,11 +195,12 @@ class TestModuleManager(unittest.TestCase):
     def test_connect_nodes(self):
         """ Test existing nodes are connected correctly """
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -228,9 +229,10 @@ class TestModuleManager(unittest.TestCase):
     def test_get_node(self):
         """ Test get_node returns the correct node """
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -248,9 +250,10 @@ class TestModuleManager(unittest.TestCase):
     def test_module_exists(self):
         """ Test module exists """
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Synapse(10, 10, None, None)
-        module2 = snn.Neuron(10, None, None)
+        module1 = snn.Synapse(10, 10, ins, None)
+        module2 = snn.Neuron(10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -261,16 +264,17 @@ class TestModuleManager(unittest.TestCase):
         modules.add(module2, handle3, handle4)
         # Check if exists
         self.assertTrue(modules.module_exists(module1))
-        self.assertFalse(modules.module_exists(snn.Neuron(10, None, None)))
+        self.assertFalse(modules.module_exists(snn.Neuron(10, ins, None)))
 
     def test_pre_pop(self):
         """ Test get all pre-populations """
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module0 = snn.Synapse(10, 10, None, None)
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
+        module0 = snn.Synapse(10, 10, ins, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
         # Test handles
         handle0 = snn.NeuronHandle()
         handle1 = snn.NeuronHandle()
@@ -293,12 +297,13 @@ class TestModuleManager(unittest.TestCase):
 
         # Multiple pre-populations
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
-        module5 = snn.Neuron(10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
+        module5 = snn.Neuron(10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -322,11 +327,12 @@ class TestModuleManager(unittest.TestCase):
 
         # Recurrent
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -350,11 +356,12 @@ class TestModuleManager(unittest.TestCase):
         """ Test get all post-populations """
         # Test Forward
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module0 = snn.Synapse(10, 10, None, None)
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
+        module0 = snn.Synapse(10, 10, ins, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
         # Test handles
         handle0 = snn.NeuronHandle()
         handle1 = snn.NeuronHandle()
@@ -377,11 +384,12 @@ class TestModuleManager(unittest.TestCase):
 
         # Test recurrent
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -406,9 +414,10 @@ class TestModuleManager(unittest.TestCase):
         """ Test dropout masks are set properly """
         # Test neuron followed by dropout
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.BatchDropout(10, 0.5, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.BatchDropout(10, 0.5, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -430,9 +439,10 @@ class TestModuleManager(unittest.TestCase):
 
         # Test dropout not proceded by neuron
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Synapse(10, 10, None, None)
-        module2 = snn.BatchDropout(10, 0.5, None, None)
+        module1 = snn.Synapse(10, 10, ins, None)
+        module2 = snn.BatchDropout(10, 0.5, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -452,16 +462,16 @@ class TestModuleManager(unittest.TestCase):
     def test_forward_input_nodes(self):
         """ Test if input nodes are forwarded properly """
         # Test neuron followed by dropout
-        instance = snn.Instance(mock=True)
+        ins = snn.Instance(mock=True)
         # Test modules
-        module1 = snn.Synapse(10, 10, instance, lambda x: x)
-        module2 = snn.Neuron(10, instance, lambda x: x)
+        module1 = snn.Synapse(10, 10, ins, lambda x: x)
+        module2 = snn.Neuron(10, ins, lambda x: x)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
 
-        modules = instance.modules
+        modules = ins.modules
 
         # Add and connect
         node1 = modules.add(module1, handle1, handle2)
@@ -473,7 +483,7 @@ class TestModuleManager(unittest.TestCase):
         self.assertEqual(len(modules._input_populations), 0)
 
         # Forward input nodes
-        modules._inject_input_nodes(instance)
+        modules._inject_input_nodes(ins)
         modules._forward_input_nodes()
 
         # Test
@@ -487,7 +497,7 @@ class TestModuleManager(unittest.TestCase):
         self.assertEqual(node1.output_handle, handle2)
 
         # Forward again input nodes
-        modules._inject_input_nodes(instance)
+        modules._inject_input_nodes(ins)
         modules._forward_input_nodes()
 
         # Test -> nothing should have changed besides intermediate handle
@@ -511,8 +521,9 @@ class TestModuleManager(unittest.TestCase):
     def test_update_node(self):
         """ Test nodes handles are updated properly """
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module = snn.Neuron(10, None, None)
+        module = snn.Neuron(10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -537,11 +548,12 @@ class TestModuleManager(unittest.TestCase):
         """ Test modules are returned in correct order """
         # Simple feed-forward
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, None, ins)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -566,11 +578,12 @@ class TestModuleManager(unittest.TestCase):
 
         # Simple feed-forward, ordered wrong
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -595,11 +608,13 @@ class TestModuleManager(unittest.TestCase):
 
         # Feedforward multiple pre
         modules = ModuleManager()
+        ins = snn.Instance()
+
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -625,15 +640,16 @@ class TestModuleManager(unittest.TestCase):
 
         # Feedforward Diamond
         modules = ModuleManager()
+        ins = snn.Instance()
         # Test modules
-        module1 = snn.Neuron(10, None, None)
-        module2 = snn.Synapse(10, 10, None, None)
-        module3 = snn.Neuron(10, None, None)
-        module4 = snn.Synapse(10, 10, None, None)
-        module5 = snn.Synapse(10, 10, None, None)
-        module6 = snn.Neuron(10, None, None)
-        module7 = snn.Synapse(10, 10, None, None)
-        module8 = snn.Neuron(10, None, None)
+        module1 = snn.Neuron(10, ins, None)
+        module2 = snn.Synapse(10, 10, ins, None)
+        module3 = snn.Neuron(10, ins, None)
+        module4 = snn.Synapse(10, 10, ins, None)
+        module5 = snn.Synapse(10, 10, ins, None)
+        module6 = snn.Neuron(10, ins, None)
+        module7 = snn.Synapse(10, 10, ins, None)
+        module8 = snn.Neuron(10, ins, None)
         # Test handles
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()

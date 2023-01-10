@@ -53,3 +53,8 @@ class SuperSpike(torch.autograd.Function):
         grad_input = grad / (ctx.alpha * torch.abs(input) + 1.0).pow(2)
 
         return grad_input, None
+
+
+# pylint: disable=redefined-builtin, arguments-differ
+def superspike_func(input: torch.Tensor, alpha: float) -> torch.Tensor:
+    return SuperSpike.apply(input, alpha)

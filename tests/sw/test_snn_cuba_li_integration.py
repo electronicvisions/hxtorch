@@ -22,10 +22,7 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration(self):
         """ Test CUBA LI integration """
         # Params
-        params = CUBALIParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            dt=1e-6)
+        params = CUBALIParams(tau_mem_inv=1./6e-6, tau_syn_inv=1./6e-6)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -36,7 +33,7 @@ class TestLIIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        membrane = cuba_li_integration(graded_spikes, params)
+        membrane = cuba_li_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -57,10 +54,7 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration_hw_data(self):
         """ Test CUBA LI integration with hardware data """
         # Params
-        params = CUBALIParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            dt=1e-6)
+        params = CUBALIParams(tau_mem_inv=1./6e-6, tau_syn_inv=1./6e-6)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -71,7 +65,7 @@ class TestLIIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        membrane = cuba_li_integration(graded_spikes, params)
+        membrane = cuba_li_integration(graded_spikes, params, dt=1e-6)
 
         # Add jitter
         membrane += torch.rand(membrane.shape) * 0.05
@@ -79,7 +73,7 @@ class TestLIIntegration(unittest.TestCase):
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         membrane_hw = cuba_li_integration(
-            graded_spikes, params, hw_data=(membrane,))
+            graded_spikes, params, hw_data=(membrane,), dt=1e-6)
 
         # Shapes
         self.assertTrue(

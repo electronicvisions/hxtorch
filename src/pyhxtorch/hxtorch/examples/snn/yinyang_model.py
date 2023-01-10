@@ -54,8 +54,9 @@ class SNN(torch.nn.Module):
 
         # Neuron parameters
         lif_params = F.CUBALIFParams(
-            1. / tau_mem, 1. / tau_syn, dt=dt, alpha=alpha)
-        li_params = F.CUBALIParams(1. / tau_mem, 1. / tau_syn, dt=dt)
+            tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn, alpha=alpha)
+        li_params = F.CUBALIParams(
+            tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn)
 
         # Instance to work on
         self.instance = snn.Instance(mock=mock, dt=dt)

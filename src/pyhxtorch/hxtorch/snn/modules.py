@@ -1,7 +1,8 @@
 """
 Implementing SNN modules
 """
-from typing import Any, Callable, Dict, Tuple, Type, Optional, Union, List
+from typing import (
+    Any, Callable, Dict, Tuple, Type, Optional, NamedTuple, Union, List)
 from functools import partial
 import inspect
 import numpy as np
@@ -362,8 +363,7 @@ class Neuron(HXModule):
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
-                 params: Optional[
-                     Union[F.CUBALIFParams, F.CUBALIParams]] = None,
+                 params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
@@ -439,7 +439,7 @@ class Neuron(HXModule):
 
         self.size = size
         self.params = params
-        self.extra_kwargs.update({"params": params})
+        self.extra_kwargs.update({"params": params, "dt": instance.dt})
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
@@ -709,7 +709,7 @@ class ReadoutNeuron(Neuron):
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function] = F.LI,
-                 params: Optional[F.CUBALIParams] = None,
+                 params: Optional[NamedTuple] = None,
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,

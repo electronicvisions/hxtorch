@@ -13,14 +13,13 @@ class CUBALIParams(NamedTuple):
     tau_mem_inv: torch.Tensor
     tau_syn_inv: torch.Tensor
     v_leak: torch.Tensor = torch.tensor(0.)
-    dt: float = torch.tensor(1e-6)  # pylint: disable=invalid-name
 
 
 # Allow redefining builtin for PyTorch consistancy
 # pylint: disable=redefined-builtin, invalid-name
 def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
-                        hw_data: Optional[torch.Tensor] = None) \
-        -> torch.Tensor:
+                        hw_data: Optional[torch.Tensor] = None,
+                        dt: float = 1e-6) -> torch.Tensor:
     """
     Leaky-integrate neuron integration for realization of readout neurons
     with exponential synapses.
@@ -33,6 +32,7 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
 
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIParams object holding neuron parameters.
+    :param dt: Integration step width
 
     :return: Returns the membrane trace in shape (batch, time, neurons).
     """
@@ -49,11 +49,11 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
 
     for ts in range(T):
         # Membrane
-        dv = params.dt * params.tau_mem_inv * (params.v_leak - v + i)
+        dv = dt * params.tau_mem_inv * (params.v_leak - v + i)
         v = Unterjubel.apply(v + dv, v_hw[ts]) if hw_data else v + dv
 
         # Current
-        di = -params.dt * params.tau_syn_inv * i
+        di = -dt * params.tau_syn_inv * i
         i = i + di + input[ts]
 
         # Save data
