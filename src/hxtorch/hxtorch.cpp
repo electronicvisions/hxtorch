@@ -33,9 +33,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.import("pygrenade_vx");
 	m.def(
 	    "init_hardware",
-	    (void (*)(std::optional<hxtorch::HWDBPath> const&, bool)) & hxtorch::init_hardware,
+	    (void (*)(std::optional<hxtorch::HWDBPath> const&, std::string)) & hxtorch::init_hardware,
 	    __doc_hxtorch_init_hardware, pybind11::arg("hwdb_path") = std::nullopt,
-	    pybind11::arg("spiking") = false);
+	    pybind11::arg("calib_name") = "hagen");
 	m.def(
 	    "init_hardware", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init_hardware,
 	    __doc_hxtorch_init_hardware_2, pybind11::arg("calibration_path"));

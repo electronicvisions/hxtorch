@@ -236,7 +236,7 @@ class HWTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware(spiking=True)
+        hxtorch.init_hardware(calib_name="spiking")
 
     @classmethod
     def tearDownClass(cls):
