@@ -42,7 +42,8 @@ class ReadoutNeuron(Neuron):
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear") -> None:
+                 interpolation_mode: str = "linear",
+                 enable_v2_shape: bool = False) -> None:
         """
         Initialize a ReadoutNeuron. This module creates a population of non-
         spiking neurons of size `size` and is equivalent to Neuron when its
@@ -101,12 +102,14 @@ class ReadoutNeuron(Neuron):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
+        :param enable_v2_shape: Enable the neurons to be comprised of two
+            vertically connected atomic neuron circuits.
         """
         super().__init__(
             size, instance, func, params, False, enable_cadc_recording,
             enable_madc_recording, record_neuron_id, placement_constraint,
             trace_offset, trace_scale, cadc_time_shift, shift_cadc_to_first,
-            interpolation_mode)
+            interpolation_mode, enable_v2_shape)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,
@@ -142,6 +145,26 @@ class ReadoutNeuron(Neuron):
         neuron_block.atomic_neurons[
             coord.get_placed_compartments()[
                 halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+
+        if self._enable_v2_shape:
+            atomic_neuron_top = neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][0]]
+            atomic_neuron_bot = neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][1]]
+            # connect compartment
+            atomic_neuron_top.multicompartment.connect_vertical = True
+            atomic_neuron_bot.multicompartment.connect_vertical = True
+            neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][0]
+            ] = atomic_neuron_top
+            neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][1]
+            ] = atomic_neuron_bot
+
         return neuron_block
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],

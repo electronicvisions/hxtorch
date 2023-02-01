@@ -36,7 +36,7 @@ class Neuron(HXModule):
     _cadc_readout_source: lola.AtomicNeuron.Readout.Source \
         = lola.AtomicNeuron.Readout.Source.membrane
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
                  params: Optional[NamedTuple] = None,
@@ -51,7 +51,8 @@ class Neuron(HXModule):
                  trace_scale: Union[Dict[halco.LogicalNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear") -> None:
+                 interpolation_mode: str = "linear",
+                 enable_v2_shape: bool = False) -> None:
         """
         Initialize a Neuron. This module creates a population of spiking
         neurons of size `size`. This module has a internal spiking mask, which
@@ -114,6 +115,8 @@ class Neuron(HXModule):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
+        :param enable_v2_shape: Enable the neurons to be comprised of two
+            vertically connected atomic neuron circuits.
         """
         super().__init__(instance=instance, func=func)
 
@@ -142,6 +145,7 @@ class Neuron(HXModule):
         self.shift_cadc_to_first = shift_cadc_to_first
 
         self.interpolation_mode = interpolation_mode
+        self._enable_v2_shape = enable_v2_shape
 
     def register_hw_entity(self) -> None:
         """
@@ -187,9 +191,18 @@ class Neuron(HXModule):
             self.instance.has_madc_recording = True
         log.TRACE(f"Registered hardware  entity '{self}'.")
 
-    @classmethod
-    def create_hw_shape(cls) -> halco.LogicalNeuronCompartments:
+    def create_hw_shape(self) -> halco.LogicalNeuronCompartments:
         """Builds a logical neuron compartment description."""
+        if self._enable_v2_shape:
+            return halco.LogicalNeuronCompartments(
+                {halco.CompartmentOnLogicalNeuron():
+                 [halco.AtomicNeuronOnLogicalNeuron(
+                  halco.NeuronColumnOnLogicalNeuron(),
+                  halco.NeuronRowOnLogicalNeuron(0)),
+                  halco.AtomicNeuronOnLogicalNeuron(
+                  halco.NeuronColumnOnLogicalNeuron(),
+                  halco.NeuronRowOnLogicalNeuron(1))]})
+
         return halco.LogicalNeuronCompartments(
             {halco.CompartmentOnLogicalNeuron():
              [halco.AtomicNeuronOnLogicalNeuron()]})
@@ -260,8 +273,28 @@ class Neuron(HXModule):
             atomic_neuron.readout.enable_buffered_access = True
             atomic_neuron.readout.source = self._madc_readout_source
 
-        neuron_block.atomic_neurons[coord.get_placed_compartments()[
-            halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        if self._enable_v2_shape:
+            atomic_neuron_top = neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][0]]
+            atomic_neuron_bot = neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][1]]
+            # connect compartment
+            atomic_neuron_top.multicompartment.connect_vertical = True
+            atomic_neuron_bot.multicompartment.connect_vertical = True
+            neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][0]
+            ] = atomic_neuron_top
+            neuron_block.atomic_neurons[
+                coord.get_placed_compartments()[
+                    halco.CompartmentOnLogicalNeuron(0)][1]
+            ] = atomic_neuron_bot
+
         return neuron_block
 
     def add_to_network_graph(self,
@@ -316,7 +349,8 @@ class Neuron(HXModule):
                  grenade.logical_network.Population.Neuron.Compartment(
                      grenade.logical_network.Population
                      .Neuron.Compartment.SpikeMaster(
-                         0, enable_record_spikes[i]), [receptors])})
+                         0, enable_record_spikes[i]), [receptors] * len(
+                         logical_neuron.get_atomic_neurons()))})
             for i, logical_neuron in enumerate(coords)
         ]
 

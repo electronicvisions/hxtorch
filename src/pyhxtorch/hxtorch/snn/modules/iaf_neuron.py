@@ -32,7 +32,7 @@ class IAFNeuron(Neuron):
     _cadc_readout_source: lola.AtomicNeuron.Readout.Source \
         = lola.AtomicNeuron.Readout.Source.membrane
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, instance: "Instance",
                  func: Union[Callable, torch.autograd.Function]
                  = F.IAF,
@@ -48,7 +48,8 @@ class IAFNeuron(Neuron):
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear") -> None:
+                 interpolation_mode: str = "linear",
+                 enable_v2_shape: bool = False) -> None:
         """
         Initialize an IAFNeuron. This module creates a population of a non-
         leaking spiking neurons of size `size`. This module has a internal
@@ -112,12 +113,14 @@ class IAFNeuron(Neuron):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
+        :param enable_v2_shape: Enable the neurons to be comprised of two
+            vertically connected atomic neuron circuits.
         """
         super().__init__(
             size, instance, func, params, enable_spike_recording,
             enable_cadc_recording, enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
-            interpolation_mode)
+            shift_cadc_to_first, interpolation_mode, enable_v2_shape)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,

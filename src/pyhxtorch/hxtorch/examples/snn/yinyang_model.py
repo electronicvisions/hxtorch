@@ -95,7 +95,9 @@ class SNN(torch.nn.Module):
             cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
             placement_constraint=list(
                 halco.LogicalNeuronOnDLS(
-                    snn.ReadoutNeuron.create_hw_shape(),
+                    halco.LogicalNeuronCompartments(
+                        {halco.CompartmentOnLogicalNeuron():
+                         [halco.AtomicNeuronOnLogicalNeuron()]}),
                     halco.AtomicNeuronOnDLS(
                         halco.NeuronRowOnDLS(1), halco.NeuronColumnOnDLS(nrn)))
                 for nrn in range(n_out)))
