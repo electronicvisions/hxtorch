@@ -1,4 +1,6 @@
 #pragma once
+#include "grenade/vx/logical_network/network_graph.h"
+#include "grenade/vx/logical_network/population.h"
 #include "grenade/vx/network/population.h"
 #include "hxtorch/snn/types.h"
 #include <map>
@@ -21,12 +23,14 @@ namespace hxtorch::snn {
  * sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
+ * @param logical_network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and spike handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extract_spikes(
     grenade::vx::IODataMap const& data,
+    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 
@@ -34,12 +38,14 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
  * samples in a sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
+ * @param logical_network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and MADC handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract_madc(
     grenade::vx::IODataMap const& data,
+    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 
@@ -47,12 +53,14 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
  * samples in a sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
+ * @param logical_network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and CADC handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract_cadc(
     grenade::vx::IODataMap const& data,
+    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 

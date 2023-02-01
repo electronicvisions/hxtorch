@@ -5,6 +5,8 @@ from typing import Optional, Tuple
 from functools import partial
 import torch
 
+from dlens_vx_v3 import halco
+
 import hxtorch
 import hxtorch.snn as snn
 from hxtorch.snn.transforms import weight_transforms
@@ -61,11 +63,6 @@ class SNN(torch.nn.Module):
         # Instance to work on
         self.instance = snn.Instance(mock=mock, dt=dt)
 
-        # Ajdust placement to use second hemisphere for output neurons
-        self.instance.neuron_placement = snn.instance.NeuronPlacement(
-            permutation=list(
-                range(0, n_hidden)) + list(range(256, 256 + n_out)))
-
         # Repeat input
         self.input_repetitions = input_repetitions
         # Input projection
@@ -95,7 +92,13 @@ class SNN(torch.nn.Module):
         self.li_readout = snn.ReadoutNeuron(
             n_out, instance=self.instance, func=F.cuba_li_integration,
             params=li_params, trace_scale=trace_scale,
-            cadc_time_shift=trace_shift_out, shift_cadc_to_first=True)
+            cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
+            placement_constraint=list(
+                halco.LogicalNeuronOnDLS(
+                    snn.ReadoutNeuron.create_hw_shape(),
+                    halco.AtomicNeuronOnDLS(
+                        halco.NeuronRowOnDLS(1), halco.NeuronColumnOnDLS(nrn)))
+                for nrn in range(n_out)))
         # Initialize weights
         if weight_init_output:
             torch.nn.init.normal_(self.linear_o.weight, *weight_init_output)

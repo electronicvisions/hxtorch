@@ -11,7 +11,7 @@ namespace hxtorch::snn {
 /** Transform weight tensor to grenade connections. Note all entries must be of the same receptor
  * type.
  */
-grenade::vx::network::Projection::Connections weight_to_connection(torch::Tensor weight)
+grenade::vx::logical_network::Projection::Connections weight_to_connection(torch::Tensor weight)
 {
 	if (weight.dim() != 2) {
 		throw std::runtime_error("Only 2D weight tensors are supported.");
@@ -28,13 +28,18 @@ grenade::vx::network::Projection::Connections weight_to_connection(torch::Tensor
 		    "Encountered different signs in the weights. Only one sign (or zero) is supported.");
 	}
 
-	grenade::vx::network::Projection::Connections connections;
+	grenade::vx::logical_network::Projection::Connections connections;
 	for (int row = 0; row < weight.sizes()[0]; ++row) {
 		for (int col = 0; col < weight.sizes()[1]; ++col) {
 			auto w = weight.index({row, col}).item().toInt();
 			connections.push_back(
-			    {static_cast<size_t>(col), static_cast<size_t>(row),
-			     lola::vx::v3::SynapseMatrix::Weight(std::abs(w))});
+			    {grenade::vx::logical_network::Projection::Connection::Index{
+			         static_cast<size_t>(col),
+			         halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron()},
+			     grenade::vx::logical_network::Projection::Connection::Index{
+			         static_cast<size_t>(row),
+			         halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron()},
+			     grenade::vx::logical_network::Projection::Connection::Weight(std::abs(w))});
 		}
 	}
 

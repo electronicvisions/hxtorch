@@ -1,4 +1,4 @@
-#include "grenade/vx/network/projection.h"
+#include "grenade/vx/logical_network/projection.h"
 #include <torch/torch.h>
 
 namespace hxtorch::snn {
@@ -10,6 +10,6 @@ namespace hxtorch::snn {
  * @param weight Torch tensor holding the weights.
  * @return All grenade connections given as a vector of connections.
  */
-grenade::vx::network::Projection::Connections weight_to_connection(torch::Tensor weight);
+grenade::vx::logical_network::Projection::Connections weight_to_connection(torch::Tensor weight);
 
 } // namespace hxtorch::snn

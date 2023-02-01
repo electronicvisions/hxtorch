@@ -421,10 +421,12 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
         """
         self.instance.register_projection(self)
 
-    def add_to_network_graph(self, pre: grenade.PopulationDescriptor,
-                             post: grenade.PopulationDescriptor,
-                             builder: grenade.NetworkBuilder) \
-            -> Tuple[grenade.ProjectionDescriptor, ...]:
+    def add_to_network_graph(
+            self,
+            pre: grenade.logical_network.PopulationDescriptor,
+            post: grenade.logical_network.PopulationDescriptor,
+            builder: grenade.logical_network.NetworkBuilder) -> Tuple[
+                grenade.logical_network.ProjectionDescriptor, ...]:
         """
         Adds the projection to a grenade network builder by providing the
         population descriptor of the corresponding pre and post population.
@@ -450,11 +452,15 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
         connections_exc = hxtorch.snn.weight_to_connection(weight_exc)  # pylint: disable=no-member
         connections_inh = hxtorch.snn.weight_to_connection(weight_inh)  # pylint: disable=no-member
 
-        projection_exc = grenade.Projection(
-            grenade.Projection.ReceptorType.excitatory,
+        projection_exc = grenade.logical_network.Projection(
+            grenade.logical_network.Receptor(
+                grenade.logical_network.Receptor.ID(),
+                grenade.logical_network.Receptor.Type.excitatory),
             connections_exc, pre, post)
-        projection_inh = grenade.Projection(
-            grenade.Projection.ReceptorType.inhibitory,
+        projection_inh = grenade.logical_network.Projection(
+            grenade.logical_network.Receptor(
+                grenade.logical_network.Receptor.ID(),
+                grenade.logical_network.Receptor.Type.inhibitory),
             connections_inh, pre, post)
 
         exc_descriptor = builder.add(projection_exc)
@@ -490,9 +496,11 @@ class Neuron(HXModule):
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
-                 trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                 placement_constraint: Optional[
+                     List[halco.LogicalNeuronOnDLS]] = None,
+                 trace_offset: Union[Dict[halco.LogicalNeuronOnDLS, float],
                                      torch.Tensor, float] = 0.,
-                 trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                 trace_scale: Union[Dict[halco.LogicalNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear") -> None:
@@ -523,15 +531,17 @@ class Neuron(HXModule):
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
+        :param placement_constraint: An optional list of logical neurons
+            defining where to place the module`s neurons on hardware.
         :param trace_offset: The value by which the measured CADC traces are
             shifted before the scaling is applied. If this offset is given as
             float the same value is applied to all neuron traces in this
             population. One can also provide a torch tensor holding one offset
             for each individual neuron in this population. The corresponding
             tensor has to be of size `size`. Further, the offsets can be
-            supplied in a dictionary where the keys are the hardware neuron
+            supplied in a dictionary where the keys are the logical neuron
             coordinates and the values are the offsets, i.e.
-            Dict[AtomicNeuronOnDLS, float]. The dictionary has to provide one
+            Dict[LogicalNeuronOnDLS, float]. The dictionary has to provide one
             coordinate for each hardware neuron represented by this population,
             but might also hold neuron coordinates that do not correspond to
             this layer. The layer-specific offsets are then picked and applied
@@ -542,10 +552,10 @@ class Neuron(HXModule):
             One can also provide a torch tensor holding one scale for each
             individual neuron in this population. The corresponding tensor has
             to be of size `size`. Further, the scales can be supplied in a
-            dictionary where the keys are the hardware neuron coordinates and
-            the values are the scales, i.e. Dict[AtomicNeuronOnDLS, float]. The
-            dictionary has to provide one coordinate for each hardware neuron
-            represented by this population, but might also hold neuron
+            dictionary where the keys are the logical neuron coordinates and
+            the values are the scales, i.e. Dict[LogicalNeuronOnDLS, float].
+            The dictionary has to provide one coordinate for each hardware
+            neuron represented by this population, but might also hold neuron
             coordinates that do not correspond to this layer. The layer-
             specific scales are then picked and applied implicitly.
         :param cadc_time_shift: An integer indicating by how many time steps
@@ -559,6 +569,13 @@ class Neuron(HXModule):
         """
         super().__init__(instance=instance, func=func)
 
+        if placement_constraint is not None \
+                and len(placement_constraint) != size:
+            raise ValueError(
+                "The number of neurons in logical neurons in "
+                + "`hardware_constraints` does not equal the `size` of the "
+                + "module.")
+
         self.size = size
         self.params = params
         self.extra_kwargs.update({"params": params, "dt": instance.dt})
@@ -567,6 +584,7 @@ class Neuron(HXModule):
         self._enable_cadc_recording = enable_cadc_recording
         self._enable_madc_recording = enable_madc_recording
         self._record_neuron_id = record_neuron_id
+        self._placement_constraint = placement_constraint
         self._mask: Optional[torch.Tensor] = None
         self.unit_ids: Optional[np.ndarray] = None
 
@@ -579,11 +597,12 @@ class Neuron(HXModule):
 
     def register_hw_entity(self) -> None:
         """
-        Infere neuron ids on hardware and register them.
+        Infer neuron ids on hardware and register them.
         """
         self.unit_ids = np.arange(
             self.instance.id_counter, self.instance.id_counter + self.size)
-        self.instance.neuron_placement.register_id(self.unit_ids)
+        self.instance.neuron_placement.register_id(
+            self.unit_ids, self.create_hw_shape(), self._placement_constraint)
         self.instance.id_counter += self.size
         self.instance.register_population(self)
 
@@ -592,7 +611,7 @@ class Neuron(HXModule):
             assert self.offset.shape[0] == self.size
         if isinstance(self.offset, dict):
             # Get populations HW neurons
-            coords = self.instance.neuron_placement.id2atomicneuron(
+            coords = self.instance.neuron_placement.id2logicalneuron(
                 self.unit_ids)
             offset = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -604,7 +623,7 @@ class Neuron(HXModule):
             assert self.scale.shape[0] == self.size
         if isinstance(self.scale, dict):
             # Get populations HW neurons
-            coords = self.instance.neuron_placement.id2atomicneuron(
+            coords = self.instance.neuron_placement.id2logicalneuron(
                 self.unit_ids)
             scale = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -619,6 +638,13 @@ class Neuron(HXModule):
                     + "single neuron.")
             self.instance.has_madc_recording = True
         log.TRACE(f"Registered hardware  entity '{self}'.")
+
+    @classmethod
+    def create_hw_shape(cls) -> halco.LogicalNeuronCompartments:
+        """Builds a logical neuron compartment description."""
+        return halco.LogicalNeuronCompartments(
+            {halco.CompartmentOnLogicalNeuron():
+             [halco.AtomicNeuronOnLogicalNeuron()]})
 
     @property
     def mask(self) -> None:
@@ -654,8 +680,9 @@ class Neuron(HXModule):
         return lola.AtomicNeuron()
 
     def configure_hw_entity(self, neuron_id: int,
-                            atomic_neuron: lola.AtomicNeuron) \
-            -> lola.AtomicNeuron:
+                            neuron_block: lola.NeuronBlock,
+                            coord: halco.LogicalNeuronOnDLS) \
+            -> lola.NeuronBlock:
         """
         Configures a neuron in the given layer with its specific properties.
         The neurons digital event outputs are enabled according to the given
@@ -665,12 +692,15 @@ class Neuron(HXModule):
               population-specific parameters.
 
         :param neuron_id: In-population neuron index.
-        :param atomic_neuron: The neurons hardware entity representing the
-            neuron with index `neuron_id` on hardware.
+        :param neuron_block: The neuron block hardware entity.
+        :param coord: Coordinate of neuron on hardware.
 
         :returns: Returns the AtomicNeuron with population-specific
             configurations appended.
         """
+        atomic_neuron = neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]]
         # configure spike recording
         atomic_neuron.event_routing.analog_output = \
             atomic_neuron.EventRouting.AnalogOutputMode.normal
@@ -682,10 +712,13 @@ class Neuron(HXModule):
             atomic_neuron.readout.enable_buffered_access = True
             atomic_neuron.readout.source = self._madc_readout_source
 
-        return atomic_neuron
+        neuron_block.atomic_neurons[coord.get_placed_compartments()[
+            halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        return neuron_block
 
-    def add_to_network_graph(self, builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationDescriptor:
+    def add_to_network_graph(self,
+                             builder: grenade.logical_network.NetworkBuilder) \
+            -> grenade.logical_network.PopulationDescriptor:
         """
         Add the layer's neurons to grenades network builder. If
         `enable_spike_recording` is enabled the neuron's spikes are recorded
@@ -715,19 +748,43 @@ class Neuron(HXModule):
             enable_record_spikes = np.zeros_like(self.unit_ids, dtype=bool)
 
         # get neuron coordinates
-        coords: List[halco.AtomicNeuronOnDLS] = \
-            self.instance.neuron_placement.id2atomicneuron(self.unit_ids)
+        coords: List[halco.LogicalNeuronOnDLS] = \
+            self.instance.neuron_placement.id2logicalneuron(self.unit_ids)
+
+        # create receptors
+        receptors = set([
+            grenade.logical_network.Receptor(
+                grenade.logical_network.Receptor.ID(),
+                grenade.logical_network.Receptor.Type.excitatory),
+            grenade.logical_network.Receptor(
+                grenade.logical_network.Receptor.ID(),
+                grenade.logical_network.Receptor.Type.inhibitory),
+        ])
+
+        neurons: List[grenade.logical_network.Population.Neuron] = [
+            grenade.logical_network.Population.Neuron(
+                logical_neuron,
+                {halco.CompartmentOnLogicalNeuron():
+                 grenade.logical_network.Population.Neuron.Compartment(
+                     grenade.logical_network.Population
+                     .Neuron.Compartment.SpikeMaster(
+                         0, enable_record_spikes[i]), [receptors])})
+            for i, logical_neuron in enumerate(coords)
+        ]
 
         # create grenade population
-        gpopulation = grenade.Population(coords, list(enable_record_spikes))
+        gpopulation = grenade.logical_network.Population(neurons)
 
         # add to builder
         self.descriptor = builder.add(gpopulation)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
-                neuron = grenade.CADCRecording.Neuron(
-                    self.descriptor, in_pop_id, self._cadc_readout_source)
+                neuron = grenade.logical_network.CADCRecording.Neuron()
+                neuron.population = self.descriptor
+                neuron.neuron_on_population = in_pop_id
+                neuron.compartment_on_neuron = 0
+                neuron.atomic_neuron_on_compartment = 0
                 self.instance.cadc_recording[unit_id] = neuron
 
         # No recording registered -> return
@@ -737,19 +794,27 @@ class Neuron(HXModule):
         # add MADC recording
         # NOTE: If two populations register MADC reordings grenade should
         #       throw in the following
-        madc_recording = grenade.MADCRecording()
+        madc_recording = grenade.logical_network.MADCRecording()
         madc_recording.population = self.descriptor
         madc_recording.source = self._madc_readout_source
-        madc_recording.index = int(self._record_neuron_id)
+        madc_recording.neuron_on_population = int(self._record_neuron_id)
+        madc_recording.compartment_on_neuron = \
+            halco.CompartmentOnLogicalNeuron()
+        madc_recording.atomic_neuron_on_compartment = 0
         builder.add(madc_recording)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
         return self.descriptor
 
     @staticmethod
-    def add_to_input_generator(layer: HXModule,
-                               builder: grenade.InputGenerator) -> None:
-        pass
+    def add_to_input_generator(
+            module: HXModule,
+            builder: grenade.logical_network.InputGenerator) -> None:
+        """
+        Add the input to an input module to grenades input generator.
+        :param module: The module to add the input for.
+        :param builder: Grenade's logical network builder.
+        """
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],
                      hw_cadc: Optional[CADCHandle],
@@ -835,6 +900,8 @@ class ReadoutNeuron(Neuron):
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
+                 placement_constraint: Optional[
+                     List[halco.LogicalNeuronOnDLS]] = None,
                  trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                      torch.Tensor, float] = 0.,
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
@@ -864,6 +931,8 @@ class ReadoutNeuron(Neuron):
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
+        :param placement_constraint: An optional list of logical neurons
+            defining where to place the module`s neurons on hardware.
         :param trace_offset: The value by which the measured CADC traces are
             shifted before the scaling is applied. If this offset is given as
             float the same value is applied to all neuron traces in this
@@ -900,22 +969,33 @@ class ReadoutNeuron(Neuron):
         """
         super().__init__(
             size, instance, func, params, False, enable_cadc_recording,
-            enable_madc_recording, record_neuron_id, trace_offset, trace_scale,
-            cadc_time_shift, shift_cadc_to_first, interpolation_mode)
+            enable_madc_recording, record_neuron_id, placement_constraint,
+            trace_offset, trace_scale, cadc_time_shift, shift_cadc_to_first,
+            interpolation_mode)
 
     def configure_hw_entity(self, neuron_id: int,
-                            atomic_neuron: lola.AtomicNeuron) \
-            -> lola.AtomicNeuron:
+                            neuron_block: lola.NeuronBlock,
+                            coord: halco.LogicalNeuronOnDLS) \
+            -> lola.NeuronBlock:
         """
-        Configures a neuron in the given layer with its specific properties.
+        Configures a neuron in the given module with its specific properties.
+        The neurons digital event outputs are enabled according to the given
+        spiking mask.
+
+        TODO: Additional parameterization should happen here, i.e. with
+              population-specific parameters.
 
         :param neuron_id: In-population neuron index.
-        :param atomic_neuron: The neurons hardware entity representing the
-            neuron with index `neuron_id` on hardware.
+        :param neuron_block: The neuron block hardware entity.
+        :param coord: Coordinate of neuron on hardware.
 
         :returns: Returns the AtomicNeuron with population-specific
             configurations appended.
         """
+        atomic_neuron = neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]]
+
         # configure spike recording
         atomic_neuron.event_routing.analog_output = \
             atomic_neuron.EventRouting.AnalogOutputMode.normal
@@ -924,7 +1004,10 @@ class ReadoutNeuron(Neuron):
         # disable threshold comparator
         atomic_neuron.threshold.enable = False
 
-        return atomic_neuron
+        neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        return neuron_block
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],
                      hw_cadc: Optional[CADCHandle],
@@ -983,6 +1066,8 @@ class IAFNeuron(Neuron):
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
+                 placement_constraint: Optional[
+                     List[halco.LogicalNeuronOnDLS]] = None,
                  trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                      torch.Tensor, float] = 0.,
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
@@ -1017,6 +1102,8 @@ class IAFNeuron(Neuron):
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
+        :param placement_constraint: An optional list of logical neurons
+            defining where to place the module`s neurons on hardware.
         :param trace_offset: The value by which the measured CADC traces are
             shifted before the scaling is applied. If this offset is given as
             float the same value is applied to all neuron traces in this
@@ -1054,10 +1141,12 @@ class IAFNeuron(Neuron):
         super().__init__(
             size, instance, func, params, enable_spike_recording,
             enable_cadc_recording, enable_madc_recording, record_neuron_id,
-            trace_offset, trace_scale, cadc_time_shift, interpolation_mode)
+            placement_constraint, trace_offset, trace_scale, cadc_time_shift,
+            interpolation_mode)
 
     def configure_hw_entity(self, neuron_id: int,
-                            atomic_neuron: lola.AtomicNeuron) \
+                            neuron_block: lola.NeuronBlock,
+                            coord: halco.LogicalNeuronOnDLS) \
             -> lola.AtomicNeuron:
         """
         Disables the neurons leak to behave like a integrate-and-fire neuron.
@@ -1067,9 +1156,18 @@ class IAFNeuron(Neuron):
         :returns: Returns the AtomicNeuron with population-specific
             configurations appended.
         """
-        atomic_neuron = super().configure_hw_entity(neuron_id, atomic_neuron)
+        neuron_block = super().configure_hw_entity(
+            neuron_id, neuron_block, coord)
+
+        atomic_neuron = neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]]
         atomic_neuron.leak.i_bias = 0
-        return atomic_neuron
+
+        neuron_block.atomic_neurons[
+            coord.get_placed_compartments()[
+                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        return neuron_block
 
 
 class BatchDropout(HXModule):  # pylint: disable=abstract-method
@@ -1171,8 +1269,9 @@ class InputNeuron(HXModule):
         """
         self.instance.register_population(self)
 
-    def add_to_network_graph(self, builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationDescriptor:
+    def add_to_network_graph(
+        self, builder: grenade.logical_network.NetworkBuilder) \
+            -> grenade.logical_network.PopulationDescriptor:
         """
         Adds instance to grenade's network builder.
 
@@ -1180,15 +1279,16 @@ class InputNeuron(HXModule):
         :returns: External population descriptor.
         """
         # create grenade population
-        gpopulation = grenade.ExternalPopulation(self.size)
+        gpopulation = grenade.logical_network.ExternalPopulation(self.size)
         # add to builder
         self.descriptor = builder.add(gpopulation)
         log.TRACE(f"Added Input Population: {self}")
 
         return self.descriptor
 
-    def add_to_input_generator(self, input: NeuronHandle,  # pylint: disable=redefined-builtin
-                               builder: grenade.InputGenerator) -> None:
+    def add_to_input_generator(
+            self, input: NeuronHandle,  # pylint: disable=redefined-builtin
+            builder: grenade.logical_network.InputGenerator) -> None:
         """
         Add the neurons events represented by this instance to grenades input
         generator.
