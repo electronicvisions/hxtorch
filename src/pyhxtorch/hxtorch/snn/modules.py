@@ -7,7 +7,6 @@ import inspect
 import numpy as np
 
 import torch
-import torch.nn.functional as nnF
 from torch.nn.parameter import Parameter
 
 from dlens_vx_v3 import lola, hal, halco
@@ -187,7 +186,7 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
 
     # pylint: disable=too-many-arguments
     def __init__(self, in_features: int, out_features: int, instance,
-                 func: Union[Callable, torch.autograd.Function] = nnF.linear,
+                 func: Union[Callable, torch.autograd.Function] = F.linear,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
