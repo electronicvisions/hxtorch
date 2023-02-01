@@ -151,7 +151,10 @@ class Instance(BaseInstance):
 
     """ Instance class for describing experiments on hardware """
 
-    def __init__(self, mock: bool = False, dt: float = 1e-6) -> None:
+    def __init__(
+            self, mock: bool = False, dt: float = 1e-6,
+            hw_routing_func=grenade.build_routing) \
+            -> None:
         """
         Instanziate a new instance, represting an experiment on hardware and/or
         in software.
@@ -186,6 +189,7 @@ class Instance(BaseInstance):
         self.id_counter = 0
 
         self.neuron_placement = NeuronPlacement()
+        self.hw_routing_func = hw_routing_func
 
     def clear(self) -> None:
         """
@@ -291,7 +295,7 @@ class Instance(BaseInstance):
         if self.grenade_hardware_network is None \
                 or grenade.requires_routing(
                     network, self.grenade_hardware_network):
-            routing_result = grenade.build_routing(network)
+            routing_result = self.hw_routing_func(network)
 
         # Keep graph
         self.grenade_hardware_network = network
