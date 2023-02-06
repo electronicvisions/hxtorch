@@ -182,8 +182,8 @@ class Instance(BaseInstance):
         self.injection_inside_realtime_begin = None  # Unused
         self.injection_inside_realtime_end = None  # Unused
 
-        self._populations = set()
-        self._projections = set()
+        self._populations: List[snn_module.HXModule] = []
+        self._projections: List[snn_module.HXModule] = []
 
         self._batch_size = 0
         self.id_counter = 0
@@ -211,8 +211,8 @@ class Instance(BaseInstance):
         self.injection_pre_realtime = None  # Unused
         self.injection_post_realtime = None  # Unused
 
-        self._populations = set()
-        self._projections = set()
+        self._populations = []
+        self._projections = []
 
         self._batch_size = 0
         self.id_counter = 0
@@ -494,7 +494,7 @@ class Instance(BaseInstance):
 
         :param module: The module to register as population.
         """
-        self._populations.add(module)
+        self._populations.append(module)
 
     def register_projection(self, module: snn_module.HXModule) -> None:
         """
@@ -502,7 +502,7 @@ class Instance(BaseInstance):
 
         :param module: The module to register as projection.
         """
-        self._projections.add(module)
+        self._projections.append(module)
 
     def get_hw_results(self, runtime: Optional[int]) \
             -> Dict[grenade.logical_network.PopulationDescriptor,
