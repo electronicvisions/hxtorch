@@ -1,6 +1,7 @@
 """
 Implementing SNN modules
 """
+# pylint: disable=too-many-lines
 from typing import (
     Any, Callable, Dict, Tuple, Type, Optional, NamedTuple, Union, List)
 from functools import partial
@@ -41,13 +42,22 @@ class HXModule(torch.nn.Module):
         """
         super().__init__()
 
+        self._func_is_wrapped = False
+        self._changed_since_last_run = True
+
         self.instance = instance
         self.func = func
         self.extra_args: Tuple[Any] = tuple()
         self.extra_kwargs: Dict[str, Any] = {}
         self.size: int = None
-        self._changed_since_last_run = True
-        self._func_is_wrapped = False
+
+        self._output_handle = self.output_type()
+
+        # Grenade descriptor
+        self.descriptor: Optional[
+            grenade.PopulationDescriptor,
+            Union[grenade.ProjectionDescriptor, Tuple[
+                grenade.ProjectionDescriptor, ...]]] = None
 
     @property
     def func(self) -> Callable:
@@ -185,32 +195,144 @@ class HXModule(torch.nn.Module):
         :returns: Returns a Reference to TensorHandle holding result data
             asociated with this layer after 'hxtorch.run' is executed.
         """
-        output = self.output_type()
-        self.instance.connect(self, input, output)
-
-        return output
+        self.instance.connect(self, input, self._output_handle)
+        return self._output_handle
 
     # Allow redefinition of builtin in order to be consistent with PyTorch
     # pylint: disable=redefined-builtin
     def exec_forward(self, input: Union[Tuple[TensorHandle], TensorHandle],
                      output: TensorHandle,
-                     hw_data: Optional[Tuple[torch.Tensor]] = tuple()) -> None:
+                     hw_map: Dict[grenade.PopulationDescriptor,
+                                  Tuple[torch.Tensor]]) -> None:
         """
         Inject hardware observables into TensorHandles or execute forward in
         mock-mode.
         """
+        # Access HW data
+        hw_data = hw_map.get(self.descriptor)
         # Need tuple to allow for multiple input
         if not isinstance(input, tuple):
             input = (input,)
         input = tuple(handle.observable_state for handle in input)
-
         # Forwards function
         out = self.func(input, hw_data=hw_data)
-
         # We need to unpack into `Handle.put` otherwise we get Tuple[Tuple]
         # in `put`, however, func should not be limited to return type 'tuple'
         out = (out,) if not isinstance(out, tuple) else out
         output.put(*out)
+
+
+class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
+    """ Class to wrap HXModules """
+
+    def __init__(self, instance, modules: List[HXModule],
+                 func: Optional[Callable]) -> None:
+        """
+        A module which wrappes a number of HXModules defined in `modules` to
+        which a single PyTorch-differential function `func` is defined. For
+        instance, this allows to wrap a Synapse and a Neuron to descripe
+        recurrence.
+        :param instance: The instance to register this wrapper in.
+        :param modules: A list of modules to be represented by this wrapper.
+        :param func: The function describing the unified functionallity of all
+            modules assigned to this wrapper. As for HXModules, this needs to
+            be a PyTorch-differentiable function and can be either an
+            autograd.Function or a function defined by PyTorch operation. The
+            signature of this function is expected as:
+            1. All positional arguments of each function in `modules` appended
+               in the order given in `modules`.
+            2. All keywords arguments of each function in `modules`. If a
+               keyword is occurred multiple times it is post-fixed `_i`, where
+               i is an integered incremented with each occurrence.
+            3. A keyword argument `hw_data` if hardware data is expected, which
+               is a tuple holding the data for each module for which data is
+               expected. The order is defined by `modules`.
+            The function is expected to output a tensor or a tuple of tensors
+            for each module in `modules`, that can be assigned to the output
+            handle of the corresponding HXModule.
+        """
+        if isinstance(func, torch.autograd.function.FunctionMeta):
+            raise TypeError(
+                "Currently HXModuleWrappers do not accept "
+                + "'torch.autograd.Function's as 'func'. If you want to use "
+                + "an 'torch.autograd.Function' as 'func' you can wrap it "
+                + "with a function providing the appropriate input signature "
+                + "and return type.")
+        super().__init__(instance, func)
+        self.modules = modules
+        self.update_args(modules)
+
+    def contains(self, modules: List[HXModule]) -> bool:
+        """
+        Checks whether a list of modules `modules` is registered in the
+        wrapper.
+        :param modules: The modules for which to check if they are registered.
+        :return: Returns a bool indicating whether `modules` are a subset.
+        """
+        return set(modules).issubset(set(self.modules))
+
+    def update(self, modules: List[HXModule],
+               func: Optional[Callable] = None):
+        """
+        Update the modules and the function in the wrapper.
+        :param modules: The new modules to assign to the wrapper.
+        :param func: The new function to represent the modules in the wrapper.
+        """
+        self.modules = modules
+        self.update_args(modules)
+        self.func = func
+
+    def update_args(self, modules: List[HXModule]):
+        """
+        Gathers the args and kwargs of all modules in `modules` and renames
+        keyword arguments that occur multiple times.
+        :param modules: The modules represented by the wrapper.
+        """
+        # Update args
+        self.extra_args = ()
+        for module in modules:
+            self.extra_args += module.extra_args
+        # Update kwargs -> rename double
+        keys = [k for module in modules for k in module.extra_kwargs.keys()]
+        vals = [v for module in modules for v in module.extra_kwargs.values()]
+        keys = [k + str(keys[:i].count(k) + 1) if keys.count(k) > 1 else k
+                for i, k in enumerate(keys)]
+        self.extra_kwargs = dict(zip(keys, vals))
+
+    # pylint: disable=redefined-builtin
+    def exec_forward(self, input: Tuple[TensorHandle],
+                     output: Tuple[TensorHandle],
+                     hw_map: Dict[grenade.PopulationDescriptor,
+                                  Tuple[torch.Tensor]]) -> None:
+        """
+        Execute the the forward function of the wrapper. This method assigns
+        each output handle in `output` their corresponding PyTorch tensors and
+        adds the wrapper's `func` to the PyTorch graph.
+        :param input: A tuple of the input handles where each handle
+            corresponds to a certain module. The order is defined by `modules`.
+            Note, a module can have multiple input handles.
+        :param output: A tuole of output handles, each correspnding to one
+            module. The order is defined by `modules`.
+        :param hw_map: The hardware data map.
+        """
+        # Hw data for each module
+        hw_data = tuple(
+            hw_map.get(module.descriptor) for module in self.modules)
+        # Concat input handles according to self.modules order
+        inputs = tuple(handle.observable_state for handle in input)
+        # Execute function
+        output_tensors = self.func(inputs, hw_data=hw_data)
+        # Check for have tuples
+        if not isinstance(output_tensors, tuple):
+            output_tensors = (output_tensors,)
+        # We expect the same number of outputs as we have modules
+        # TODO: Allow for multiple outputs per module
+        assert len(output_tensors) == len(self.modules)
+        # Assign output tensors
+        for output_tensor, output_handle in zip(output_tensors, output):
+            out = (output_tensor,) if not isinstance(output_tensor, tuple) \
+                else output_tensor
+            output_handle.put(*out)
 
 
 class Synapse(HXModule):  # pylint: disable=abstract-method
@@ -316,7 +438,6 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
         :returns: A tuple of grenade ProjectionDescriptors holding the
             descriptors for the excitatory and inhibitory projection.
         """
-
         weight_transformed = self.weight_transform(
             torch.clone(self.weight.data))
 
@@ -338,9 +459,10 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
 
         exc_descriptor = builder.add(projection_exc)
         inh_descriptor = builder.add(projection_inh)
+        self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added projection '{self}' to grenade graph.")
 
-        return exc_descriptor, inh_descriptor
+        return self.descriptor
 
 
 class Neuron(HXModule):
@@ -600,29 +722,29 @@ class Neuron(HXModule):
         gpopulation = grenade.Population(coords, list(enable_record_spikes))
 
         # add to builder
-        descriptor = builder.add(gpopulation)
+        self.descriptor = builder.add(gpopulation)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
                 neuron = grenade.CADCRecording.Neuron(
-                    descriptor, in_pop_id, self._cadc_readout_source)
+                    self.descriptor, in_pop_id, self._cadc_readout_source)
                 self.instance.cadc_recording[unit_id] = neuron
 
         # No recording registered -> return
         if not self._enable_madc_recording:
-            return descriptor
+            return self.descriptor
 
         # add MADC recording
         # NOTE: If two populations register MADC reordings grenade should
         #       throw in the following
         madc_recording = grenade.MADCRecording()
-        madc_recording.population = descriptor
+        madc_recording.population = self.descriptor
         madc_recording.source = self._madc_readout_source
         madc_recording.index = int(self._record_neuron_id)
         builder.add(madc_recording)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
-        return descriptor
+        return self.descriptor
 
     @staticmethod
     def add_to_input_generator(layer: HXModule,
@@ -946,10 +1068,10 @@ class InputNeuron(HXModule):
         # create grenade population
         gpopulation = grenade.ExternalPopulation(self.size)
         # add to builder
-        descriptor = builder.add(gpopulation)
+        self.descriptor = builder.add(gpopulation)
         log.TRACE(f"Added Input Population: {self}")
 
-        return descriptor
+        return self.descriptor
 
     def add_to_input_generator(self, input: NeuronHandle,  # pylint: disable=redefined-builtin
                                builder: grenade.InputGenerator) -> None:
@@ -970,8 +1092,7 @@ class InputNeuron(HXModule):
         # TODO: Expects ms relative. Align to time handling.
         spike_times = hxtorch.snn.tensor_to_spike_times(  # pylint: disable=no-member
             input.spikes, dt=self.instance.dt / 1e-3)
-        descriptor = self.instance.modules.get_node(self).descriptor
-        builder.add(spike_times, descriptor)
+        builder.add(spike_times, self.descriptor)
 
     def post_process(self, hw_spikes: Optional[DataHandle],
                      hw_cadc: Optional[DataHandle],

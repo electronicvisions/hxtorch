@@ -24,14 +24,17 @@ class TestHXModules(unittest.TestCase):
         input_handle = snn.TensorHandle()
         synapse_handle = module(input_handle)
         self.assertTrue(isinstance(synapse_handle, snn.TensorHandle))
-
         # Test module is registered in instance
-        self.assertTrue(instance.modules.module_exists(module))
+        self.assertTrue(module in instance.modules.nodes)
         # Test handles are assigned properly
-        self.assertEqual(
-            instance.modules.get_node(module).input_handle[0], input_handle)
-        self.assertEqual(
-            instance.modules.get_node(module).output_handle, synapse_handle)
+        sources = [
+            e["handle"] for u, v, e in instance.modules.graph.in_edges(
+                instance.modules.nodes[module], data=True)]
+        targets = [
+            e["handle"] for u, v, e in instance.modules.graph.out_edges(
+                instance.modules.nodes[module], data=True)]
+        self.assertEqual(sources, [input_handle])
+        self.assertEqual(targets, [synapse_handle])
 
     def test_prepare_function(self):
         """
@@ -142,7 +145,8 @@ class TestHXModules(unittest.TestCase):
         output_handle = snn.NeuronHandle()
 
         # Execute
-        module.exec_forward(input_handle, output_handle, "hw_result")
+        module.exec_forward(
+            input_handle, output_handle, {module.descriptor: "hw_result"})
         self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
 
         # Normal function
@@ -162,7 +166,8 @@ class TestHXModules(unittest.TestCase):
         output_handle = snn.NeuronHandle()
 
         # Execute
-        module.exec_forward(input_handle, output_handle, "hw_result")
+        module.exec_forward(
+            input_handle, output_handle, {module.descriptor: "hw_result"})
         self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
 
         # Autograd function
@@ -186,7 +191,8 @@ class TestHXModules(unittest.TestCase):
         output_handle = snn.NeuronHandle()
 
         # Execute
-        module.exec_forward(input_handle, output_handle, "hw_result")
+        module.exec_forward(
+            input_handle, output_handle, {module.descriptor: "hw_result"})
         self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
 
         # Autograd function no mock
@@ -210,9 +216,181 @@ class TestHXModules(unittest.TestCase):
         output_handle = snn.NeuronHandle()
 
         # Execute
-        module.exec_forward(input_handle, output_handle, "hw_result")
+        module.exec_forward(
+            input_handle, output_handle, {module.descriptor: "hw_result"})
         # Hw result should be assigned here
         self.assertTrue(output_handle.spikes, "hw_result")
+
+
+class TestHXModuleWrapper(unittest.TestCase):
+    """ TEst HXModuleWrapper """
+
+    def test_contains(self):
+        """ Test wrapper contains module """
+        # Instance
+        instance = snn.Instance()
+
+        # Modules
+        linear = snn.Synapse(10, 10, instance=instance)
+        lif = snn.Neuron(10, instance=instance)
+
+        wrapper = snn.HXModuleWrapper(instance, [linear, lif], None)
+
+        # Should contain
+        self.assertTrue(wrapper.contains([linear]))
+        self.assertTrue(wrapper.contains([lif]))
+        self.assertTrue(wrapper.contains([linear, lif]))
+
+        # Should not contain
+        lif2 = snn.Neuron(10, instance=instance)
+        self.assertFalse(wrapper.contains([lif2]))
+        self.assertFalse(wrapper.contains([linear, lif2]))
+
+    def test_extra_args(self):
+        """ test extra args """
+        # Instance
+        instance = snn.Instance()
+
+        # Modules
+        linear1 = snn.Synapse(10, 10, instance=instance)
+        lif1 = snn.Neuron(10, instance=instance)
+        linear2 = snn.Synapse(10, 10, instance=instance)
+        lif2 = snn.Neuron(10, instance=instance)
+
+        wrapper = snn.HXModuleWrapper(
+            instance, [linear1, lif1, linear2, lif2], None)
+
+        self.assertEqual(
+            wrapper.extra_args, linear1.extra_args + linear2.extra_args)
+        self.assertEqual(
+            wrapper.extra_kwargs,
+            {"params1": lif1.extra_kwargs["params"],
+             "dt1": lif1.extra_kwargs["dt"],
+             "params2": lif2.extra_kwargs["params"],
+             "dt2": lif2.extra_kwargs["dt"]})
+
+    def test_update(self):
+        """ Test update modules """
+        # Instance
+        instance = snn.Instance()
+
+        # Modules
+        linear1 = snn.Synapse(10, 10, instance=instance)
+        lif1 = snn.Neuron(10, instance=instance)
+        wrapper = snn.HXModuleWrapper(
+            instance, [linear1, lif1], None)
+        self.assertEqual([linear1, lif1], wrapper.modules)
+
+        linear2 = snn.Synapse(10, 10, instance=instance)
+        lif2 = snn.Neuron(10, instance=instance)
+        wrapper.update([linear2, lif2])
+        self.assertEqual([linear2, lif2], wrapper.modules)
+
+    def test_exec_forward(self):
+        """ """
+        in_tensor = torch.zeros(10, 5, 10)
+
+        def func(input, arg1, arg2, arg3):
+            self.assertTrue(torch.equal(input, in_tensor))
+            self.assertEqual(arg1, "w1")
+            self.assertEqual(arg2, "b1")
+            self.assertEqual(arg3, "w2")
+            return "syn1", ("z1", "v1"), "syn2", "nrn2"
+
+        # Instance
+        instance = snn.Instance()
+
+        # Modules
+        linear1 = snn.Synapse(10, 10, instance=instance)
+        lif1 = snn.Neuron(10, instance=instance)
+        linear2 = snn.Synapse(10, 10, instance=instance)
+        lif2 = snn.Neuron(10, instance=instance)
+        # Change args before function assignment
+        linear1.extra_args = ("w1", "b1")
+        linear2.extra_args = ("w2",)
+
+        wrapper = snn.HXModuleWrapper(
+            instance, [linear1, lif1, linear2, lif2], func)
+
+        # Fake grenade descriptiors
+        linear1.descriptor = "linear1"
+        lif1.descriptor = "lif1"
+        linear2.descriptor = "linear2"
+        lif2.descriptor = "lif2"
+
+        # Forward
+        in_h = snn.NeuronHandle(in_tensor)
+        syn1 = linear1(in_h)
+        nrn1 = lif1(syn1)
+        syn2 = linear2(nrn1)
+        nrn2 = lif2(syn2)
+
+        inputs = (in_h,)
+        outputs = (syn1, nrn1, syn2, nrn2)
+
+        # Execute forward
+        wrapper.exec_forward(inputs, outputs, {})
+
+        self.assertEqual(syn1.current, "syn1")
+        self.assertEqual(nrn1.spikes, "z1")
+        self.assertEqual(nrn1.v_cadc, "v1")
+        self.assertEqual(syn2.current, "syn2")
+        self.assertEqual(nrn2.spikes, "nrn2")
+
+        # Test with HW data
+        def func(input, arg1, arg2, arg3, hw_data):
+            self.assertTrue(torch.equal(input, in_tensor))
+            self.assertEqual(arg1, "w1")
+            self.assertEqual(arg2, "b1")
+            self.assertEqual(arg3, "w2")
+            self.assertEqual(
+                hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
+            return "syn1", ("z1", "v1"), "syn2", "nrn2"
+
+        # Instance
+        instance = snn.Instance()
+
+        # Modules
+        linear1 = snn.Synapse(10, 10, instance=instance)
+        lif1 = snn.Neuron(10, instance=instance)
+        linear2 = snn.Synapse(10, 10, instance=instance)
+        lif2 = snn.Neuron(10, instance=instance)
+        # Change args before function assignment
+        linear1.extra_args = ("w1", "b1")
+        linear2.extra_args = ("w2",)
+
+        wrapper = snn.HXModuleWrapper(
+            instance, [linear1, lif1, linear2, lif2], func)
+
+        # Fake greande descriptiors
+        linear1.descriptor = "linear1"
+        lif1.descriptor = "lif1"
+        linear2.descriptor = "linear2"
+        lif2.descriptor = "lif2"
+
+        # Forward
+        in_h = snn.NeuronHandle(in_tensor)
+        syn1 = linear1(in_h)
+        nrn1 = lif1(syn1)
+        syn2 = linear2(nrn1)
+        nrn2 = lif2(syn2)
+
+        inputs = (in_h,)
+        outputs = (syn1, nrn1, syn2, nrn2)
+        hw_data = {
+            "linear1": ("syn1",),
+            "lif1": ("nrn1",),
+            "linear2": ("syn2",),
+            "lif2": ("nrn2",)}
+
+        # Execute forward
+        wrapper.exec_forward(inputs, outputs, hw_data)
+
+        self.assertEqual(syn1.current, "syn1")
+        self.assertEqual(nrn1.spikes, "z1")
+        self.assertEqual(nrn1.v_cadc, "v1")
+        self.assertEqual(syn2.current, "syn2")
+        self.assertEqual(nrn2.spikes, "nrn2")
 
 
 class HWTestCase(unittest.TestCase):

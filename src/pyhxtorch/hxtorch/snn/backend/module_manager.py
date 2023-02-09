@@ -1,246 +1,374 @@
 """
 Define graph-based datastructure managing Nodes
 """
-from typing import Dict, Tuple, List, Union, Set
+from typing import Any, Dict, Tuple, List, Union, Set, Optional
 from abc import ABC, abstractmethod
+import networkx as nx
 
 import hxtorch.snn.modules as snn_module
-from hxtorch.snn import handle
-from hxtorch.snn.backend.nodes import Node
+
+Source = Tuple[Any]
+Target = Any
+Module = Union[snn_module.HXModule, Any]
+Wrapper = Union[snn_module.HXModuleWrapper, Any]
 
 
 class BaseModuleManager(ABC):
     """ Abstract base class for module manager """
 
-    # Types that are recognized as populations on hardware
-    _population_types: Tuple[snn_module.HXModule]
-    # Types that are recognized as projections on hardware
-    _projection_types: Tuple[snn_module.HXModule]
-
-    def __init__(self) -> None:
+    def __init__(self):
         """ """
-        self._nodes: List[Node] = []
+        self.graph: nx.DiGraph = nx.DiGraph()
+        self.nodes: Dict[Module, int] = {}
+        self.wrappers: Dict[Wrapper, int] = {}
 
-    def __str__(self):
+    def __str__(self) -> str:
         """ Add proper object string """
-        loose_string = ""
-        connected_string = ""
-        for node in self._nodes:
-            if node.pre or node.post:
-                connected_string += f"\n{node}"
-            else:
-                loose_string += f"\n{node}"
-        loose_string = " None" if loose_string == "" else loose_string
-        connected_string = " None" if connected_string == "" \
-            else connected_string
-        string = f"Connected Nodes:{connected_string}" \
-            + f"\nLoose Nodes:{loose_string}"
+        string = "Modules (node_id, module):\n"
+        if not self.nodes:
+            string += "\tNone\n"
+        else:
+            for module, node in self.nodes.items():
+                string += f"\t{node}: {module}\n"
+        string += "Wrappers (wrapper_id, wrapper):\n"
+        if not self.wrappers:
+            string += "\tNone\n"
+        else:
+            for wrapper, node in self.wrappers.items():
+                string += f"\t{node}: {wrapper}\n"
+        string += "Connections:\n"
+        for node in self.graph.nodes():
+            string += f"\tNode {node}:\n"
+            string += "\t\tSources: " \
+                + f"{list(self.graph.predecessors(node))}\n"
+            string += "\t\tTargets: " \
+                + f"{list(self.graph.successors(node))}\n"
         return string
 
-    def __getitem__(self, index: int) -> Node:
+    def clear(self):
         """
-        Retrieve a node in the `Modules` graph at index `index`.
-
-        :param index: The index at which to access the node.
+        Clear the internal graph and remove the module -> node and
+        wrapper -> node mapping
         """
-        return self._nodes[index]
-
-    def __len__(self):
-        """
-        The length of the manager corresponds to the length of the nodes
-        registered.
-
-        :return: Returns the number of nodes registered.
-        """
-        return len(self._nodes)
+        self.graph = nx.DiGraph()
 
     @abstractmethod
-    def add(self, module: snn_module.HXModule,
-            input_handles: Union[
-                Tuple[handle.TensorHandle], handle.TensorHandle],
-            output_handle: handle.TensorHandle) -> Node:
+    def add_node(self, module: Module, sources: Source, target: Target):
         """
-        Adds a new module to the manager without creating edges. This method
-        created a node implictly (or update an existing node), keeps it and
-        finally returns it.
-
-        :param module: HXModule to add to the graph.
-        :param input_handles: The input HXHandle (or a tuple of handles),
-            passed to the modules forward method.
-        :param output_handle: The output HXHandle returned by the modules
-            forward method.
-
-        :return: Returns the created/updates node.
+        Adds a new module to the manager. This method adds a node to the
+        internal graph to reporesent the module. It assigned edges to this node
+        holding the data in `sources`, resp. `target`.
+        :param module: Module to represented in to the graph.
+        :param sources: The sources to the node representing `module`.
+        :param targets: The targets of the node representing `module`.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def pre_process(self, instance) -> None:
+    def add_wrapper(self, wrapper: Wrapper):
         """
-        A method evoked by Instance, request the module manager to prepare the
-        modules.
+        Adds a new wrapper to the manager. This must be called after all
+        modules wrapped by this wrapper are represented in the graph.
+        internal graph to reporesent the module. It assigned edges to this node
+        holding the data in `sources`, resp. `target`.
+        :param module: Module to represented in to the graph.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def ordered(self) -> List[Node]:
+    def done(self) -> List[Tuple[Module, Source, Target]]:
         """
-        Create a list of nodes which can be looped in the correct order. This
-        means for each node in the list its pre-nodes are at previous postions.
-
-        :return: Returns the ordered list.
+        Create a list of elements of form (module, sources, targets), which can
+        be looped in the correct order.
+        :return: Returns the a list of nodes to be executed.
         """
         raise NotImplementedError
 
-    def clear(self) -> None:
-        """ Delete all nodes from the graph. """
-        self._nodes = []
 
-    def leafs(self) -> List[Node]:
-        """
-        Get the list of leaf nodes. Those are defined as the nodes in the graph
-        which are not connected to post-nodes.
-
-        :return: Returns the list of the graphs leafs.
-        """
-        return [n for n in self._nodes if not n.post]
-
-    def inputs(self) -> List[Node]:
-        """
-        Get the list of input nodes. Those are defined as the nodes in the
-        graph which do not have any pre-nodes assigned.
-
-        :return: Returnes the list of input nodes of the graph.
-        """
-        return [node for node in self._nodes if not node.pre]
-
-    def connect_nodes(self):
-        """ Connect all nodes registered """
-        for node in self._nodes:
-            node.set_pre(*[
-                n for n in self._nodes
-                if n.output_handle in node.input_handle])
-            node.set_post(*[
-                n for n in self._nodes
-                if node.output_handle in n.input_handle])
-
-    def get_node(self, module: snn_module.HXModule) -> Node:
-        """
-        Retrieve the node containing `module`.
-
-        :param module: The module for which to find its corresponding node.
-
-        :return: Returns the node containing `module`.
-        """
-        nodes = [n for n in self if n.module == module]
-        assert len(nodes) == 1
-        return nodes.pop()
-
-    def module_exists(self, module: snn_module.HXModule) -> bool:
-        """
-        Checks whether a module is present in any of the nodes in `Modules`.
-
-        :param module: The module to check if an node exists for.
-        """
-        return len([n for n in self if n.module == module]) > 0
-
-    def pre_populations(self, node: List[Node]) -> Node:
-        """
-        Static method to traverse back in the graph to find the previous
-        population relative to the module in `node`. This does only include
-        nodes holding populations which have to be represented on hardware.
-        Currently those are: [InputNeuron, Neuron, ReadoutNeuron].
-
-        :param node: The node for which to find the pre-populations.
-
-        :return: The list of pre-populations of the moduel in `node`.
-        """
-        # List of pre-nodes to check
-        nodes = node.pre.copy()
-        # List of actual pre-populations
-        pre_pops = []
-
-        while True:
-            # No pre-nodes left
-            if not nodes:
-                return pre_pops
-
-            # Get next node
-            node = nodes.pop()
-
-            # If of correct type its pre-node
-            if isinstance(node.module, self._population_types):
-                pre_pops.append(node)
-                continue
-
-            # Add next pre-nodes to check for population
-            nodes += node.pre
-
-    def post_populations(self, node: Node) -> Node:
-        """
-        Static method to traverse forward in the graph to find the next
-        population relative to the module in `node`. This does only include
-        nodes holding populations which have to be represented on hardware.
-        Currently those are: [InputNeuron, Neuron, ReadoutNeuron].
-
-        :param node: The node for which to find the post-populations.
-
-        :return: The list of post-populations of the moduel in `node`.
-        """
-        # List of post-nodes to check
-        nodes = node.post.copy()
-        # List of actual post-populations
-        post_pops = []
-
-        while True:
-            # No post-nodes left
-            if not nodes:
-                return post_pops
-
-            # Get next node
-            node = nodes.pop()
-
-            # If population, return
-            if isinstance(node.module, self._population_types):
-                post_pops.append(node)
-                continue
-
-            # Add next post-nodes to check for population
-            nodes += node.post
-
-
+# We allow u, v as variable names to be consitant with networkx
+# pylint: disable=invalid-name
 class ModuleManager(BaseModuleManager):
-
-    """
-    Object representing all nodes in a graph-like data structure.
-    """
+    """ Object representing all nodes in a graph-like data structure """
 
     # Types that are recognized as populations on hardware
-    _population_types = (snn_module.InputNeuron, snn_module.Neuron,
-                         snn_module.ReadoutNeuron)
-    # Types that are recognized as projections on hardware
-    _projection_types = (snn_module.Synapse,)
+    input_type = snn_module.InputNeuron
+    # Types that are recognized as populations on hardware
+    population_types = (snn_module.InputNeuron, snn_module.Neuron,
+                        snn_module.ReadoutNeuron)
 
-    def __init__(self) -> None:
+    def __init__(self):
         """
         Initialize a `Modules` object. This object holds a list of `nodes`.
         """
         super().__init__()
-        # self._nodes: List[Node] = []
-        self.populations: Set[Node] = set()
-        self.projections: Set[Node] = set()
-        self._input_populations: Dict[Node, Node] = {}
+        self._inputs: Dict = {}
+        self._open_sources: Set = set()
+        self._open_targets: Set = set()
+        self._graph_hash: Optional[str] = None
 
-    def clear(self) -> None:
+    def __str__(self):
+        """ Append string """
+        string = super().__str__()
+        string += "Inputs (Module, Input Module):\n"
+        if not self._inputs:
+            string += "\tNone\n"
+        else:
+            for in_module, target_module in self._inputs.items():
+                string += f"\t{in_module}: {target_module}\n"
+        string += f"Open sources:\n\t{list(self._open_sources)}\n"
+        string += f"Open targets:\n\t{list(self._open_targets)}"
+        return string
+
+    def clear(self):
         """
-        Override clear
+        Override clear to also clear open sources and open targets. This method
+        resets the Manager without removing implictly created input modules
+        such that they can be reused.
         """
         super().clear()
-        self.populations = set()
-        self.projections = set()
-        self._input_populations = {}
+        self._open_sources: Set = set()
+        self._open_targets: Set = set()
 
-    def _set_dropout_mask(self) -> None:
+    def get_node_id(self) -> int:
+        """
+        Get the ID of the next node to add.
+        :returns: Returns the next usable ID of a node to add.
+        """
+        return len(self.nodes)
+
+    def get_wrapper_id(self) -> int:
+        """
+        Get the ID of the next wrapper to add.
+        :returns: Returns the next usable ID of a wrapper to add.
+        """
+        return f"w_{len(self.wrappers)}"
+
+    def get_module_by_id(self, node_id: int):
+        """
+        Finds the module of the node with ID `node_id` and returns it. If
+        multiple modules assigned to this ID are found, only the first one is
+        returned. However, this should never be the case and if so, it is a
+        bug.
+        :param node_id: The ID of the node to find the module for.
+        :returns: Returns the corresponding module.
+        """
+        return [key for key, val in self.nodes.items() if val == node_id].pop()
+
+    def get_wrapper_by_id(self, wrapper_id: int):
+        """
+        Finds the wrapper of the node with ID `wrapper_id` and returns it. If
+        multiple wrapper assigned to this ID are found, only the first one is
+        returned. However, this should never be the case and if so, it is a
+        bug.
+        :param wrapper_id: The ID of the node to find the module for.
+        :returns: Returns the corresponding wrapper.
+        """
+        return [
+            key for key, val in self.wrappers.items()
+            if val == wrapper_id].pop()
+
+    def get_id_by_module(self, module: Module) -> Optional[int]:
+        """
+        Finds the ID of the node which corresponds to module `module`. If no ID
+        is found, `None` is returned.
+        :param module: The module to find the node ID for.
+        :returns: Returns the node ID or `None` if no ID is found.
+        """
+        return self.nodes.get(module)
+
+    def get_id_by_wrapper(self, wrapper: Wrapper) -> Optional[int]:
+        """
+        Finds the ID of the wrapper which corresponds to wrapper `wrapper`. If
+        no ID is found, `None` is returned.
+        :param wrapper: The wrapper module to find the node ID for.
+        :returns: Returns the node ID or `None` if no ID is found.
+        """
+        return self.wrappers.get(wrapper)
+
+    def changed_since_last_run(self) -> bool:
+        """
+        Check if any module is marked dirty.
+        :return: Returns true if at least one module has been marked dirty.
+        """
+        topology_changed = self._graph_hash != nx.weisfeiler_lehman_graph_hash(
+            self.graph)
+        modules_changed = any(
+            module.changed_since_last_run for module in self.nodes)
+        return topology_changed or modules_changed
+
+    def reset_changed_since_last_run(self):
+        """
+        Restes all registered modules changed_since_last_run flags.
+        """
+        self._graph_hash = nx.weisfeiler_lehman_graph_hash(self.graph)
+        for module in self.nodes:
+            module.reset_changed_since_last_run()
+
+    def has_module(self, module: Module) -> bool:
+        """
+        Checks whether the moudle `mdoule` is already registered within the
+        graph.
+        :param module: The module to check its existance for.
+        :return: Returns a bool indicating whether the module exists or not.
+        """
+        return module in self.nodes
+
+    def find_edges(self, handle: Any) -> List[int]:
+        """
+        Find all edges with data associated with `handle`.
+        :param handle: The edge data to match agains.
+        :return: Returns a list of all edges in the graph which hold the same
+            data `handle`.
+        """
+        return [
+            (u, v) for u, v, e in self.graph.edges(data=True)
+            if e['handle'] == handle]
+
+    def input_data(self) -> List[Any]:
+        """
+        Finds all edge data associated to edges with a source node in
+        _open_sources, those nodes are roots.
+        :return: Returns a list of all input data.
+        """
+        return [
+            e['handle'] for u, v, e in self.graph.edges(data=True)
+            if u in self._open_sources]
+
+    def add_node(self, module: Module, sources: Source, target: Target):
+        """
+        Adds a new module to the manager. This method adds a node to the
+        internal graph to reporesent the module. It assigned edges to this node
+        holding the data in `sources`, resp. `target`.
+        :param module: Module to represented in to the graph.
+        :param sources: The sources to the node representing `module`.
+        :param targets: The targets of the node representing `module`.
+        """
+        node_id = self.get_id_by_module(module)
+        if node_id is None:
+            node_id = self.get_node_id()
+            self.nodes.update({module: node_id})
+
+        # Cast to tuple
+        if not isinstance(sources, tuple):
+            sources = (sources,)
+
+        # Handle sources
+        for i, source in enumerate(sources):
+            edges = self.find_edges(source)
+            for u, v in edges:
+                if v in self._open_targets:
+                    self._open_targets.remove(v)
+                    self.graph.remove_node(v)
+                    break
+            if not edges:
+                u = f"s_{node_id}_{i}"
+                self._open_sources.add(u)
+            self.graph.add_edge(u, node_id, handle=source)
+
+        # Handle targets
+        # TODO: Possibly allow for multiple targets
+        edge = self.find_edges(target)
+        if edge:
+            u, v = edge[0]
+            if u in self._open_sources and not u == node_id:
+                self._open_sources.remove(u)
+                self.graph.remove_node(u)
+        if not edge:
+            v = f"t_{node_id}"
+            self._open_targets.add(v)
+        self.graph.add_edge(node_id, v, handle=target)
+
+    def add_wrapper(self, wrapper: Wrapper):
+        """
+        Adds a new wrapper to the manager. This must be called after all
+        modules wrapped by this wrapper are represented in the graph.
+        internal graph to reporesent the module. It assigned edges to this node
+        holding the data in `sources`, resp. `target`.
+        :param module: Module to represented in to the graph.
+        """
+        wrapper_id = self.get_id_by_wrapper(wrapper)
+        # Get existing node or create new node
+        if wrapper_id is None:
+            wrapper_id = self.get_wrapper_id()
+        self.wrappers.update({wrapper: wrapper_id})
+
+    def _get_populations(self, module: Module, target: bool = False) \
+            -> List[Module]:
+        """
+        Find the target, resp. source populations of module `module`, i.e.
+        modules which are of type self._population_types.
+        :param module: The module to find the source population (target=False)
+            or the target populations for(target=True)
+        :param target: A bool indicating whether the search is performed for
+            source or target populations.
+        :return: Returns a list of source, resp. target populations of module.
+        """
+        method = self.graph.successors if target \
+            else self.graph.predecessors
+        id_module = dict(zip(self.nodes.values(), self.nodes.keys()))
+        stack = list(method(self.get_id_by_module(module)))
+
+        pops = []
+        while True:
+            if not stack:
+                return pops
+            node_id = stack.pop()
+            module = id_module[node_id]
+            if isinstance(module, self.population_types):
+                pops.append(module)
+                continue
+            stack += list(method(node_id))
+        return pops
+
+    def source_populations(self, module: Module):
+        """
+        Find the source populations of module `module`, i.e. modules which are
+        of type self._population_types.
+        :param module: The module to find the source population.
+        :return: Returns a list of source populations of module.
+        """
+        return self._get_populations(module, False)
+
+    def target_populations(self, module: Module):
+        """
+        Find the target populations of module `module`, i.e. modules which are
+        of type self._population_types.
+        :param module: The module to find the target populations for.
+        :return: Returns a list of target populations of module.
+        """
+        return self._get_populations(module, True)
+
+    def _handle_inputs(self, instance):
+        """
+        On hardware, synapse have external populations as sources. Hence we
+        have to augment Synapses with InputNeurons.
+        """
+        # Replace open sources with input modules
+        for u in self._open_sources:
+            vs = list(self.graph.successors(u))
+            assert len(vs) == 1
+            v = vs.pop()
+
+            module = self.get_module_by_id(v)
+            if not isinstance(module, snn_module.Synapse):
+                continue
+
+            in_module = self._inputs.get(module)
+            if not in_module:
+                in_module = self.input_type(
+                    module.in_features, instance)
+                self._inputs.update({module: in_module})
+            in_id = self.get_node_id()
+            self.nodes.update({in_module: in_id})
+
+            # Update graph
+            source = self.graph.get_edge_data(u, v)["handle"]
+            target = in_module.output_type()
+            self.graph.add_edge(u, in_id, handle=source)
+            self.graph.add_edge(in_id, v, handle=target)
+            self.graph.remove_edge(u, v)
+
+    def _handle_dropout_mask(self):
         """
         Method to back-assign spiking mask from Dropout layers to the previous
         Neuron layer in order to configure the neurons appropriately on
@@ -248,158 +376,112 @@ class ModuleManager(BaseModuleManager):
 
         Note: BatchDropout layers have to be preceded by a Neuron layer.
         """
-        for node in self._nodes:
-            if isinstance(node.module, snn_module.BatchDropout):
-                for pre in node.pre:
-                    assert isinstance(pre.module, snn_module.Neuron)
-                    pre.module.mask = node.module.set_mask()
-
-    def _update_node(self, module: snn_module.HXModule,
-                     input_handle: Union[Tuple[handle.TensorHandle],
-                                         handle.TensorHandle],
-                     output_handle: handle.TensorHandle) -> Node:
-        """
-        Update the input and output handle in an existing node in the `Modules`
-        object.
-
-        :param module: The module for whose node the handles are updated.
-        :param input_handle: The new input handle, or a tuple of input handles.
-        :param output_handle: The new output handle.
-
-        :return: Returns the updated node.
-        """
-        if not isinstance(input_handle, tuple):
-            input_handle = (input_handle,)
-        node = self.get_node(module)
-        node.set_handles(input_handle, output_handle)
-        return node
-
-    def _inject_input_nodes(self, instance) -> None:
-        """
-        On hardware, synapse have external populations as sources. Hence we
-        have to augment Synapses with InputNeurons.
-        """
-        # Find input nodes which do not qualify as input
-        output_handles = [n.output_handle for n in self._nodes]
-        # Get all nodes that do not have an input handle that is an output
-        # handel
-        input_nodes = [
-            n for n in self._nodes if isinstance(
-                n.module, self._projection_types)  # pylint: disable=no-member
-            and n not in self._input_populations
-            and any(h not in output_handles for h in n.input_handle)]
-
-        # Register nodes preceding those input nodes
-        for node in input_nodes:
-            # Create input layer and node
-            source = snn_module.InputNeuron(node.module.in_features, instance)
-            input_node = Node(source)
-            self._nodes.append(input_node)
-            self._input_populations.update({node: input_node})
-
-    def _forward_input_nodes(self) -> None:
-        """
-        Forward modules that are registered as input populations. This is
-        necessary since input populations are not created by the user but by
-        the ModuleManger since they are needed for mapping the network to
-        hardware. While all other modules are forwarded in the model created by
-        the user, the input modules are not. Hence they are forwarded
-        implicitly.
-        """
-        # Forward input populations and shift handles
-        for post_node, in_node in self._input_populations.items():
-            # Forward input node
-            out_handle = in_node.module(*post_node.input_handle)
-            # Shift handles for post module
-            post_node.set_handles(out_handle, post_node.output_handle)
-
-    def changed_since_last_run(self) -> bool:
-        """
-        Check if any module is marked dirty.
-
-        :return: Returns true if at least one module has been marked dirty.
-        """
-        return any(node.module.changed_since_last_run for node in self._nodes)
-
-    def reset_changed_since_last_run(self):
-        """
-        Restes all registered modules changed_since_last_run flags.
-        """
-        for node in self._nodes:
-            node.module.reset_changed_since_last_run()
-
-    def add(self, module: snn_module.HXModule,
-            input_handles: Union[
-                Tuple[handle.TensorHandle], handle.TensorHandle],
-            output_handle: handle.TensorHandle) -> Node:
-        """
-        Adds a new node to the graph without creating edges. If the given
-        module already exists, the input and output handles are updated (This
-        is necessary since new handles are created with each forward-call).
-
-        :param module: HXModule to add to the graph.
-        :param input_handles: The input HXHandle (or a tuple of handles),
-            passed to the modules forward method.
-        :param output_handle: The output HXHandle returned by the modules
-            forward method.
-
-        :return: Returns the created/updates node.
-        """
-        if not isinstance(input_handles, tuple):
-            input_handles = (input_handles,)
-        if self.module_exists(module):
-            node = self._update_node(module, input_handles, output_handle)
-        else:
-            node = Node(module, input_handles, output_handle)
-            self._nodes.append(node)
-        return node
-
-    def pre_process(self, instance) -> None:
-        """
-        Inferres output sizes for each layer from its preceding layer and
-        injects neuron masks in neuron layers and synapses in case of a
-        subsequent dropout layer. Unlike in simulation, dropout masks need to
-        be known before execution on hardware.
-
-        :param instance: The instance to pre-process the modules for.
-        """
-        if not instance.mock:
-            self._inject_input_nodes(instance)
-            self._forward_input_nodes()
-
-        # Create or update edges (in case graph changed)
-        self.connect_nodes()
-
-        # Set dropout masks
-        self._set_dropout_mask()
-
-    def ordered(self) -> List[Node]:
-        """
-        Create a list of nodes which can be looped in the correct order. This
-        means for each node in the list its pre-nodes are at previous postions.
-
-        :return: Returns the ordered list.
-        """
-        ordered_nodes = []
-
-        # Nodes that are inputs
-        input_nodes = self.inputs()
-        nodes = [] + input_nodes
-
-        while True:
-            # No post nodes to check left
-            if not nodes:
-                return ordered_nodes
-
-            # Next node
-            node = nodes.pop(0)
-
-            # If node already processed we can continue
-            if node in ordered_nodes:
+        for module, u in self.nodes.items():
+            if u in self._open_sources:
                 continue
+            if isinstance(module, snn_module.BatchDropout):
+                pre_nodes = list(self.graph.predecessors(u))
+                if len(pre_nodes) != 1:
+                    raise TypeError(
+                        "The BatchDropout module is only allowed to "
+                        "preceed one module.")
+                pre_module = self.get_module_by_id(pre_nodes.pop())
+                if not isinstance(pre_module, snn_module.Neuron):
+                    raise TypeError(
+                        "The BatchDropout module is only allowed to "
+                        "succeed a Neuron module.")
+                pre_module.mask = module.set_mask()
 
-            # Otherwise this node need to be processed next
-            ordered_nodes.append(node)
+    def _handle_wrappers(self):
+        """
+        Handle registered wrappers. This method needs to be called after all
+        modules are registered. It replaces all nodes associated with the nodes
+        in a given wrapper in the graph. All internal target handles are
+        gathered in the wrapper's node attributes 'targets'. All external input
+        sources to the wrapper are gathered in the node attributes 'sources'.
+        """
+        # Keep original graph
+        for wrapper, w_id in self.wrappers.items():
+            self.graph.add_node(w_id, is_wrapper=True)
+            ids = [self.nodes[m] for m in wrapper.modules]
 
-            # Append next nodes
-            nodes += node.post
+            targets, sources = [], []
+            for n_id in ids:
+                for u, _, e in self.graph.in_edges(n_id, data=True):
+                    if u not in ids:
+                        sources.append(e["handle"])
+                        self.graph.add_edge(u, w_id, **e)
+                for _, v, e in self.graph.out_edges(n_id, data=True):
+                    if v not in ids:
+                        self.graph.add_edge(w_id, v, **e)
+                    else:
+                        targets.append(e["handle"])
+            self.graph.remove_nodes_from(ids)
+            self.graph.nodes[w_id]["sources"] = sources
+            self.graph.nodes[w_id]["targets"] = targets
+
+    def _order(self) -> List[Tuple[Module, Source, Tuple[Target]]]:
+        """
+        This method checks whether the internal graph representation has no
+        cyclic dependencies. Cyclic dependencies need to be wrapped manually at
+        the moment.
+        TODO: Introduce implicit module wrapping here.
+        Further, a topological sort is performed in order to return the nodes
+        in an order in which all modules can be executed successively.
+        :return: Returns a list of tuples of shape (module, sources, targets),
+            where sources is a tuple of all input sources and targets is a
+            tuple of all output targets of module `module`.
+        """
+        # Check for cycles in graph
+        graph = self.graph.to_undirected(as_view=True)
+        if nx.cycle_basis(graph):
+            raise ValueError(
+                "Encountered cyclic dependencies in the network. At the"
+                " moment, cyclic dependencies are expected to be wrapped"
+                " manually.")
+        # Order nodes
+        nodes = []
+        for n in nx.topological_sort(self.graph):
+            if n in self._open_sources or n in self._open_targets:
+                continue
+            if "is_wrapper" in self.graph.nodes[n]:
+                source = self.graph.nodes[n]["sources"]
+                target = tuple(self.graph.nodes[n]["targets"])
+                module = self.get_wrapper_by_id(n)
+            else:
+                source, target = [], []
+                for _, _, e in self.graph.in_edges(n, data=True):
+                    source.append(e["handle"])
+                for _, _, e in self.graph.out_edges(n, data=True):
+                    handle = e["handle"]
+                    if handle not in target:
+                        target.append(handle)
+                assert len(target) == 1
+                target = target.pop()
+                module = self.get_module_by_id(n)
+            nodes.append((module, tuple(source), target))
+        return nodes
+
+    def pre_process(self, instance):
+        """
+        Handle all preprocessing needed prior to hardware execution.
+        This includes input module injection as well as setting the dropout
+        masks.
+        """
+        if instance.mock:
+            self._handle_dropout_mask()
+            return
+        self._handle_inputs(instance)
+
+    def done(self):
+        """
+        Create a list of elements of form (module, sources, targets), which can
+        be looped in the correct order.
+        :param instance: The instance to work on.
+        :return: Returns the ordered modules in the form (module, sources,
+            targets).
+        """
+        self._handle_wrappers()
+        nodes = self._order()
+        self.clear()
+        return nodes

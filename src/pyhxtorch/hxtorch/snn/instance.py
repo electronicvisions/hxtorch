@@ -2,7 +2,7 @@
 Defining basic types to create hw-executable instances
 """
 # pylint: disable=no-member, invalid-name
-from typing import Dict, Final, List, Tuple, Union, Optional
+from typing import Callable, Dict, Final, List, Tuple, Union, Optional
 from abc import ABC, abstractmethod
 from copy import copy
 import itertools
@@ -15,7 +15,6 @@ import _hxtorch
 import hxtorch
 import hxtorch.snn.modules as snn_module
 from hxtorch.snn import handle
-from hxtorch.snn.backend.nodes import Node
 from hxtorch.snn.backend.module_manager import BaseModuleManager, ModuleManager
 
 log = hxtorch.logger.get("hxtorch.snn.instance")
@@ -108,8 +107,8 @@ class BaseInstance(ABC):
 
     @abstractmethod
     def connect(self, module: torch.nn.Module,
-                input_handle: handle.TensorHandle,
-                output_handle: handle.TensorHandle) -> Node:
+                input_handles: handle.TensorHandle,
+                output_handle: handle.TensorHandle):
         raise NotImplementedError
 
     @abstractmethod
@@ -150,6 +149,9 @@ class Instance(BaseInstance):
         self.injection_inside_realtime_begin = None  # Unused
         self.injection_inside_realtime_end = None  # Unused
 
+        self._populations = set()
+        self._projections = set()
+
         self._batch_size = 0
         self.id_counter = 0
 
@@ -173,6 +175,9 @@ class Instance(BaseInstance):
         self.injection_pre_static_config = None
         self.injection_pre_realtime = None  # Unused
         self.injection_post_realtime = None  # Unused
+
+        self._populations = set()
+        self._projections = set()
 
         self._batch_size = 0
         self.id_counter = 0
@@ -221,17 +226,17 @@ class Instance(BaseInstance):
         network_builder = grenade.NetworkBuilder()
 
         # Add populations
-        for node in self.modules.populations:
-            node.descriptor = node.module.add_to_network_graph(network_builder)
+        for module in self._populations:
+            module.descriptor = module.add_to_network_graph(network_builder)
         # Add projections
-        for node in self.modules.projections:
-            pre_pop = self.modules.pre_populations(node)
-            post_pop = self.modules.post_populations(node)
+        for module in self._projections:
+            pre_pop = self.modules.source_populations(module)
+            post_pop = self.modules.target_populations(module)
             assert len(pre_pop) == 1, "On hardware, a projection can only " \
                 "have one source population."
             assert len(post_pop) == 1, "On hardware, a projection can only " \
                 "have one target population."
-            node.descriptor = node.module.add_to_network_graph(
+            module.descriptor = module.add_to_network_graph(
                 pre_pop.pop().descriptor, post_pop.pop().descriptor,
                 network_builder)
 
@@ -276,17 +281,17 @@ class Instance(BaseInstance):
         assert config is not None
 
         pop_changed_since_last_run = any(
-            node.module.changed_since_last_run for node in self.modules)
+            m.changed_since_last_run for m in self._populations)
         if not pop_changed_since_last_run:
             return config
 
-        for node in self.modules.populations:
-            if not isinstance(node.module, snn_module.Neuron):
+        for module in self._populations:
+            if not isinstance(module, snn_module.Neuron):
                 continue
-            log.TRACE(f"Configure population '{node.module}'.")
-            for in_pop_id, unit_id in enumerate(node.module.unit_ids):
+            log.TRACE(f"Configure population '{module}'.")
+            for in_pop_id, unit_id in enumerate(module.unit_ids):
                 coord = self.neuron_placement.id2atomicneuron(unit_id)
-                atomic_neuron = node.module.configure_hw_entity(
+                atomic_neuron = module.configure_hw_entity(
                     in_pop_id, config.neuron_block.atomic_neurons[coord])
                 config.neuron_block.atomic_neurons[coord] = atomic_neuron
                 log.TRACE(
@@ -306,16 +311,18 @@ class Instance(BaseInstance):
 
         # Make sure all batch sizes are equal
         sizes = [
-            node.input_handle[0].observable_state.shape[1] for node in
-            self.modules.inputs()]
+            handle.observable_state.shape[1] for handle in
+            self.modules.input_data()]
         assert all(sizes)
         self._batch_size = sizes[0]
 
         input_generator = grenade.InputGenerator(
             network_graph, self._batch_size)
-        for node in self.modules.populations:
-            node.module.add_to_input_generator(
-                node.input_handle, input_generator)
+        for module in self._populations:
+            in_handle = [
+                e["handle"] for _, _, e in self.modules.graph.in_edges(
+                    self.modules.get_id_by_module(module), data=True)].pop()
+            module.add_to_input_generator(in_handle, input_generator)
 
         return input_generator.done()
 
@@ -373,33 +380,65 @@ class Instance(BaseInstance):
 
         # Data maps
         data_map: Dict[
-            grenade.PopulationsDescriptor, Tuple[torch.Tensor]] = {}  # pylint: disable=c-extension-no-member
+            grenade.PopulationDescriptor, Tuple[torch.Tensor]] = {}  # pylint: disable=c-extension-no-member
 
         # Map populations to data
-        for pop in self.modules.populations:
-            if isinstance(pop.module, snn_module.InputNeuron):
+        for module in self._populations:
+            if isinstance(module, snn_module.InputNeuron):
                 continue
-            data_map[pop.descriptor] = pop.module.post_process(
-                hw_spike_times.get(pop.descriptor),
-                hw_cadc_samples.get(pop.descriptor),
-                hw_madc_samples.get(pop.descriptor))
+            data_map[module.descriptor] = module.post_process(
+                hw_spike_times.get(module.descriptor),
+                hw_cadc_samples.get(module.descriptor),
+                hw_madc_samples.get(module.descriptor))
 
         return data_map
 
     def connect(self, module: torch.nn.Module,
-                input_handle: handle.TensorHandle,
-                output_handle: handle.TensorHandle) -> Node:
+                input_handles: Tuple[handle.TensorHandle],
+                output_handle: handle.TensorHandle):
         """
         Add an module to the instance and connect it to other instance
         modules via input and output handles.
 
         :param module: The HXModule to add to the instance.
-        :param input_handle: The TensorHandle serving as input to the module
+        :param input_handles: The TensorHandle serving as input to the module
             (its obsv_state).
         :param output_handle: The TensorHandle outputted by the module,
             serving as input to subsequent HXModules.
         """
-        return self.modules.add(module, input_handle, output_handle)
+        return self.modules.add_node(
+            module, input_handles, output_handle)
+
+    def wrap_modules(self, modules: List[snn_module.HXModule],
+                     func: Optional[Callable] = None):
+        """
+        Wrap a number of given modules into a wrapper to which a single
+        function `func` can be assigned. In the PyTorch graph the individual
+        module functions are then bypassed and only the wrapper's function is
+        considered when building the PyTorch graph. This functionality is of
+        interest if several modules have cyclic dependencies and need to be
+        represented by one PyTorch function.
+        :param modules: A list of module to be wrapped. These modules need to
+            constitute a closed sub-graph with no modules in between that are
+            not element of the wrapper.
+        :func: The function to assign to the wrapper.
+            TODO: Add info about this functions signature.
+        """
+        # Unique modules
+        assert len(set(modules)) == len(modules)
+
+        # Check if modules are already existent
+        for wrapper in self.modules.wrappers:
+            if set(wrapper.modules) == set(modules):
+                wrapper.update(modules, func)
+                return
+            if wrapper.contains(modules):
+                raise ValueError(
+                    "You tried to register a group of modules that are "
+                    + "partially registered in another group")
+
+        self.modules.add_wrapper(
+            snn_module.HXModuleWrapper(self, modules, func))
 
     def register_population(self, module: snn_module.HXModule) -> None:
         """
@@ -407,7 +446,7 @@ class Instance(BaseInstance):
 
         :param module: The module to register as population.
         """
-        self.modules.populations.add(self.modules.get_node(module))
+        self._populations.add(module)
 
     def register_projection(self, module: snn_module.HXModule) -> None:
         """
@@ -415,7 +454,7 @@ class Instance(BaseInstance):
 
         :param module: The module to register as projection.
         """
-        self.modules.projections.add(self.modules.get_node(module))
+        self._projections.add(module)
 
     def get_hw_results(self, runtime: Optional[int]) \
             -> Dict[grenade.PopulationDescriptor,
@@ -442,11 +481,11 @@ class Instance(BaseInstance):
             return {}
 
         # Register HW entity
-        for node in self.modules:
-            if hasattr(node.module, "register_hw_entity") and node \
-                    not in itertools.chain(self.modules.projections,
-                                           self.modules.populations):
-                node.module.register_hw_entity()
+        for module in self.modules.nodes:
+            if hasattr(module, "register_hw_entity") and module \
+                    not in itertools.chain(self._projections,
+                                           self._populations):
+                module.register_hw_entity()
 
         # Generate network graph
         network_graph = self._generate_network_graph()

@@ -21,9 +21,5 @@ def run(instance: Instance, runtime: Optional[int]) -> None:
 
     # Network graph
     data_map = instance.get_hw_results(runtime)
-
-    for module in instance.modules.ordered():
-        # Execute forward
-        module.module.exec_forward(
-            module.input_handle, module.output_handle,
-            data_map.get(module.descriptor))
+    for module, inputs, output in instance.modules.done():
+        module.exec_forward(inputs, output, data_map)
