@@ -7,6 +7,8 @@ from typing import Optional, Tuple
 import torch
 
 
+# Issue: 4019
+# pylint: disable=abstract-method
 class SuperSpike(torch.autograd.Function):
     """
     Define Surrogate Gradient 'SuperSpike' (negative side of Fast Sigmoid)

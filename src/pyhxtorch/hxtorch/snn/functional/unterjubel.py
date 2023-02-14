@@ -9,6 +9,8 @@ from typing import Tuple, Optional
 import torch
 
 
+# Issue: 4019
+# pylint: disable=abstract-method
 class Unterjubel(torch.autograd.Function):
 
     """ Unterjubel hardware observables to allow correct gradient flow """
