@@ -133,7 +133,12 @@ lola::vx::v3::Chip get_chip()
 
 void release_hardware()
 {
-	detail::getConnection().reset();
+	if (detail::getConnection()) {
+		auto connections = detail::getConnection()->release_connections();
+		detail::getConnection().reset();
+		detail::getReinitCalibration().reset();
+		connections.clear();
+	}
 }
 
 } // namespace hxtorch
