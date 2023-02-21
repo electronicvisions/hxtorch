@@ -7,7 +7,7 @@ namespace hxtorch::detail {
 
 void InferenceTracer::check_input(torch::Tensor const& value) const
 {
-	static log4cxx::LoggerPtr const logger =
+	log4cxx::LoggerPtr const logger =
 	    log4cxx::Logger::getLogger("hxtorch.InferenceTracer.check_input");
 	LOG4CXX_TRACE(logger, "Checking input value(shape: " << value.sizes() << ").");
 
@@ -21,7 +21,7 @@ void InferenceTracer::check_input(torch::Tensor const& value) const
 
 void InferenceTracer::update_output(torch::Tensor const& value)
 {
-	static log4cxx::LoggerPtr const logger =
+	log4cxx::LoggerPtr const logger =
 	    log4cxx::Logger::getLogger("hxtorch.InferenceTracer.update_output");
 	LOG4CXX_TRACE(logger, "Updating output value(shape: " << value.sizes() << ").");
 	m_last_output = value;
