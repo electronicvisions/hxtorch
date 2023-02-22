@@ -784,15 +784,6 @@ class Neuron(HXModule):
             cadc = hw_cadc.to_dense(
                 self.instance.dt, mode=self.interpolation_mode)
 
-            # Offset CADC traces
-            if self.shift_cadc_to_first:
-                cadc = cadc - cadc[0].unsqueeze(0)
-            else:
-                cadc -= self.offset
-
-            # Scale CADC traces
-            cadc *= self.scale
-
             # Shift CADC samples in time
             if self.cadc_time_shift != 0:
                 cadc = torch.roll(cadc, shifts=-self.cadc_time_shift, dims=0)
@@ -804,6 +795,15 @@ class Neuron(HXModule):
             if self.cadc_time_shift < 0:
                 cadc[:-self.cadc_time_shift] = \
                     cadc[-self.cadc_time_shift].unsqueeze(0)
+
+            # Offset CADC traces
+            if self.shift_cadc_to_first:
+                cadc = cadc - cadc[0].unsqueeze(0)
+            else:
+                cadc -= self.offset
+
+            # Scale CADC traces
+            cadc *= self.scale
 
         # Get spikes
         if self._enable_spike_recording:
