@@ -16,8 +16,8 @@ torch::Tensor argmax_mock(
 
 namespace {
 
-std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> convert_argmax_input(
-    torch::Tensor const& input, c10::optional<int64_t> const dim)
+std::tuple<std::vector<std::vector<grenade::vx::signal_flow::Int8>>, std::vector<int64_t>>
+convert_argmax_input(torch::Tensor const& input, c10::optional<int64_t> const dim)
 {
 	std::vector<int64_t> dims(input.dim());
 	std::iota(dims.begin(), dims.end(), 0);
@@ -38,18 +38,18 @@ std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> co
 	sizes_2d = input_2d.sizes().vec();
 
 	auto input_a = input_2d.accessor<float, 2>();
-	std::vector<std::vector<grenade::vx::Int8>> input_in(sizes_2d.at(0));
+	std::vector<std::vector<grenade::vx::signal_flow::Int8>> input_in(sizes_2d.at(0));
 	for (int64_t i = 0; i < sizes_2d.at(0); ++i) {
 		input_in[i].resize(sizes_2d.at(1));
 		for (int64_t j = 0; j < sizes_2d.at(1); ++j) {
-			input_in[i][j] = grenade::vx::Int8(input_a[i][j]);
+			input_in[i][j] = grenade::vx::signal_flow::Int8(input_a[i][j]);
 		}
 	}
 	return {input_in, sizes_2d};
 }
 
 torch::Tensor convert_argmax_output(
-    std::vector<std::vector<grenade::vx::UInt32>> const& results,
+    std::vector<std::vector<grenade::vx::signal_flow::UInt32>> const& results,
     c10::IntArrayRef const& sizes_2d,
     c10::IntArrayRef const& sizes,
     c10::optional<int64_t> const dim,

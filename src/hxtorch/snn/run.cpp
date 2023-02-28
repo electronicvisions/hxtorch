@@ -5,11 +5,11 @@
 
 namespace hxtorch::snn {
 
-grenade::vx::IODataMap run(
+grenade::vx::signal_flow::IODataMap run(
     lola::vx::v3::Chip const& config,
     grenade::vx::network::NetworkGraph const& network_graph,
-    grenade::vx::IODataMap const& inputs,
-    grenade::vx::ExecutionInstancePlaybackHooks& playback_hooks)
+    grenade::vx::signal_flow::IODataMap const& inputs,
+    grenade::vx::signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection present.");

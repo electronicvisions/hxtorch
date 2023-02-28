@@ -17,8 +17,8 @@ torch::Tensor relu_mock_forward(torch::Tensor const& input)
 
 namespace {
 
-std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> convert_relu_input(
-    torch::Tensor const& input)
+std::tuple<std::vector<std::vector<grenade::vx::signal_flow::Int8>>, std::vector<int64_t>>
+convert_relu_input(torch::Tensor const& input)
 {
 	detail::tracer_check_input(input);
 
@@ -29,7 +29,7 @@ std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> co
 	auto const sizes_2d = input_2d.sizes();
 
 	auto const input_a = input_2d.accessor<float, 2>();
-	auto const input_in = hxtorch::convert_to_vector<grenade::vx::Int8>(input_a);
+	auto const input_in = hxtorch::convert_to_vector<grenade::vx::signal_flow::Int8>(input_a);
 	return {input_in, sizes_2d.vec()};
 }
 

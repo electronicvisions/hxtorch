@@ -56,12 +56,12 @@ std::tuple<std::vector<std::vector<T>>, std::vector<int64_t>> convert_inference_
 	auto const sizes_2d = input_2d.sizes().vec();
 
 	auto input_a = input_2d.accessor<float, 2>();
-	if constexpr (std::is_same_v<T, grenade::vx::Int8>) {
-		auto input_in = hxtorch::convert_to_vector<grenade::vx::Int8>(input_a);
+	if constexpr (std::is_same_v<T, grenade::vx::signal_flow::Int8>) {
+		auto input_in = hxtorch::convert_to_vector<grenade::vx::signal_flow::Int8>(input_a);
 		return {input_in, sizes_2d};
 	} else {
-		auto input_in =
-		    hxtorch::convert_to_vector<grenade::vx::UInt5>(input_a, detail::convert_activation);
+		auto input_in = hxtorch::convert_to_vector<grenade::vx::signal_flow::UInt5>(
+		    input_a, detail::convert_activation);
 		return {input_in, sizes_2d};
 	}
 }
@@ -104,11 +104,11 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 	grenade::vx::compute::Sequence::IOData input_variant;
 	std::vector<int64_t> sizes_2d;
 	if (std::holds_alternative<grenade::vx::compute::MAC>(ops.data.front())) {
-		auto const [i, s] = convert_inference_trace_input<grenade::vx::UInt5>(input);
+		auto const [i, s] = convert_inference_trace_input<grenade::vx::signal_flow::UInt5>(input);
 		input_variant = i;
 		sizes_2d = s;
 	} else {
-		auto const [i, s] = convert_inference_trace_input<grenade::vx::Int8>(input);
+		auto const [i, s] = convert_inference_trace_input<grenade::vx::signal_flow::Int8>(input);
 		input_variant = i;
 		sizes_2d = s;
 	}
@@ -122,12 +122,12 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 	torch::Tensor ret;
 	if (std::holds_alternative<grenade::vx::compute::ConvertingReLU>(ops.data.front())) {
 		ret = convert_inference_trace_output(
-		    std::get<std::vector<std::vector<grenade::vx::UInt5>>>(result_variant), sizes_2d,
-		    input.sizes().vec());
+		    std::get<std::vector<std::vector<grenade::vx::signal_flow::UInt5>>>(result_variant),
+		    sizes_2d, input.sizes().vec());
 	} else {
 		ret = convert_inference_trace_output(
-		    std::get<std::vector<std::vector<grenade::vx::Int8>>>(result_variant), sizes_2d,
-		    input.sizes().vec());
+		    std::get<std::vector<std::vector<grenade::vx::signal_flow::Int8>>>(result_variant),
+		    sizes_2d, input.sizes().vec());
 	}
 	return ret;
 }

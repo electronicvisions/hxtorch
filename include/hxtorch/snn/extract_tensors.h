@@ -8,7 +8,10 @@
 
 
 namespace grenade::vx {
+
+namespace signal_flow {
 class IODataMap;
+} // namespace signal_flow
 
 namespace network {
 class NetworkGraph;
@@ -29,7 +32,7 @@ namespace hxtorch::snn {
  * @returns Returns a mapping between population descriptors and spike handles.
  */
 std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extract_spikes(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
@@ -44,7 +47,7 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extrac
  * @returns Returns a mapping between population descriptors and MADC handles.
  */
 std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract_madc(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
@@ -59,7 +62,7 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract
  * @returns Returns a mapping between population descriptors and CADC handles.
  */
 std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract_cadc(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);

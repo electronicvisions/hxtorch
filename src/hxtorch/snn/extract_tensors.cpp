@@ -1,8 +1,8 @@
 #include "hxtorch/snn/extract_tensors.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/logical_network/extract_output.h"
 #include "grenade/vx/logical_network/network_graph.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include <vector>
 #include <torch/torch.h>
 
@@ -12,7 +12,7 @@
 namespace hxtorch::snn {
 
 std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extract_spikes(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -97,14 +97,16 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extrac
 		// handle
 		ret[descriptor] = SpikeHandle(
 		    spike_tensor,
-		    1. / 1e6 / static_cast<float>(grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
+		    1. / 1e6 /
+		        static_cast<float>(
+		            grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
 	}
 	return ret;
 }
 
 
 std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract_madc(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -169,15 +171,16 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract
 
 	// handle
 	ret[descriptor] = MADCHandle(
-	    madc_tensor,
-	    1. / 1e6 / static_cast<float>(grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
+	    madc_tensor, 1. / 1e6 /
+	                     static_cast<float>(
+	                         grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
 
 	return ret;
 }
 
 
 std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract_cadc(
-    grenade::vx::IODataMap const& data,
+    grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -250,7 +253,9 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract
 		// handle
 		ret[descriptor] = CADCHandle(
 		    cadc_tensor,
-		    1. / 1e6 / static_cast<float>(grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
+		    1. / 1e6 /
+		        static_cast<float>(
+		            grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
 	}
 	return ret;
 }

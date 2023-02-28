@@ -1,7 +1,7 @@
 #include "hxtorch/detail/mac.h"
 
 #include "grenade/vx/compute/mac.h"
-#include "grenade/vx/event.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "hxtorch/constants.h"
 #include "hxtorch/detail/connection.h"
 #include "hxtorch/detail/conversion.h"
@@ -116,7 +116,7 @@ torch::Tensor mac_forward(
 	}
 
 	size_t const num_inputs = x.sizes().vec().at(0);
-	std::vector<std::vector<grenade::vx::UInt5>> xin(num_inputs);
+	std::vector<std::vector<grenade::vx::signal_flow::UInt5>> xin(num_inputs);
 	for (size_t input = 0; input < num_inputs; ++input) {
 		xin[input].resize(num_rows);
 	}
@@ -130,8 +130,9 @@ torch::Tensor mac_forward(
 		}
 	}
 
-	grenade::vx::compute::MAC mac{std::move(m_weights), static_cast<size_t>(num_sends),
-	                              grenade::vx::TimedSpike::Time(wait_between_events)};
+	grenade::vx::compute::MAC mac{
+	    std::move(m_weights), static_cast<size_t>(num_sends),
+	    grenade::vx::signal_flow::TimedSpike::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

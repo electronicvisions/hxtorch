@@ -16,21 +16,21 @@ torch::Tensor add_mock_forward(torch::Tensor const& input, torch::Tensor const& 
 
 namespace {
 
-std::vector<grenade::vx::Int8> convert_add_other(torch::Tensor const& other)
+std::vector<grenade::vx::signal_flow::Int8> convert_add_other(torch::Tensor const& other)
 {
 	auto const other_1d = other.reshape({-1}).floor().clamp(-128., 127.);
 	auto const sizes_1d = other_1d.sizes();
 
 	auto const other_a = other_1d.accessor<float, 1>();
-	std::vector<grenade::vx::Int8> other_in(sizes_1d.at(0));
+	std::vector<grenade::vx::signal_flow::Int8> other_in(sizes_1d.at(0));
 	for (int64_t i = 0; i < sizes_1d.at(0); ++i) {
-		other_in[i] = grenade::vx::Int8(other_a[i]);
+		other_in[i] = grenade::vx::signal_flow::Int8(other_a[i]);
 	}
 	return other_in;
 }
 
-std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> convert_add_input(
-    torch::Tensor const& input, int64_t const other_size)
+std::tuple<std::vector<std::vector<grenade::vx::signal_flow::Int8>>, std::vector<int64_t>>
+convert_add_input(torch::Tensor const& input, int64_t const other_size)
 {
 	detail::tracer_check_input(input);
 
@@ -40,11 +40,11 @@ std::tuple<std::vector<std::vector<grenade::vx::Int8>>, std::vector<int64_t>> co
 	auto const sizes_2d = input_2d.sizes();
 
 	auto const input_a = input_2d.accessor<float, 2>();
-	std::vector<std::vector<grenade::vx::Int8>> input_in(sizes_2d.at(0));
+	std::vector<std::vector<grenade::vx::signal_flow::Int8>> input_in(sizes_2d.at(0));
 	for (int64_t i = 0; i < sizes_2d.at(0); ++i) {
 		input_in[i].resize(sizes_2d.at(1));
 		for (int64_t j = 0; j < sizes_2d.at(1); ++j) {
-			input_in[i][j] = grenade::vx::Int8(input_a[i][j]);
+			input_in[i][j] = grenade::vx::signal_flow::Int8(input_a[i][j]);
 		}
 	}
 	return {input_in, sizes_2d.vec()};
