@@ -1,8 +1,8 @@
 #include "hxtorch/connection.h"
 
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/backend/run.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/run.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/detail/connection.h"
@@ -30,7 +30,7 @@ namespace hxtorch {
 namespace {
 
 std::tuple<lola::vx::v3::Chip const, stadls::vx::ReinitStackEntry> load_and_apply_calibration(
-    std::string calibration_path, grenade::vx::backend::Connection& connection)
+    std::string calibration_path, grenade::vx::execution::backend::Connection& connection)
 {
 	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
 	LOG4CXX_INFO(logger, "Loading calibration from \"" << calibration_path << "\"");
@@ -74,20 +74,22 @@ void init_hardware_minimal()
 {
 	detail::getConnection().reset();
 	auto init_generator = stadls::vx::v3::DigitalInit();
-	grenade::vx::backend::Connection connection(
+	grenade::vx::execution::backend::Connection connection(
 	    hxcomm::vx::get_connection_from_env(), init_generator);
 	lola::vx::v3::Chip const chip;
 	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
+	    connections;
 	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	detail::getConnection() =
+	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
 }
 
 
 void init_hardware(std::optional<HWDBPath> const& hwdb_path, std::string calib_name)
 {
-	grenade::vx::backend::Connection connection;
+	grenade::vx::execution::backend::Connection connection;
 
 	std::optional<std::string> hwdb_path_value;
 	std::string version = "stable/latest";
@@ -103,24 +105,28 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, std::string calib_n
 
 	auto [chip, reinit] = load_and_apply_calibration(calibration_path, connection);
 	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
+	    connections;
 	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	detail::getConnection() =
+	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
 	detail::getReinitCalibration() =
 	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
 
 void init_hardware(CalibrationPath const& calibration_path)
 {
-	grenade::vx::backend::Connection connection;
+	grenade::vx::execution::backend::Connection connection;
 
 	auto [chip, reinit] = load_and_apply_calibration(calibration_path.value, connection);
 	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
+	    connections;
 	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() = std::make_unique<grenade::vx::JITGraphExecutor>(std::move(executor));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	detail::getConnection() =
+	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
 	detail::getReinitCalibration() =
 	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }

@@ -1,6 +1,5 @@
 #include "hxtorch/snn/run.h"
 
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/run.h"
 #include "hxtorch/detail/connection.h"
 
