@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from dlens_vx_v3 import lola, hal, halco
-import pygrenade_vx as grenade
+import pygrenade_vx.network.placed_logical as grenade
 
 from _hxtorch._snn import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch
@@ -261,8 +261,8 @@ class Neuron(HXModule):
         return neuron_block
 
     def add_to_network_graph(self,
-                             builder: grenade.logical_network.NetworkBuilder) \
-            -> grenade.logical_network.PopulationDescriptor:
+                             builder: grenade.NetworkBuilder) \
+            -> grenade.PopulationDescriptor:
         """
         Add the layer's neurons to grenades network builder. If
         `enable_spike_recording` is enabled the neuron's spikes are recorded
@@ -297,20 +297,20 @@ class Neuron(HXModule):
 
         # create receptors
         receptors = set([
-            grenade.logical_network.Receptor(
-                grenade.logical_network.Receptor.ID(),
-                grenade.logical_network.Receptor.Type.excitatory),
-            grenade.logical_network.Receptor(
-                grenade.logical_network.Receptor.ID(),
-                grenade.logical_network.Receptor.Type.inhibitory),
+            grenade.Receptor(
+                grenade.Receptor.ID(),
+                grenade.Receptor.Type.excitatory),
+            grenade.Receptor(
+                grenade.Receptor.ID(),
+                grenade.Receptor.Type.inhibitory),
         ])
 
-        neurons: List[grenade.logical_network.Population.Neuron] = [
-            grenade.logical_network.Population.Neuron(
+        neurons: List[grenade.Population.Neuron] = [
+            grenade.Population.Neuron(
                 logical_neuron,
                 {halco.CompartmentOnLogicalNeuron():
-                 grenade.logical_network.Population.Neuron.Compartment(
-                     grenade.logical_network.Population
+                 grenade.Population.Neuron.Compartment(
+                     grenade.Population
                      .Neuron.Compartment.SpikeMaster(
                          0, enable_record_spikes[i]), [receptors] * len(
                          logical_neuron.get_atomic_neurons()))})
@@ -318,14 +318,14 @@ class Neuron(HXModule):
         ]
 
         # create grenade population
-        gpopulation = grenade.logical_network.Population(neurons)
+        gpopulation = grenade.Population(neurons)
 
         # add to builder
         self.descriptor = builder.add(gpopulation)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
-                neuron = grenade.logical_network.CADCRecording.Neuron()
+                neuron = grenade.CADCRecording.Neuron()
                 neuron.population = self.descriptor
                 neuron.neuron_on_population = in_pop_id
                 neuron.compartment_on_neuron = 0
@@ -339,7 +339,7 @@ class Neuron(HXModule):
         # add MADC recording
         # NOTE: If two populations register MADC reordings grenade should
         #       throw in the following
-        madc_recording = grenade.logical_network.MADCRecording()
+        madc_recording = grenade.MADCRecording()
         madc_recording.population = self.descriptor
         madc_recording.source = self._madc_readout_source
         madc_recording.neuron_on_population = int(self._record_neuron_id)
@@ -354,7 +354,7 @@ class Neuron(HXModule):
     @staticmethod
     def add_to_input_generator(
             module: HXModule,
-            builder: grenade.logical_network.InputGenerator) -> None:
+            builder: grenade.InputGenerator) -> None:
         """
         Add the input to an input module to grenades input generator.
         :param module: The module to add the input for.

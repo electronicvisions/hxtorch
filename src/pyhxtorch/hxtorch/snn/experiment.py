@@ -142,7 +142,7 @@ class BaseExperiment(ABC):
 
     @abstractmethod
     def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.logical_network.PopulationDescriptor,
+            -> Dict[grenade.network.placed_logical.PopulationDescriptor,
                     Tuple[Optional[torch.Tensor], ...]]:
         raise NotImplementedError
 
@@ -153,7 +153,7 @@ class Experiment(BaseExperiment):
 
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
-            hw_routing_func=grenade.network.build_routing) \
+            hw_routing_func=grenade.network.placed_atomic.build_routing) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -244,8 +244,8 @@ class Experiment(BaseExperiment):
         log.TRACE("Preparation of static config done.")
 
     def _generate_network_graphs(self) -> Tuple[
-            grenade.logical_network.NetworkGraph,
-            grenade.network.NetworkGraph]:
+            grenade.network.placed_logical.NetworkGraph,
+            grenade.network.placed_atomic.NetworkGraph]:
         """
         Generate grenade network graph from the populations and projections in
         modules
@@ -262,7 +262,7 @@ class Experiment(BaseExperiment):
                         self.grenade_hardware_network_graph)
 
         # Create network builder
-        network_builder = grenade.logical_network.NetworkBuilder()
+        network_builder = grenade.network.placed_logical.NetworkBuilder()
 
         # Add populations
         for module in self._populations:
@@ -281,20 +281,21 @@ class Experiment(BaseExperiment):
 
         # Add CADC recording
         if self.cadc_recording:
-            cadc_recording = grenade.logical_network.CADCRecording()
+            cadc_recording = grenade.network.placed_logical.CADCRecording()
             cadc_recording.neurons = list(self.cadc_recording.values())
             network_builder.add(cadc_recording)
 
         network = network_builder.done()
 
-        network_graph = grenade.logical_network.build_network_graph(network)
+        network_graph = grenade.network.placed_logical.build_network_graph(
+            network)
         self.grenade_logical_network_graph = network_graph
         network = network_graph.hardware_network
 
         # route network if required
         routing_result = None
         if self.grenade_hardware_network is None \
-                or grenade.network.requires_routing(
+                or grenade.network.placed_atomic.requires_routing(
                     network, self.grenade_hardware_network):
             routing_result = self.hw_routing_func(network)
 
@@ -304,10 +305,10 @@ class Experiment(BaseExperiment):
         # build or update network graph
         if routing_result is not None:
             self.grenade_hardware_network_graph = grenade.network\
-                .build_network_graph(
+                .placed_atomic.build_network_graph(
                     self.grenade_hardware_network, routing_result)
         else:
-            grenade.network.update_network_graph(
+            grenade.network.placed_atomic.update_network_graph(
                 self.grenade_hardware_network_graph,
                 self.grenade_hardware_network)
 
@@ -346,8 +347,8 @@ class Experiment(BaseExperiment):
         return config
 
     def _generate_inputs(
-        self, network_graph: grenade.logical_network.NetworkGraph,
-        hardware_network_graph: grenade.network.NetworkGraph) \
+        self, network_graph: grenade.network.placed_logical.NetworkGraph,
+        hardware_network_graph: grenade.network.placed_atomic.NetworkGraph) \
             -> grenade.signal_flow.IODataMap:
         """
         Generate external input events from the routed network graph
@@ -364,7 +365,7 @@ class Experiment(BaseExperiment):
         assert all(sizes)
         self._batch_size = sizes[0]
 
-        input_generator = grenade.logical_network.InputGenerator(
+        input_generator = grenade.network.placed_logical.InputGenerator(
             network_graph, hardware_network_graph, self._batch_size)
         for module in self._populations:
             in_handle = [
@@ -397,10 +398,11 @@ class Experiment(BaseExperiment):
             inside_realtime_end, post_realtime)
 
     def _get_population_observables(
-            self, network_graph: grenade.logical_network.NetworkGraph,
-            hardware_network_graph: grenade.network.NetworkGraph,
+            self, network_graph: grenade.network.placed_logical.NetworkGraph,
+            hardware_network_graph: grenade.network.placed_atomic.NetworkGraph,
             result_map: grenade.signal_flow.IODataMap, runtime) -> Dict[
-                grenade.logical_network.PopulationDescriptor, np.ndarray]:
+                grenade.network.placed_logical.PopulationDescriptor,
+                np.ndarray]:
         """
         Takes the greade network graph and the result map returned by grenade
         after experiment execution and returns a data map where for each
@@ -429,7 +431,7 @@ class Experiment(BaseExperiment):
 
         # Data maps
         data_map: Dict[
-            grenade.logical_network.PopulationsDescriptor,
+            grenade.network.placed_logical.PopulationsDescriptor,
             Tuple[torch.Tensor]] = {}  # pylint: disable=c-extension-no-member
 
         # Map populations to data
@@ -507,7 +509,7 @@ class Experiment(BaseExperiment):
         self._projections.append(module)
 
     def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.logical_network.PopulationDescriptor,
+            -> Dict[grenade.network.placed_logical.PopulationDescriptor,
                     Tuple[Optional[torch.Tensor], ...]]:
         """
         Executes the experiment in mock or on hardware using the information

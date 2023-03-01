@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.nn.parameter import Parameter
 
-import pygrenade_vx as grenade
+import pygrenade_vx.network.placed_logical as grenade
 
 import hxtorch
 import hxtorch.snn.functional as F
@@ -106,10 +106,10 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
 
     def add_to_network_graph(
             self,
-            pre: grenade.logical_network.PopulationDescriptor,
-            post: grenade.logical_network.PopulationDescriptor,
-            builder: grenade.logical_network.NetworkBuilder) -> Tuple[
-                grenade.logical_network.ProjectionDescriptor, ...]:
+            pre: grenade.PopulationDescriptor,
+            post: grenade.PopulationDescriptor,
+            builder: grenade.NetworkBuilder) -> Tuple[
+                grenade.ProjectionDescriptor, ...]:
         """
         Adds the projection to a grenade network builder by providing the
         population descriptor of the corresponding pre and post population.
@@ -135,15 +135,15 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
         connections_exc = hxtorch.snn.weight_to_connection(weight_exc)  # pylint: disable=no-member
         connections_inh = hxtorch.snn.weight_to_connection(weight_inh)  # pylint: disable=no-member
 
-        projection_exc = grenade.logical_network.Projection(
-            grenade.logical_network.Receptor(
-                grenade.logical_network.Receptor.ID(),
-                grenade.logical_network.Receptor.Type.excitatory),
+        projection_exc = grenade.Projection(
+            grenade.Receptor(
+                grenade.Receptor.ID(),
+                grenade.Receptor.Type.excitatory),
             connections_exc, pre, post)
-        projection_inh = grenade.logical_network.Projection(
-            grenade.logical_network.Receptor(
-                grenade.logical_network.Receptor.ID(),
-                grenade.logical_network.Receptor.Type.inhibitory),
+        projection_inh = grenade.Projection(
+            grenade.Receptor(
+                grenade.Receptor.ID(),
+                grenade.Receptor.Type.inhibitory),
             connections_inh, pre, post)
 
         exc_descriptor = builder.add(projection_exc)

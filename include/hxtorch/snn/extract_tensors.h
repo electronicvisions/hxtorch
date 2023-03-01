@@ -1,7 +1,6 @@
 #pragma once
-#include "grenade/vx/logical_network/network_graph.h"
-#include "grenade/vx/logical_network/population.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
+#include "grenade/vx/network/placed_logical/population.h"
 #include "hxtorch/snn/types.h"
 #include <map>
 #include <torch/torch.h>
@@ -13,9 +12,9 @@ namespace signal_flow {
 class IODataMap;
 } // namespace signal_flow
 
-namespace network {
+namespace network::placed_atomic {
 class NetworkGraph;
-} // namespace network
+} // namespace network::placed_atomic
 
 } // namspace grenade::vx
 
@@ -26,45 +25,45 @@ namespace hxtorch::snn {
  * sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
- * @param logical_network_graph The logical grenade graph representation of the network.
+ * @param network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and spike handles.
  */
-std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime);
 
 /** Convert recorded MADC samples in IODataMap to population-specific MADCHandles holding the
  * samples in a sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
- * @param logical_network_graph The logical grenade graph representation of the network.
+ * @param network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and MADC handles.
  */
-std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime);
 
 /** Convert recorded CADC samples in IODataMap to population-specific CADCHandles holding the
  * samples in a sparse tensor representation.
  *
  * @param data The IODataMap returned by grenade holding all recorded data.
- * @param logical_network_graph The logical grenade graph representation of the network.
+ * @param network_graph The logical grenade graph representation of the network.
  * @param network_graph The grenade graph representation of the network.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and CADC handles.
  */
-std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime);
 
 } // namespace hxtorch::snn

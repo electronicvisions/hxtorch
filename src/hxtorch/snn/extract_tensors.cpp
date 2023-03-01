@@ -1,7 +1,7 @@
 #include "hxtorch/snn/extract_tensors.h"
-#include "grenade/vx/logical_network/extract_output.h"
-#include "grenade/vx/logical_network/network_graph.h"
-#include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/network/placed_atomic/network_graph.h"
+#include "grenade/vx/network/placed_logical/extract_output.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include <vector>
 #include <torch/torch.h>
@@ -11,14 +11,14 @@
 
 namespace hxtorch::snn {
 
-std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
-	using namespace grenade::vx::logical_network;
+	using namespace grenade::vx::network::placed_logical;
 
 	// return data
 	std::map<PopulationDescriptor, SpikeHandle> ret;
@@ -105,17 +105,17 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, SpikeHandle> extrac
 }
 
 
-std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
-	using namespace grenade::vx::logical_network;
+	using namespace grenade::vx::network::placed_logical;
 
 	// return data
-	std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> ret;
+	std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> ret;
 
 	assert(logical_network_graph.get_network());
 	if (!logical_network_graph.get_network()->madc_recording) {
@@ -179,14 +179,14 @@ std::map<grenade::vx::logical_network::PopulationDescriptor, MADCHandle> extract
 }
 
 
-std::map<grenade::vx::logical_network::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::logical_network::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
+    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
-	using namespace grenade::vx::logical_network;
+	using namespace grenade::vx::network::placed_logical;
 
 	// return data
 	std::map<PopulationDescriptor, CADCHandle> ret;

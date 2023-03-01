@@ -5,7 +5,7 @@ from typing import Tuple, Type, Optional
 
 import torch
 
-import pygrenade_vx as grenade
+import pygrenade_vx.network.placed_logical as grenade
 
 from _hxtorch._snn import DataHandle  # pylint: disable=import-error
 import hxtorch
@@ -43,8 +43,8 @@ class InputNeuron(HXModule):
         self.experiment.register_population(self)
 
     def add_to_network_graph(
-        self, builder: grenade.logical_network.NetworkBuilder) \
-            -> grenade.logical_network.PopulationDescriptor:
+        self, builder: grenade.NetworkBuilder) \
+            -> grenade.PopulationDescriptor:
         """
         Adds instance to grenade's network builder.
 
@@ -52,7 +52,7 @@ class InputNeuron(HXModule):
         :returns: External population descriptor.
         """
         # create grenade population
-        gpopulation = grenade.logical_network.ExternalPopulation(self.size)
+        gpopulation = grenade.ExternalPopulation(self.size)
         # add to builder
         self.descriptor = builder.add(gpopulation)
         log.TRACE(f"Added Input Population: {self}")
@@ -61,7 +61,7 @@ class InputNeuron(HXModule):
 
     def add_to_input_generator(
             self, input: NeuronHandle,  # pylint: disable=redefined-builtin
-            builder: grenade.logical_network.InputGenerator) -> None:
+            builder: grenade.InputGenerator) -> None:
         """
         Add the neurons events represented by this instance to grenades input
         generator.

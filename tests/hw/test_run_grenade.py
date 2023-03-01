@@ -24,24 +24,26 @@ class TestRun(unittest.TestCase):
 
     def generate_network(self):
         # Builder
-        network_builder = grenade.network.NetworkBuilder()
+        network_builder = grenade.network.placed_atomic.NetworkBuilder()
 
         # Populations
         neurons = [
             halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
             for coord in halco.iter_all(halco.NeuronColumnOnDLS)
             ][:self.int_pop_size]
-        int_pop = grenade.network.Population(neurons, [True] * len(neurons))
-        ext_pop = grenade.network.ExternalPopulation(self.ext_pop_size)
+        int_pop = grenade.network.placed_atomic.Population(
+            neurons, [True] * len(neurons))
+        ext_pop = grenade.network.placed_atomic.ExternalPopulation(
+            self.ext_pop_size)
         int_pop_descr = network_builder.add(int_pop)
         self.ext_pop_descr = network_builder.add(ext_pop)
 
         # Some CADC recording
-        cadc_recording = grenade.network.CADCRecording()
+        cadc_recording = grenade.network.placed_atomic.CADCRecording()
         recorded_neurons = list()
         for nrn_id in range(self.int_pop_size):
             recorded_neurons.append(
-                grenade.network.CADCRecording.Neuron(
+                grenade.network.placed_atomic.CADCRecording.Neuron(
                     int_pop_descr, nrn_id,
                     lola.AtomicNeuron.Readout.Source.membrane))
         cadc_recording.neurons = recorded_neurons
@@ -50,20 +52,22 @@ class TestRun(unittest.TestCase):
         # Some connections
         connections = []
         for i in range(self.ext_pop_size):
-            connections.append(grenade.network.Projection.Connection(i, i, 63))
-        proj = grenade.network.Projection(
-            grenade.network.Projection.ReceptorType.excitatory,
+            connections.append(
+                grenade.network.placed_atomic.Projection.Connection(i, i, 63))
+        proj = grenade.network.placed_atomic.Projection(
+            grenade.network.placed_atomic.Projection.ReceptorType.excitatory,
             connections, self.ext_pop_descr, int_pop_descr)
         network_builder.add(proj)
 
         # Build network graph
         network = network_builder.done()
-        routing_result = grenade.network.build_routing(network)
-        return grenade.network.build_network_graph(network, routing_result)
+        routing_result = grenade.network.placed_atomic.build_routing(network)
+        return grenade.network.placed_atomic.build_network_graph(
+            network, routing_result)
 
     def generate_inputs(self, network_graph):
         # Inputs
-        input_generator = grenade.network.InputGenerator(
+        input_generator = grenade.network.placed_atomic.InputGenerator(
             network_graph, self.batch_size)
 
         # Add inputs
