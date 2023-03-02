@@ -132,7 +132,7 @@ torch::Tensor mac_forward(
 
 	grenade::vx::compute::MAC mac{
 	    std::move(m_weights), static_cast<size_t>(num_sends),
-	    grenade::vx::signal_flow::TimedSpike::Time(wait_between_events)};
+	    grenade::vx::common::Time(wait_between_events)};
 
 	if (!hxtorch::detail::getConnection()) {
 		throw std::runtime_error("No connection allocated.");

@@ -97,9 +97,7 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle
 		// handle
 		ret[descriptor] = SpikeHandle(
 		    spike_tensor,
-		    1. / 1e6 /
-		        static_cast<float>(
-		            grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
+		    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
 	}
 	return ret;
 }
@@ -171,9 +169,8 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle>
 
 	// handle
 	ret[descriptor] = MADCHandle(
-	    madc_tensor, 1. / 1e6 /
-	                     static_cast<float>(
-	                         grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
+	    madc_tensor,
+	    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
 
 	return ret;
 }
@@ -253,9 +250,7 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle>
 		// handle
 		ret[descriptor] = CADCHandle(
 		    cadc_tensor,
-		    1. / 1e6 /
-		        static_cast<float>(
-		            grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
+		    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
 	}
 	return ret;
 }
