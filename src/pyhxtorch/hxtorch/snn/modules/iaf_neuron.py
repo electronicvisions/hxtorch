@@ -34,7 +34,7 @@ class IAFNeuron(Neuron):
         = lola.AtomicNeuron.Readout.Source.membrane
 
     # pylint: disable=too-many-arguments, too-many-locals
-    def __init__(self, size: int, instance: "Instance",
+    def __init__(self, size: int, experiment: "Experiment",
                  func: Union[Callable, torch.autograd.Function]
                  = F.IAF,
                  params: Optional[NamedTuple] = None,
@@ -59,7 +59,7 @@ class IAFNeuron(Neuron):
         useful for dropout.
 
         :param size: Size of the population.
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
@@ -118,7 +118,7 @@ class IAFNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, instance, func, params, enable_spike_recording,
+            size, experiment, func, params, enable_spike_recording,
             enable_cadc_recording, enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
             shift_cadc_to_first, interpolation_mode, neuron_structure)

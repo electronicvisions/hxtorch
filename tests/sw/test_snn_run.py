@@ -3,7 +3,7 @@ Test snn run function
 """
 import unittest
 import torch
-from hxtorch.snn import run, Instance
+from hxtorch.snn import run, Experiment
 from hxtorch.snn.modules import Neuron, Synapse
 from hxtorch.snn.handle import NeuronHandle
 
@@ -13,13 +13,13 @@ class TestSNNRun(unittest.TestCase):
 
     def test_run(self):
         """ Test run in abstract case """
-        # Instance
-        instance = Instance(mock=True)
+        # Experiment
+        experiment = Experiment(mock=True)
 
         # Modules
-        module1 = Neuron(10, instance, lambda x: x)
-        module2 = Neuron(10, instance, lambda x: x)
-        module3 = Neuron(10, instance, lambda x: x)
+        module1 = Neuron(10, experiment, lambda x: x)
+        module2 = Neuron(10, experiment, lambda x: x)
+        module3 = Neuron(10, experiment, lambda x: x)
 
         # Input handle
         input_handle = NeuronHandle(torch.zeros(10, 12))
@@ -33,7 +33,7 @@ class TestSNNRun(unittest.TestCase):
         self.assertIsNone(h3.observable_state)
 
         # Run
-        run(instance, None)
+        run(experiment, None)
 
         # Handles should be full now
         self.assertTrue(torch.equal(h1.observable_state, torch.zeros(10, 12)))
@@ -42,19 +42,19 @@ class TestSNNRun(unittest.TestCase):
 
     def test_run_realistic(self):
         """ Test run in realistiv scenario """
-        # Instance
-        instance = Instance(mock=True)
+        # Experiment
+        experiment = Experiment(mock=True)
 
         def syn_func(x, w, b):
             return x
 
         # Modules
-        l1 = Synapse(5, 10, instance, syn_func)
-        n1 = Neuron(10, instance, lambda x: x)
-        l2 = Synapse(10, 20, instance, syn_func)
-        n2 = Neuron(20, instance, lambda x: x)
-        l3 = Synapse(20, 1, instance, syn_func)
-        n3 = Neuron(1, instance, lambda x: x)
+        l1 = Synapse(5, 10, experiment, syn_func)
+        n1 = Neuron(10, experiment, lambda x: x)
+        l2 = Synapse(10, 20, experiment, syn_func)
+        n2 = Neuron(20, experiment, lambda x: x)
+        l3 = Synapse(20, 1, experiment, syn_func)
+        n3 = Neuron(1, experiment, lambda x: x)
 
         # Input handle
         input_handle = NeuronHandle(torch.zeros(10, 5))
@@ -74,7 +74,7 @@ class TestSNNRun(unittest.TestCase):
         self.assertIsNone(h6.observable_state)
 
         # Run
-        run(instance, None)
+        run(experiment, None)
 
         # Handles should be full now
         self.assertTrue(torch.equal(h1.observable_state, torch.zeros(10, 5)))

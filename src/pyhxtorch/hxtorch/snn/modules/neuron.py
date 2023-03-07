@@ -38,7 +38,7 @@ class Neuron(HXModule):
         = lola.AtomicNeuron.Readout.Source.membrane
 
     # pylint: disable=too-many-arguments, too-many-locals
-    def __init__(self, size: int, instance: "Instance",
+    def __init__(self, size: int, experiment: "Experiment",
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
@@ -61,7 +61,7 @@ class Neuron(HXModule):
         neurons within the layer. This is particularly useful for dropout.
 
         :param size: Size of the population.
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
@@ -119,7 +119,7 @@ class Neuron(HXModule):
         :param neuron_structure: Structure of the neuron. If not supplied a
             single neuron circuit is used.
         """
-        super().__init__(instance=instance, func=func)
+        super().__init__(experiment=experiment, func=func)
 
         if placement_constraint is not None \
                 and len(placement_constraint) != size:
@@ -130,7 +130,7 @@ class Neuron(HXModule):
 
         self.size = size
         self.params = params
-        self.extra_kwargs.update({"params": params, "dt": instance.dt})
+        self.extra_kwargs.update({"params": params, "dt": experiment.dt})
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
@@ -162,19 +162,19 @@ class Neuron(HXModule):
         Infere neuron ids on hardware and register them.
         """
         self.unit_ids = np.arange(
-            self.instance.id_counter, self.instance.id_counter + self.size)
-        self.instance.neuron_placement.register_id(
+            self.experiment.id_counter, self.experiment.id_counter + self.size)
+        self.experiment.neuron_placement.register_id(
             self.unit_ids, self._neuron_structure.compartments,
             self._placement_constraint)
-        self.instance.id_counter += self.size
-        self.instance.register_population(self)
+        self.experiment.id_counter += self.size
+        self.experiment.register_population(self)
 
         # Handle offset
         if isinstance(self.offset, torch.Tensor):
             assert self.offset.shape[0] == self.size
         if isinstance(self.offset, dict):
             # Get populations HW neurons
-            coords = self.instance.neuron_placement.id2logicalneuron(
+            coords = self.experiment.neuron_placement.id2logicalneuron(
                 self.unit_ids)
             offset = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -186,7 +186,7 @@ class Neuron(HXModule):
             assert self.scale.shape[0] == self.size
         if isinstance(self.scale, dict):
             # Get populations HW neurons
-            coords = self.instance.neuron_placement.id2logicalneuron(
+            coords = self.experiment.neuron_placement.id2logicalneuron(
                 self.unit_ids)
             scale = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -194,12 +194,12 @@ class Neuron(HXModule):
             self.scale = scale
 
         if self._enable_madc_recording:
-            if self.instance.has_madc_recording:
+            if self.experiment.has_madc_recording:
                 raise RuntimeError(
                     "Another HXModule already registered MADC recording. "
                     + "MADC recording is only enabled for a "
                     + "single neuron.")
-            self.instance.has_madc_recording = True
+            self.experiment.has_madc_recording = True
         log.TRACE(f"Registered hardware  entity '{self}'.")
 
     @property
@@ -293,7 +293,7 @@ class Neuron(HXModule):
 
         # get neuron coordinates
         coords: List[halco.LogicalNeuronOnDLS] = \
-            self.instance.neuron_placement.id2logicalneuron(self.unit_ids)
+            self.experiment.neuron_placement.id2logicalneuron(self.unit_ids)
 
         # create receptors
         receptors = set([
@@ -330,7 +330,7 @@ class Neuron(HXModule):
                 neuron.neuron_on_population = in_pop_id
                 neuron.compartment_on_neuron = 0
                 neuron.atomic_neuron_on_compartment = 0
-                self.instance.cadc_recording[unit_id] = neuron
+                self.experiment.cadc_recording[unit_id] = neuron
 
         # No recording registered -> return
         if not self._enable_madc_recording:
@@ -392,7 +392,7 @@ class Neuron(HXModule):
         if self._enable_cadc_recording:
             # Get dense representation
             cadc = hw_cadc.to_dense(
-                self.instance.dt, mode=self.interpolation_mode)
+                self.experiment.dt, mode=self.interpolation_mode)
 
             # Shift CADC samples in time
             if self.cadc_time_shift != 0:
@@ -417,7 +417,7 @@ class Neuron(HXModule):
 
         # Get spikes
         if self._enable_spike_recording:
-            spikes = hw_spikes.to_dense(self.instance.dt).float()
+            spikes = hw_spikes.to_dense(self.experiment.dt).float()
 
         # Get madc trace
         if self._enable_madc_recording:

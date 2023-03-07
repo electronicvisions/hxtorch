@@ -17,14 +17,14 @@ log = hxtorch.logger.get("hxtorch.snn.modules")
 class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
     """ Class to wrap HXModules """
 
-    def __init__(self, instance, modules: List[HXModule],
+    def __init__(self, experiment, modules: List[HXModule],
                  func: Optional[Callable]) -> None:
         """
         A module which wrappes a number of HXModules defined in `modules` to
         which a single PyTorch-differential function `func` is defined. For
         instance, this allows to wrap a Synapse and a Neuron to descripe
         recurrence.
-        :param instance: The instance to register this wrapper in.
+        :param experiment: The experiment to register this wrapper in.
         :param modules: A list of modules to be represented by this wrapper.
         :param func: The function describing the unified functionallity of all
             modules assigned to this wrapper. As for HXModules, this needs to
@@ -50,7 +50,7 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
                 + "an 'torch.autograd.Function' as 'func' you can wrap it "
                 + "with a function providing the appropriate input signature "
                 + "and return type.")
-        super().__init__(instance, func)
+        super().__init__(experiment, func)
         self.modules = modules
         self.update_args(modules)
 

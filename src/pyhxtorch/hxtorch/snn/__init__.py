@@ -6,5 +6,5 @@ from hxtorch.snn.modules import (
     Synapse, BatchDropout)
 from hxtorch.snn.handle import (
     TensorHandle, SynapseHandle, NeuronHandle, ReadoutNeuronHandle)
-from hxtorch.snn.instance import Instance
+from hxtorch.snn.experiment import Experiment
 from hxtorch.snn.run import run

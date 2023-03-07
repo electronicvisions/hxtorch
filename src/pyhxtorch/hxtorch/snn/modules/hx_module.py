@@ -22,10 +22,10 @@ class HXModule(torch.nn.Module):
 
     output_type: Type = TensorHandle
 
-    def __init__(self, instance,
+    def __init__(self, experiment,
                  func: Union[Callable, torch.autograd.Function]) -> None:
         """
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation.
@@ -36,7 +36,7 @@ class HXModule(torch.nn.Module):
         self._func_is_wrapped = False
         self._changed_since_last_run = True
 
-        self.instance = instance
+        self.experiment = experiment
         self.func = func
         self.extra_args: Tuple[Any] = tuple()
         self.extra_kwargs: Dict[str, Any] = {}
@@ -120,7 +120,7 @@ class HXModule(torch.nn.Module):
             function, torch.autograd.function.FunctionMeta)
 
         # In case of HW execution and func is autograd func we override forward
-        if is_autograd_func and not self.instance.mock:
+        if is_autograd_func and not self.experiment.mock:
             def func(*inputs, hw_data):
                 class LocalAutograd(function):
                     @staticmethod
@@ -135,7 +135,7 @@ class HXModule(torch.nn.Module):
             return func
 
         # In case of SW execution and func is autograd func we use forward
-        if is_autograd_func and self.instance.mock:
+        if is_autograd_func and self.experiment.mock:
             # Make new autograd to not change the original one
             class LocalAutograd(function):
                 pass
@@ -176,9 +176,9 @@ class HXModule(torch.nn.Module):
     def forward(self, *input: Union[Tuple[TensorHandle], TensorHandle]) \
             -> TensorHandle:
         """
-        Forward method registering layer operation in given instance. Input and
-        output references will hold corresponding data as soon as 'hxtorch.run'
-        in executed.
+        Forward method registering layer operation in given experiment. Input
+        and output references will hold corresponding data as soon as
+        'hxtorch.run' in executed.
 
         :param input: Reference to TensorHandle holding data tensors as soon
             as required.
@@ -186,7 +186,7 @@ class HXModule(torch.nn.Module):
         :returns: Returns a Reference to TensorHandle holding result data
             asociated with this layer after 'hxtorch.run' is executed.
         """
-        self.instance.connect(self, input, self._output_handle)
+        self.experiment.connect(self, input, self._output_handle)
         return self._output_handle
 
     # Allow redefinition of builtin in order to be consistent with PyTorch

@@ -30,7 +30,7 @@ class ReadoutNeuron(Neuron):
     output_type: Type = ReadoutNeuronHandle
 
     # pylint: disable=too-many-arguments
-    def __init__(self, size: int, instance: "Instance",
+    def __init__(self, size: int, experiment: "Experiment",
                  func: Union[Callable, torch.autograd.Function] = F.LI,
                  params: Optional[NamedTuple] = None,
                  enable_cadc_recording: bool = True,
@@ -51,7 +51,7 @@ class ReadoutNeuron(Neuron):
         spiking mask is disabled for all neurons.
 
         :param size: Size of the population.
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to regsiter the module in.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LI`.
@@ -107,7 +107,7 @@ class ReadoutNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, instance, func, params, False, enable_cadc_recording,
+            size, experiment, func, params, False, enable_cadc_recording,
             enable_madc_recording, record_neuron_id, placement_constraint,
             trace_offset, trace_scale, cadc_time_shift, shift_cadc_to_first,
             interpolation_mode, neuron_structure)

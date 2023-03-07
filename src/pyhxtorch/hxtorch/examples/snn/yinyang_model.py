@@ -60,14 +60,14 @@ class SNN(torch.nn.Module):
         li_params = F.CUBALIParams(
             tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn)
 
-        # Instance to work on
-        self.instance = snn.Instance(mock=mock, dt=dt)
+        # Experiment instance to work on
+        self.exp = snn.Experiment(mock=mock, dt=dt)
 
         # Repeat input
         self.input_repetitions = input_repetitions
         # Input projection
         self.linear_h = snn.Synapse(
-            n_in * input_repetitions, n_hidden, instance=self.instance,
+            n_in * input_repetitions, n_hidden, experiment=self.exp,
             transform=partial(
                 weight_transforms.linear_saturating, scale=weight_scale))
         # Initialize weights
@@ -78,19 +78,19 @@ class SNN(torch.nn.Module):
 
         # Hidden layer
         self.lif_h = snn.Neuron(
-            n_hidden, instance=self.instance, func=F.cuba_lif_integration,
+            n_hidden, experiment=self.exp, func=F.cuba_lif_integration,
             params=lif_params, trace_scale=trace_scale,
             cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True)
 
         # Output projection
         self.linear_o = snn.Synapse(
-            n_hidden, n_out, instance=self.instance,
+            n_hidden, n_out, experiment=self.exp,
             transform=partial(
                 weight_transforms.linear_saturating, scale=weight_scale))
 
         # Readout layer
         self.li_readout = snn.ReadoutNeuron(
-            n_out, instance=self.instance, func=F.cuba_li_integration,
+            n_out, experiment=self.exp, func=F.cuba_li_integration,
             params=li_params, trace_scale=trace_scale,
             cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
             placement_constraint=list(
@@ -132,7 +132,7 @@ class SNN(torch.nn.Module):
         y_o = self.li_readout(c_o)
 
         # Execute on hardware
-        hxtorch.snn.run(self.instance, spikes.shape[0])
+        hxtorch.snn.run(self.exp, spikes.shape[0])
 
         return y_o.v_cadc
 

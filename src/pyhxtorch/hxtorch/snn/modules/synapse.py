@@ -34,7 +34,7 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
     output_type: Type = SynapseHandle
 
     # pylint: disable=too-many-arguments
-    def __init__(self, in_features: int, out_features: int, instance,
+    def __init__(self, in_features: int, out_features: int, experiment,
                  func: Union[Callable, torch.autograd.Function] = F.linear,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
@@ -46,13 +46,13 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
         :param out_features: Size of output dimension.
         :param device: Device to execute on. Only considered in mock-mode.
         :param dtype: Data type of weight tensor.
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Required function args:
                 [input (torch.Tensor), weight (torch.Tensor)]
         """
-        super().__init__(instance=instance, func=func)
+        super().__init__(experiment=experiment, func=func)
 
         self.in_features = in_features
         self.out_features = out_features
@@ -100,9 +100,9 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
 
     def register_hw_entity(self) -> None:
         """
-        Add the synapse layer to the instances projections.
+        Add the synapse layer to the experiment's projections.
         """
-        self.instance.register_projection(self)
+        self.experiment.register_projection(self)
 
     def add_to_network_graph(
             self,

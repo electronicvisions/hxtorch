@@ -134,7 +134,7 @@ class TestModuleManager(unittest.TestCase):
     def test_handle_inputs(self):
         """ Test handle_inputs """
         modules = ModuleManager()
-        instance = snn.Instance(mock=True)
+        experiment = snn.Experiment(mock=True)
         module1 = snn.Synapse(10, 11, None, None)
         module2 = snn.Synapse(12, 13, None, None)
         handle1 = snn.NeuronHandle()
@@ -144,7 +144,7 @@ class TestModuleManager(unittest.TestCase):
         # Add and connect
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle2, handle3), handle4)
-        modules._handle_inputs(instance)
+        modules._handle_inputs(experiment)
         self.assertEqual(len(modules._inputs), 2)
         self.assertEqual(set([module1, module2]), set(modules._inputs.keys()))
 
@@ -153,7 +153,7 @@ class TestModuleManager(unittest.TestCase):
         self.assertEqual(set([module1, module2]), set(modules._inputs.keys()))
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle2, handle3), handle4)
-        modules._handle_inputs(instance)
+        modules._handle_inputs(experiment)
         self.assertEqual(len(modules._inputs), 2)
         self.assertEqual(set([module1, module2]), set(modules._inputs.keys()))
 
@@ -161,9 +161,9 @@ class TestModuleManager(unittest.TestCase):
         """ Test dropout masks are set properly """
         # Test neuron followed by dropout
         modules = ModuleManager()
-        instance = snn.Instance(mock=True)
-        module1 = snn.Neuron(10, instance, None)
-        module2 = snn.BatchDropout(10, 0.5, instance, None)
+        experiment = snn.Experiment(mock=True)
+        module1 = snn.Neuron(10, experiment, None)
+        module2 = snn.BatchDropout(10, 0.5, experiment, None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -171,7 +171,7 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle2,), handle3)
         modules.hw_graph = nx.DiGraph(modules.graph)
-        modules._handle_inputs(instance)
+        modules._handle_inputs(experiment)
         self.assertIsNone(module1.mask)
         self.assertIsNone(module2.mask)
         # Set dropout masks
@@ -189,7 +189,7 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle2,), handle3)
         modules.hw_graph = nx.DiGraph(modules.graph)
-        modules._handle_inputs(instance)
+        modules._handle_inputs(experiment)
         self.assertIsNone(module2.mask)
         # Set dropout masks -> should raise
         with self.assertRaises(TypeError):
@@ -343,18 +343,18 @@ class TestModuleManager(unittest.TestCase):
             None, [module2, module3, module4], None)
         modules.add_wrapper(wrapper)
         modules.hw_graph = nx.DiGraph(modules.graph)
-        modules._handle_inputs(snn.Instance())
+        modules._handle_inputs(snn.Experiment())
         modules._handle_wrappers()
         print(modules)
 
     def test_get_populations(self):
         """ Test get populations """
-        instance = snn.Instance()
+        experiment = snn.Experiment()
         modules = ModuleManager()
-        module1 = snn.InputNeuron(12, instance=instance)
-        module2 = snn.Synapse(10, 12, instance=instance, func=None)
-        module3 = snn.Neuron(10, instance=instance, func=None)
-        module4 = snn.BatchDropout(10, 0.5, instance=instance)
+        module1 = snn.InputNeuron(12, experiment=experiment)
+        module2 = snn.Synapse(10, 12, experiment=experiment, func=None)
+        module3 = snn.Neuron(10, experiment=experiment, func=None)
+        module4 = snn.BatchDropout(10, 0.5, experiment=experiment)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()

@@ -17,7 +17,7 @@ import hxtorch.snn.modules as snn_module
 from hxtorch.snn import handle
 from hxtorch.snn.backend.module_manager import BaseModuleManager, ModuleManager
 
-log = hxtorch.logger.get("hxtorch.snn.instance")
+log = hxtorch.logger.get("hxtorch.snn.experiment")
 
 
 # TODO: Issue: 4007
@@ -126,7 +126,7 @@ class NeuronPlacement:
             return self._id_2_ln[neuron_id]
 
 
-class BaseInstance(ABC):
+class BaseExperiment(ABC):
 
     def __init__(self, modules: BaseModuleManager, mock: bool, dt: float) \
             -> None:
@@ -147,17 +147,17 @@ class BaseInstance(ABC):
         raise NotImplementedError
 
 
-class Instance(BaseInstance):
+class Experiment(BaseExperiment):
 
-    """ Instance class for describing experiments on hardware """
+    """ Experiment class for describing experiments on hardware """
 
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             hw_routing_func=grenade.build_routing) \
             -> None:
         """
-        Instanziate a new instance, represting an experiment on hardware and/or
-        in software.
+        Instanziate a new experiment, represting an experiment on hardware
+        and/or in software.
 
         :param mock: Indicating whether module is executed on hardware (False)
             or simulated in software (True).
@@ -193,7 +193,7 @@ class Instance(BaseInstance):
 
     def clear(self) -> None:
         """
-        Reset the instance's state. Corresponds to creating a new Instance
+        Reset the experiments's state. Corresponds to creating a new Experiment
         instance.
         """
         self.modules.clear()
@@ -322,7 +322,7 @@ class Instance(BaseInstance):
 
         :return: Returns the config object with the configuration appended.
         """
-        # Make sure instance holds chip config
+        # Make sure experiment holds chip config
         assert config is not None
 
         pop_changed_since_last_run = any(
@@ -445,10 +445,10 @@ class Instance(BaseInstance):
                 input_handles: Tuple[handle.TensorHandle],
                 output_handle: handle.TensorHandle):
         """
-        Add an module to the instance and connect it to other instance
+        Add an module to the experiment and connect it to other experiment
         modules via input and output handles.
 
-        :param module: The HXModule to add to the instance.
+        :param module: The HXModule to add to the experiment.
         :param input_handles: The TensorHandle serving as input to the module
             (its obsv_state).
         :param output_handle: The TensorHandle outputted by the module,
@@ -509,8 +509,8 @@ class Instance(BaseInstance):
                     Tuple[Optional[torch.Tensor], ...]]:
         """
         Executes the experiment in mock or on hardware using the information
-        added to the instance for a time given by `runtime` and returns a dict
-        of hardware data represented as PyTorch data types.
+        added to the experiment for a time given by `runtime` and returns a
+        dict of hardware data represented as PyTorch data types.
 
         :param runtime: The runtime of the experiment on hardware in ms.
 

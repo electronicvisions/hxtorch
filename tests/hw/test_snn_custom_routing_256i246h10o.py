@@ -218,13 +218,13 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         return ret
 
     def test(self):
-        instance = snn.Instance(hw_routing_func=self.hw_routing_func)
-        synapse_ih = snn.Synapse(256, 246, instance=instance)
+        experiment = snn.Experiment(hw_routing_func=self.hw_routing_func)
+        synapse_ih = snn.Synapse(256, 246, experiment=experiment)
         neuron_h = snn.Neuron(
-            246, instance, neuron_structure=SingleCompartmentNeuron(2))
-        synapse_ho = snn.Synapse(246, 10, instance=instance)
+            246, experiment, neuron_structure=SingleCompartmentNeuron(2))
+        synapse_ho = snn.Synapse(246, 10, experiment=experiment)
         neuron_o = snn.ReadoutNeuron(
-            10, instance, neuron_structure=SingleCompartmentNeuron(2))
+            10, experiment, neuron_structure=SingleCompartmentNeuron(2))
         # Test output handle
         input = snn.NeuronHandle(
             spikes=torch.bernoulli(torch.ones((10, 10, 256)) * 0.5))
@@ -234,7 +234,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         synapse_ho_handle = synapse_ho(neuron_h_handle)
         neuron_o_handle = neuron_o(synapse_ho_handle)
 
-        snn.run(instance, 10)
+        snn.run(experiment, 10)
 
         # Assert spikes exist
         self.assertIsInstance(neuron_o_handle.v_cadc, torch.Tensor)

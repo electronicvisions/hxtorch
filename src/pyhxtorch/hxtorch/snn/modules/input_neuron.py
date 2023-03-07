@@ -23,24 +23,24 @@ class InputNeuron(HXModule):
     """
     output_type: Type = NeuronHandle
 
-    def __init__(self, size: int, instance) -> None:
+    def __init__(self, size: int, experiment) -> None:
         """
         Instanziate a INputNeuron. This module serves as an External
-        Population for input injection and is created within `snn.Instance`
+        Population for input injection and is created within `snn.Experiment`
         if not present in the considerd model.
         This module performes an identity mapping when `forward` is called.
 
         :param size: Number of input neurons.
-        :param instance: Instance to which this module is assigned.
+        :param experiment: Experiment to which this module is assigned.
         """
-        super().__init__(instance, func=F.input_neuron)
+        super().__init__(experiment, func=F.input_neuron)
         self.size = size
 
     def register_hw_entity(self) -> None:
         """
-        Register instance in member `instance`.
+        Register instance in member `experiment`.
         """
-        self.instance.register_population(self)
+        self.experiment.register_population(self)
 
     def add_to_network_graph(
         self, builder: grenade.logical_network.NetworkBuilder) \
@@ -78,7 +78,7 @@ class InputNeuron(HXModule):
         # maybe support sparse input tensor?
         # TODO: Expects ms relative. Align to time handling.
         spike_times = hxtorch.snn.tensor_to_spike_times(  # pylint: disable=no-member
-            input.spikes, dt=self.instance.dt / 1e-3)
+            input.spikes, dt=self.experiment.dt / 1e-3)
         builder.add(spike_times, self.descriptor)
 
     def post_process(self, hw_spikes: Optional[DataHandle],

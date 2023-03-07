@@ -23,21 +23,21 @@ class TestHXModules(unittest.TestCase):
         Test Synapse returns the expected handle and registers module
         properly.
         """
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, None)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, None)
         # Test output handle
         input_handle = snn.TensorHandle()
         synapse_handle = module(input_handle)
         self.assertTrue(isinstance(synapse_handle, snn.TensorHandle))
-        # Test module is registered in instance
-        self.assertTrue(module in instance.modules.nodes)
+        # Test module is registered in experiment
+        self.assertTrue(module in experiment.modules.nodes)
         # Test handles are assigned properly
         sources = [
-            e["handle"] for u, v, e in instance.modules.graph.in_edges(
-                instance.modules.nodes[module], data=True)]
+            e["handle"] for u, v, e in experiment.modules.graph.in_edges(
+                experiment.modules.nodes[module], data=True)]
         targets = [
-            e["handle"] for u, v, e in instance.modules.graph.out_edges(
-                instance.modules.nodes[module], data=True)]
+            e["handle"] for u, v, e in experiment.modules.graph.out_edges(
+                experiment.modules.nodes[module], data=True)]
         self.assertEqual(sources, [input_handle])
         self.assertEqual(targets, [synapse_handle])
 
@@ -49,8 +49,8 @@ class TestHXModules(unittest.TestCase):
         def func(input, params=None, hw_data=None):
             return input, params, hw_data
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, func)
         module.extra_kwargs.update({"params": "new_params"})
         new_func = module.func
         output, params, result_ret = new_func((None,), "hw_result")
@@ -62,8 +62,8 @@ class TestHXModules(unittest.TestCase):
         def func(input, params=None):
             return input, params
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, func)
         module.extra_kwargs.update({"params": "new_params"})
         new_func = module.func
         output, params_ret = new_func((None,))
@@ -74,8 +74,8 @@ class TestHXModules(unittest.TestCase):
         def func(input, hw_data=None):
             return input, hw_data
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, func)
         module.extra_kwargs.update({"params": "new_params"})
         new_func = module.func
         output, result_ret = new_func((None,), "hw_result")
@@ -90,8 +90,8 @@ class TestHXModules(unittest.TestCase):
             def backward(ctx, grad):
                 return grad
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, Func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, Func)
         module.extra_kwargs.update({"params": "new_params"})
         new_func = module.func
         output, params, result_ret = new_func((None,), "hw_result")
@@ -107,8 +107,8 @@ class TestHXModules(unittest.TestCase):
             def backward(ctx, grad):
                 return grad
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, Func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, Func)
         module.extra_kwargs.update({"params": "new_params"})
         new_func = module.func
         output, params = new_func((None,), "hw_result")
@@ -123,8 +123,8 @@ class TestHXModules(unittest.TestCase):
             def backward(ctx, grad):
                 return grad
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, Func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, Func)
         new_func = module.func
         output, hw_result = new_func((None,), "hw_result")
         self.assertEqual(hw_result, "hw_result")
@@ -140,8 +140,8 @@ class TestHXModules(unittest.TestCase):
             self.assertEqual((one, two), (1, 2))
             return input
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, func)
         module.extra_kwargs.update({"params": "new_params"})
         module.extra_args = (1, 2)
 
@@ -161,8 +161,8 @@ class TestHXModules(unittest.TestCase):
             self.assertEqual((one, two), (1, 2))
             return input
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, func)
         module.extra_kwargs.update({"params": "new_params"})
         module.extra_args = (1, 2)
 
@@ -186,8 +186,8 @@ class TestHXModules(unittest.TestCase):
             def backward(ctx, grad):
                 return grad
 
-        instance = snn.Instance(mock=True)
-        module = snn.HXModule(instance, Func)
+        experiment = snn.Experiment(mock=True)
+        module = snn.HXModule(experiment, Func)
         module.extra_kwargs.update({"params": "new_params"})
         module.extra_args = (1, 2)
 
@@ -211,8 +211,8 @@ class TestHXModules(unittest.TestCase):
             def backward(ctx, grad):
                 return grad
 
-        instance = snn.Instance(mock=False)
-        module = snn.HXModule(instance, Func)
+        experiment = snn.Experiment(mock=False)
+        module = snn.HXModule(experiment, Func)
         module.extra_kwargs.update({"params": "new_params"})
         module.extra_args = (1, 2)
 
@@ -232,14 +232,14 @@ class TestHXModuleWrapper(unittest.TestCase):
 
     def test_contains(self):
         """ Test wrapper contains module """
-        # Instance
-        instance = snn.Instance()
+        # Experiment
+        experiment = snn.Experiment()
 
         # Modules
-        linear = snn.Synapse(10, 10, instance=instance)
-        lif = snn.Neuron(10, instance=instance)
+        linear = snn.Synapse(10, 10, experiment=experiment)
+        lif = snn.Neuron(10, experiment=experiment)
 
-        wrapper = snn.HXModuleWrapper(instance, [linear, lif], None)
+        wrapper = snn.HXModuleWrapper(experiment, [linear, lif], None)
 
         # Should contain
         self.assertTrue(wrapper.contains([linear]))
@@ -247,23 +247,23 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertTrue(wrapper.contains([linear, lif]))
 
         # Should not contain
-        lif2 = snn.Neuron(10, instance=instance)
+        lif2 = snn.Neuron(10, experiment=experiment)
         self.assertFalse(wrapper.contains([lif2]))
         self.assertFalse(wrapper.contains([linear, lif2]))
 
     def test_extra_args(self):
         """ test extra args """
-        # Instance
-        instance = snn.Instance()
+        # Experiment
+        experiment = snn.Experiment()
 
         # Modules
-        linear1 = snn.Synapse(10, 10, instance=instance)
-        lif1 = snn.Neuron(10, instance=instance)
-        linear2 = snn.Synapse(10, 10, instance=instance)
-        lif2 = snn.Neuron(10, instance=instance)
+        linear1 = snn.Synapse(10, 10, experiment=experiment)
+        lif1 = snn.Neuron(10, experiment=experiment)
+        linear2 = snn.Synapse(10, 10, experiment=experiment)
+        lif2 = snn.Neuron(10, experiment=experiment)
 
         wrapper = snn.HXModuleWrapper(
-            instance, [linear1, lif1, linear2, lif2], None)
+            experiment, [linear1, lif1, linear2, lif2], None)
 
         self.assertEqual(
             wrapper.extra_args, linear1.extra_args + linear2.extra_args)
@@ -276,18 +276,18 @@ class TestHXModuleWrapper(unittest.TestCase):
 
     def test_update(self):
         """ Test update modules """
-        # Instance
-        instance = snn.Instance()
+        # Experiment
+        experiment = snn.Experiment()
 
         # Modules
-        linear1 = snn.Synapse(10, 10, instance=instance)
-        lif1 = snn.Neuron(10, instance=instance)
+        linear1 = snn.Synapse(10, 10, experiment=experiment)
+        lif1 = snn.Neuron(10, experiment=experiment)
         wrapper = snn.HXModuleWrapper(
-            instance, [linear1, lif1], None)
+            experiment, [linear1, lif1], None)
         self.assertEqual([linear1, lif1], wrapper.modules)
 
-        linear2 = snn.Synapse(10, 10, instance=instance)
-        lif2 = snn.Neuron(10, instance=instance)
+        linear2 = snn.Synapse(10, 10, experiment=experiment)
+        lif2 = snn.Neuron(10, experiment=experiment)
         wrapper.update([linear2, lif2])
         self.assertEqual([linear2, lif2], wrapper.modules)
 
@@ -302,20 +302,20 @@ class TestHXModuleWrapper(unittest.TestCase):
             self.assertEqual(arg3, "w2")
             return "syn1", ("z1", "v1"), "syn2", "nrn2"
 
-        # Instance
-        instance = snn.Instance()
+        # Experiment
+        experiment = snn.Experiment()
 
         # Modules
-        linear1 = snn.Synapse(10, 10, instance=instance)
-        lif1 = snn.Neuron(10, instance=instance)
-        linear2 = snn.Synapse(10, 10, instance=instance)
-        lif2 = snn.Neuron(10, instance=instance)
+        linear1 = snn.Synapse(10, 10, experiment=experiment)
+        lif1 = snn.Neuron(10, experiment=experiment)
+        linear2 = snn.Synapse(10, 10, experiment=experiment)
+        lif2 = snn.Neuron(10, experiment=experiment)
         # Change args before function assignment
         linear1.extra_args = ("w1", "b1")
         linear2.extra_args = ("w2",)
 
         wrapper = snn.HXModuleWrapper(
-            instance, [linear1, lif1, linear2, lif2], func)
+            experiment, [linear1, lif1, linear2, lif2], func)
 
         # Fake grenade descriptiors
         linear1.descriptor = "linear1"
@@ -352,20 +352,20 @@ class TestHXModuleWrapper(unittest.TestCase):
                 hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
             return "syn1", ("z1", "v1"), "syn2", "nrn2"
 
-        # Instance
-        instance = snn.Instance()
+        # Experiment
+        experiment = snn.Experiment()
 
         # Modules
-        linear1 = snn.Synapse(10, 10, instance=instance)
-        lif1 = snn.Neuron(10, instance=instance)
-        linear2 = snn.Synapse(10, 10, instance=instance)
-        lif2 = snn.Neuron(10, instance=instance)
+        linear1 = snn.Synapse(10, 10, experiment=experiment)
+        lif1 = snn.Neuron(10, experiment=experiment)
+        linear2 = snn.Synapse(10, 10, experiment=experiment)
+        lif2 = snn.Neuron(10, experiment=experiment)
         # Change args before function assignment
         linear1.extra_args = ("w1", "b1")
         linear2.extra_args = ("w2",)
 
         wrapper = snn.HXModuleWrapper(
-            instance, [linear1, lif1, linear2, lif2], func)
+            experiment, [linear1, lif1, linear2, lif2], func)
 
         # Fake greande descriptiors
         linear1.descriptor = "linear1"
@@ -420,8 +420,8 @@ class TestNeuron(HWTestCase):
         """
         Test neuron returns the expected handle
         """
-        instance = snn.Instance()
-        neuron = snn.Neuron(44, instance)
+        experiment = snn.Experiment()
+        neuron = snn.Neuron(44, experiment)
         # Test output handle
         neuron_handle = neuron(snn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, snn.NeuronHandle))
@@ -434,12 +434,12 @@ class TestNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        instance = snn.Instance(dt=self.dt)
-        instance.initial_config = lola.Chip.default_neuron_bypass
+        experiment = snn.Experiment(dt=self.dt)
+        experiment.initial_config = lola.Chip.default_neuron_bypass
 
         # Modules
-        linear = snn.Synapse(10, 10, instance=instance)
-        lif = snn.Neuron(10, enable_cadc_recording=False,  instance=instance)
+        linear = snn.Synapse(10, 10, experiment=experiment)
+        lif = snn.Neuron(10, enable_cadc_recording=False,  experiment=experiment)
 
         # Weights
         linear.weight.data.fill_(0.)
@@ -460,7 +460,7 @@ class TestNeuron(HWTestCase):
         self.assertTrue(s_handle.v_madc is None)
 
         # Execute
-        snn.run(instance, 110)
+        snn.run(experiment, 110)
 
         # Assert types and shapes
         self.assertIsInstance(s_handle.spikes, torch.Tensor)
@@ -490,10 +490,10 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        instance = snn.Instance(dt=self.dt)
+        experiment = snn.Experiment(dt=self.dt)
         # Modules
-        linear = snn.Synapse(10, 10, instance=instance)
-        lif = snn.Neuron(10, instance=instance)
+        linear = snn.Synapse(10, 10, experiment=experiment)
+        lif = snn.Neuron(10, experiment=experiment)
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -512,7 +512,7 @@ class TestNeuron(HWTestCase):
         self.assertTrue(s_handle.v_madc is None)
 
         # Execute
-        snn.run(instance, 110)
+        snn.run(experiment, 110)
 
         # Assert types and shapes
         self.assertIsInstance(s_handle.spikes, torch.Tensor)
@@ -533,11 +533,11 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        instance = snn.Instance(dt=self.dt)
-        linear = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(snn.NeuronHandle(spikes))
@@ -545,18 +545,18 @@ class TestNeuron(HWTestCase):
 
         # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
         with self.assertRaises(NotImplementedError):
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
 
         # Only one module can record
-        instance = snn.Instance(dt=self.dt)
-        linear_1 = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear_1 = snn.Synapse(10, 10, experiment=experiment)
         lif_1 = snn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
-        linear_2 = snn.Synapse(10, 10, instance=instance)
+            experiment=experiment)
+        linear_2 = snn.Synapse(10, 10, experiment=experiment)
         lif_2 = snn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
         i_handle_1 = linear_1(snn.NeuronHandle(spikes))
@@ -566,7 +566,7 @@ class TestNeuron(HWTestCase):
 
         # Execute
         with self.assertRaises(RuntimeError):  # Expect RuntimeError
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
 
     def test_events_on_membrane(self):
         """
@@ -588,8 +588,8 @@ class TestReadoutNeuron(HWTestCase):
         """
         Test ReadoutNeuron returns the expected handle
         """
-        instance = snn.Instance()
-        neuron = snn.ReadoutNeuron(44, instance)
+        experiment = snn.Experiment()
+        neuron = snn.ReadoutNeuron(44, experiment)
         # Test output handle
         neuron_handle = neuron(snn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, snn.ReadoutNeuronHandle))
@@ -603,9 +603,9 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        instance = snn.Instance(dt=self.dt)
-        linear = snn.Synapse(10, 10, instance=instance)
-        li = snn.ReadoutNeuron(10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear = snn.Synapse(10, 10, experiment=experiment)
+        li = snn.ReadoutNeuron(10, experiment=experiment)
 
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -621,7 +621,7 @@ class TestReadoutNeuron(HWTestCase):
         self.assertTrue(v_handle.v_cadc is None)
         self.assertTrue(v_handle.v_madc is None)
 
-        snn.run(instance, 110)
+        snn.run(experiment, 110)
 
         # Assert types and shapes
         self.assertIsInstance(v_handle.v_cadc, torch.Tensor)
@@ -638,11 +638,11 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        instance = snn.Instance(dt=self.dt)
-        linear = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear = snn.Synapse(10, 10, experiment=experiment)
         li = snn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(snn.NeuronHandle(spikes))
@@ -650,18 +650,18 @@ class TestReadoutNeuron(HWTestCase):
 
         # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
         with self.assertRaises(NotImplementedError):
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
 
         # Only one module can record
-        instance = snn.Instance(dt=self.dt)
-        linear_1 = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear_1 = snn.Synapse(10, 10, experiment=experiment)
         li_1 = snn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
-        linear_2 = snn.Synapse(10, 10, instance=instance)
+            experiment=experiment)
+        linear_2 = snn.Synapse(10, 10, experiment=experiment)
         li_2 = snn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
         i_handle_1 = linear_1(snn.NeuronHandle(spikes))
@@ -671,7 +671,7 @@ class TestReadoutNeuron(HWTestCase):
 
         # Execute
         with self.assertRaises(RuntimeError):  # Expect RuntimeError
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
 
     def test_events_on_membrane(self):
         """
@@ -687,8 +687,8 @@ class TestIAFNeuron(HWTestCase):
         """
         Test neuron returns the expected handle
         """
-        instance = snn.Instance()
-        neuron = snn.IAFNeuron(44, instance)
+        experiment = snn.Experiment()
+        neuron = snn.IAFNeuron(44, experiment)
         # Test output handle
         neuron_handle = neuron(snn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, snn.NeuronHandle))
@@ -701,13 +701,13 @@ class TestIAFNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        instance = snn.Instance(dt=self.dt)
-        instance.initial_config = lola.Chip.default_neuron_bypass
+        experiment = snn.Experiment(dt=self.dt)
+        experiment.initial_config = lola.Chip.default_neuron_bypass
         # Modules
-        linear = snn.Synapse(10, 10, instance=instance)
+        linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
             10, params=snn.functional.CUBAIAFParams(0./10e-6, 0./10e-6),
-            enable_cadc_recording=False, instance=instance)
+            enable_cadc_recording=False, experiment=experiment)
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -725,7 +725,7 @@ class TestIAFNeuron(HWTestCase):
         self.assertTrue(s_handle.v_madc is None)
 
         # Execute
-        snn.run(instance, 110)
+        snn.run(experiment, 110)
 
         # Assert types and shapes
         self.assertIsInstance(s_handle.spikes, torch.Tensor)
@@ -754,11 +754,11 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        instance = snn.Instance(dt=self.dt)
+        experiment = snn.Experiment(dt=self.dt)
         # Modules
-        linear = snn.Synapse(10, 10, instance=instance)
+        linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
-            10, enable_cadc_recording=True, instance=instance)
+            10, enable_cadc_recording=True, experiment=experiment)
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -776,7 +776,7 @@ class TestIAFNeuron(HWTestCase):
         self.assertTrue(s_handle.v_madc is None)
 
         # Execute
-        snn.run(instance, 110)
+        snn.run(experiment, 110)
         # Assert types and shapes
         self.assertIsInstance(s_handle.spikes, torch.Tensor)
         self.assertTrue(
@@ -804,27 +804,27 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        instance = snn.Instance(dt=self.dt)
-        linear = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(snn.NeuronHandle(spikes))
         lif(i_handle)
         # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
         with self.assertRaises(NotImplementedError):
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
         # Only one module can record
-        instance = snn.Instance(dt=self.dt)
-        linear_1 = snn.Synapse(10, 10, instance=instance)
+        experiment = snn.Experiment(dt=self.dt)
+        linear_1 = snn.Synapse(10, 10, experiment=experiment)
         lif_1 = snn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
-        linear_2 = snn.Synapse(10, 10, instance=instance)
+            experiment=experiment)
+        linear_2 = snn.Synapse(10, 10, experiment=experiment)
         lif_2 = snn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
-            instance=instance)
+            experiment=experiment)
         spikes = torch.zeros(110, 10, 10)
         i_handle_1 = linear_1(snn.NeuronHandle(spikes))
         s_handle_1 = lif_1(i_handle_1)
@@ -832,7 +832,7 @@ class TestIAFNeuron(HWTestCase):
         lif_2(i_handle_2)
         # Execute
         with self.assertRaises(RuntimeError):  # Expect RuntimeError
-            snn.run(instance, 110)
+            snn.run(experiment, 110)
 
     def test_events_on_membrane(self):
         """
@@ -854,8 +854,8 @@ class TestSynapse(HWTestCase):
         """
         Test Synapse returns the expected handle
         """
-        instance = snn.Instance()
-        synapse = snn.Synapse(44, 33, instance)
+        experiment = snn.Experiment()
+        synapse = snn.Synapse(44, 33, experiment)
         # Test output handle
         synapse_handle = synapse(snn.NeuronHandle(spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(synapse_handle, snn.SynapseHandle))
@@ -865,8 +865,8 @@ class TestSynapse(HWTestCase):
         """
         Test synapse weights are of correct shape.
         """
-        instance = snn.Instance()
-        synapse = snn.Synapse(44, 33, instance)
+        experiment = snn.Experiment()
+        synapse = snn.Synapse(44, 33, experiment)
         # Test shape
         self.assertEqual(synapse.weight.shape[0], 33)
         self.assertEqual(synapse.weight.shape[1], 44)
@@ -875,8 +875,8 @@ class TestSynapse(HWTestCase):
         """
         Test reset_parameters is working correctly
         """
-        instance = snn.Instance()
-        synapse = snn.Synapse(44, 33, instance)
+        experiment = snn.Experiment()
+        synapse = snn.Synapse(44, 33, experiment)
         # Test weights are not zero (weight are initialized as zero and
         # reset_params is called implicitly)
         self.assertFalse(torch.equal(torch.zeros(33, 44), synapse.weight))

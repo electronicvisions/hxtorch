@@ -24,7 +24,7 @@ class BatchDropout(HXModule):  # pylint: disable=abstract-method
 
     output_type: Type = NeuronHandle
 
-    def __init__(self, size: int, dropout: float, instance,
+    def __init__(self, size: int, dropout: float, experiment,
                  func: Union[
                      Callable, torch.autograd.Function] = F.batch_dropout) \
             -> None:
@@ -37,13 +37,13 @@ class BatchDropout(HXModule):  # pylint: disable=abstract-method
         :param size: Size of the population this dropout layer is applied to.
         :param dropout: Probability that a neuron in the precessing layer gets
             disabled during training.
-        :param instance: Instance to append layer to.
+        :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to
             `batch_dropout`.
         """
-        super().__init__(instance=instance, func=func)
+        super().__init__(experiment=experiment, func=func)
 
         self.size = size
         self._dropout = dropout

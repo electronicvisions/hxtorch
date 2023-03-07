@@ -1,25 +1,25 @@
 """
-Run function to execute a SNN given in an instance.
+Run function to execute a SNN given in an experiment.
 """
 from typing import Optional
-from hxtorch.snn.instance import Instance
+from hxtorch.snn.experiment import Experiment
 
 
-def run(instance: Instance, runtime: Optional[int]) -> None:
+def run(experiment: Experiment, runtime: Optional[int]) -> None:
     """
-    Execute the given instance.
+    Execute the given experiment.
 
     TODO: Why is this a standalone function?
 
-    :param instance: The instance representing the computational graph to be
-        executed on hardware and/or in software.
+    :param experiment: The experiment representing the computational graph to
+        be executed on hardware and/or in software.
     :param runtime: Only relevant for hardware experiements. Indicates the
-        runtime resolved with instance.dt.
+        runtime resolved with experiment.dt.
     """
-    if not isinstance(runtime, int) and not instance.mock:
+    if not isinstance(runtime, int) and not experiment.mock:
         raise ValueError("Requested runtime invalid.")
 
     # Network graph
-    data_map = instance.get_hw_results(runtime)
-    for module, inputs, output in instance.modules.done():
+    data_map = experiment.get_hw_results(runtime)
+    for module, inputs, output in experiment.modules.done():
         module.exec_forward(inputs, output, data_map)
