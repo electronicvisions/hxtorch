@@ -16,7 +16,7 @@ class TestHardwareDeviationsHX(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware()
+        hxtorch.init_hardware(ann=True)
 
     @classmethod
     def tearDownClass(cls):

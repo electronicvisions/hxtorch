@@ -92,11 +92,11 @@ torch::Tensor argmax(torch::Tensor const& input, c10::optional<int64_t> const di
 	auto const [input_in, sizes_2d] = convert_argmax_input(input, dim);
 
 	grenade::vx::compute::ArgMax kernel(sizes_2d.at(1));
-	if (!hxtorch::detail::getConnection()) {
+	if (!hxtorch::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto const results =
-	    kernel.run(input_in, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
+	    kernel.run(input_in, hxtorch::detail::getChip(), *hxtorch::detail::getExecutor());
 	tracer_add("argmax", std::move(kernel));
 	auto const ret = convert_argmax_output(results, sizes_2d, input.sizes(), dim, keepdim);
 	tracer_update_output(ret);

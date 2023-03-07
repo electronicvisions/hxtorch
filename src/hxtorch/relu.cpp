@@ -46,8 +46,9 @@ public:
 	    bool mock)
 	{
 		ctx->save_for_backward({input, torch::tensor(shift)});
-		return {mock ? detail::converting_relu_mock_forward(input, shift)
-		             : detail::converting_relu_forward(input, shift)};
+		return {
+		    mock ? detail::converting_relu_mock_forward(input, shift)
+		         : detail::converting_relu_forward(input, shift)};
 	}
 
 	static torch::autograd::variable_list backward(

@@ -9,6 +9,7 @@ import hxtorch
 from hxtorch import snn
 import pygrenade_vx.network.placed_logical as grenade
 import pygrenade_vx.network.placed_atomic as grenade_atomic
+from hxtorch.snn.utils import calib_helper
 from dlens_vx_v3 import hal, halco
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.WARN)
@@ -21,7 +22,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware(calib_name="spiking")
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
@@ -245,6 +246,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
     def test(self):
         experiment = snn.Experiment(hw_routing_func=self.hw_routing_func)
+        experiment.load_calib(calib_helper.nightly_calib_path())
         synapse_ih = snn.Synapse(256, 246, experiment=experiment)
         neuron_h = snn.Neuron(
             246, experiment, neuron_structure=SingleCompartmentNeuron(2))

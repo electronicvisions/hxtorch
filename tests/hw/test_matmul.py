@@ -131,7 +131,7 @@ class TestMatmulHX(TestMatmulPyTorch):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware()
+        hxtorch.init_hardware(ann=True)
         mock_parameter = hxtorch.measure_mock_parameter()
         hxtorch.set_mock_parameter(mock_parameter)
         cls.noise_std = mock_parameter.noise_std

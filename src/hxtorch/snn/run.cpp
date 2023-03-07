@@ -11,12 +11,12 @@ grenade::vx::signal_flow::IODataMap run(
     grenade::vx::signal_flow::IODataMap const& inputs,
     grenade::vx::signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	if (!hxtorch::detail::getConnection()) {
+	if (!hxtorch::detail::getExecutor()) {
 		throw std::runtime_error("No connection present.");
 	}
 
 	return grenade::vx::network::placed_logical::run(
-	    *detail::getConnection(), config, network_graph, inputs, playback_hooks);
+	    *detail::getExecutor(), config, network_graph, inputs, playback_hooks);
 }
 
 }

@@ -120,7 +120,7 @@ class TestConv1dHX(TestConv1d):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware()
+        hxtorch.init_hardware(ann=True)
         mock_parameter = hxtorch.measure_mock_parameter()
         hxtorch.set_mock_parameter(mock_parameter)
         cls.gain = mock_parameter.gain

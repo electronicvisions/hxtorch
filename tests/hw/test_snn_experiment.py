@@ -14,7 +14,7 @@ class TestExperiment(unittest.TestCase):
     """ Test Experiment """
 
     def setUp(cls):
-        hxtorch.init_hardware(calib_name="spiking")
+        hxtorch.init_hardware()
 
     def tearDown(cls):
         hxtorch.release_hardware()

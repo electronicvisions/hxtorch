@@ -5,22 +5,16 @@
 
 namespace hxtorch::detail {
 
-std::unique_ptr<grenade::vx::execution::JITGraphExecutor>& getConnection()
+std::unique_ptr<grenade::vx::execution::JITGraphExecutor>& getExecutor()
 {
-	static std::unique_ptr<grenade::vx::execution::JITGraphExecutor> connection;
-	return connection;
+	static std::unique_ptr<grenade::vx::execution::JITGraphExecutor> executor;
+	return executor;
 }
 
 lola::vx::v3::Chip& getChip()
 {
 	static lola::vx::v3::Chip chip;
 	return chip;
-}
-
-std::unique_ptr<stadls::vx::ReinitStackEntry>& getReinitCalibration()
-{
-	static std::unique_ptr<stadls::vx::ReinitStackEntry> reinit_calibration;
-	return reinit_calibration;
 }
 
 } // namespace hxtorch::detail

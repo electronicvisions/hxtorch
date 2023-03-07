@@ -113,11 +113,11 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 		sizes_2d = s;
 	}
 
-	if (!hxtorch::detail::getConnection()) {
+	if (!hxtorch::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto const result_variant =
-	    ops.run(input_variant, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
+	    ops.run(input_variant, hxtorch::detail::getChip(), *hxtorch::detail::getExecutor());
 
 	torch::Tensor ret;
 	if (std::holds_alternative<grenade::vx::compute::ConvertingReLU>(ops.data.front())) {

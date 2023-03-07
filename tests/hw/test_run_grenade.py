@@ -1,11 +1,10 @@
 """
 """
 import unittest
-import torch
 import hxtorch
 import _hxtorch
 import pygrenade_vx as grenade
-from dlens_vx_v3 import halco, lola, hal
+from dlens_vx_v3 import halco, lola, hal, sta
 
 
 class TestRun(unittest.TestCase):
@@ -16,7 +15,7 @@ class TestRun(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware(calib_name="spiking")
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
@@ -113,7 +112,14 @@ class TestRun(unittest.TestCase):
         inputs = self.generate_inputs(network)
 
         # Get chip config
-        config = hxtorch.get_chip()
+        identifier = _hxtorch.get_unique_identifier()
+        path = f"/wang/data/calibration/hicann-dls-sr-hx/{identifier}/stable/"\
+            + "latest/spiking_cocolist.pbin"
+        with open(path, 'rb') as fd:
+            data = fd.read()
+        dumper = sta.DumperDone()
+        sta.from_portablebinary(dumper, data)
+        config = sta.convert_to_chip(dumper)
 
         # Execute a couple times like you would when training a model
         for i in range(10):

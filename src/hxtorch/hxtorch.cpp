@@ -33,16 +33,19 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.import("pygrenade_vx");
 	m.def(
 	    "init_hardware",
-	    (void (*)(std::optional<hxtorch::HWDBPath> const&, std::string)) & hxtorch::init_hardware,
+	    (void (*)(std::optional<hxtorch::HWDBPath> const&, bool)) & hxtorch::init_hardware,
 	    __doc_hxtorch_init_hardware, pybind11::arg("hwdb_path") = std::nullopt,
-	    pybind11::arg("calib_name") = "hagen");
+	    pybind11::arg("ann") = false);
 	m.def(
 	    "init_hardware", (void (*)(hxtorch::CalibrationPath const&)) & hxtorch::init_hardware,
 	    __doc_hxtorch_init_hardware_2, pybind11::arg("calibration_path"));
 	m.def(
 	    "init_hardware_minimal", &hxtorch::init_hardware_minimal,
 	    __doc_hxtorch_init_hardware_minimal);
-	m.def("get_chip", &hxtorch::get_chip, __doc_hxtorch_get_chip);
+	m.def(
+	    "get_unique_identifier",
+	    (std::string(*)(std::optional<hxtorch::HWDBPath> const&)) & hxtorch::get_unique_identifier,
+	    __doc_hxtorch_get_unique_identifier, pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release_hardware", &hxtorch::release_hardware, __doc_hxtorch_release_hardware);
 	m.def("get_mock_parameter", &hxtorch::get_mock_parameter, __doc_hxtorch_get_mock_parameter);
 	m.def(

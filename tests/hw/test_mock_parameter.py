@@ -28,7 +28,7 @@ class TestMockParameter(unittest.TestCase):
         self.assertEqual(hxtorch.get_mock_parameter(), mock_parameter)
 
     def test_measure(self):
-        hxtorch.init_hardware()
+        hxtorch.init_hardware(ann=True)
         mock_parameter = hxtorch.measure_mock_parameter()
         hxtorch.release_hardware()
         self.assertGreater(mock_parameter.gain, 0)

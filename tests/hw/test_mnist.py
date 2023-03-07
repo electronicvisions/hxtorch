@@ -117,7 +117,7 @@ class MNISTTestHX(MNISTTest):
 
     @classmethod
     def setUpClass(cls) -> None:
-        hxtorch.init_hardware()
+        hxtorch.init_hardware(ann=True)
 
     @classmethod
     def tearDownClass(cls) -> None:

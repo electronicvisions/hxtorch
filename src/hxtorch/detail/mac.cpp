@@ -134,13 +134,12 @@ torch::Tensor mac_forward(
 	    std::move(m_weights), static_cast<size_t>(num_sends),
 	    grenade::vx::common::Time(wait_between_events)};
 
-	if (!hxtorch::detail::getConnection()) {
+	if (!hxtorch::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto ret = torch::zeros({static_cast<int64_t>(num_inputs), static_cast<int64_t>(num_cols)});
 	auto ret_a = ret.accessor<float, 2>();
-	auto const results =
-	    mac.run(xin, hxtorch::detail::getChip(), *hxtorch::detail::getConnection());
+	auto const results = mac.run(xin, hxtorch::detail::getChip(), *hxtorch::detail::getExecutor());
 	tracer_add("mac", std::move(mac));
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < results.at(0).size(); i++) {

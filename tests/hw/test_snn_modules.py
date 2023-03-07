@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from dlens_vx_v3 import lola
 import hxtorch
 from hxtorch import snn
+from hxtorch.snn.utils import calib_helper
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
 
@@ -406,7 +407,7 @@ class HWTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hxtorch.init_hardware(calib_name="spiking")
+        hxtorch.init_hardware()
 
     @classmethod
     def tearDownClass(cls):
@@ -420,7 +421,8 @@ class TestNeuron(HWTestCase):
         """
         Test neuron returns the expected handle
         """
-        experiment = snn.Experiment()
+        experiment = snn.Experiment(
+            calib_path=calib_helper.nightly_calib_path())
         neuron = snn.Neuron(44, experiment)
         # Test output handle
         neuron_handle = neuron(snn.SynapseHandle(torch.zeros(10, 44)))
@@ -434,8 +436,10 @@ class TestNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        experiment = snn.Experiment(dt=self.dt)
-        experiment.initial_config = lola.Chip.default_neuron_bypass
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
+        experiment._chip = lola.Chip.default_neuron_bypass
 
         # Modules
         linear = snn.Synapse(10, 10, experiment=experiment)
@@ -490,7 +494,9 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         # Modules
         linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.Neuron(10, experiment=experiment)
@@ -533,7 +539,9 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -548,7 +556,9 @@ class TestNeuron(HWTestCase):
             snn.run(experiment, 110)
 
         # Only one module can record
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = snn.Synapse(10, 10, experiment=experiment)
         lif_1 = snn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -603,7 +613,9 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear = snn.Synapse(10, 10, experiment=experiment)
         li = snn.ReadoutNeuron(10, experiment=experiment)
 
@@ -638,7 +650,9 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear = snn.Synapse(10, 10, experiment=experiment)
         li = snn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -653,7 +667,9 @@ class TestReadoutNeuron(HWTestCase):
             snn.run(experiment, 110)
 
         # Only one module can record
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = snn.Synapse(10, 10, experiment=experiment)
         li_1 = snn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -701,8 +717,10 @@ class TestIAFNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        experiment = snn.Experiment(dt=self.dt)
-        experiment.initial_config = lola.Chip.default_neuron_bypass
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
+        experiment._chip = lola.Chip.default_neuron_bypass
         # Modules
         linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
@@ -754,7 +772,9 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         # Modules
         linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
@@ -804,7 +824,9 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear = snn.Synapse(10, 10, experiment=experiment)
         lif = snn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -816,7 +838,9 @@ class TestIAFNeuron(HWTestCase):
         with self.assertRaises(NotImplementedError):
             snn.run(experiment, 110)
         # Only one module can record
-        experiment = snn.Experiment(dt=self.dt)
+        experiment = snn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = snn.Synapse(10, 10, experiment=experiment)
         lif_1 = snn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,

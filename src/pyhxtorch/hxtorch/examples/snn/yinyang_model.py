@@ -10,6 +10,7 @@ from dlens_vx_v3 import halco
 import hxtorch
 import hxtorch.snn as snn
 from hxtorch.snn.transforms import weight_transforms
+from hxtorch.snn.utils import calib_helper
 import hxtorch.snn.functional as F
 
 
@@ -20,7 +21,7 @@ class SNN(torch.nn.Module):
     # pylint: disable=too-many-arguments, invalid-name
 
     def __init__(self, n_in: int, n_hidden: int, n_out: int, mock: bool,
-                 dt: float = 1.0e-6, tau_mem: float = 8e-6,
+                 calib_path: str, dt: float = 1.0e-6, tau_mem: float = 8e-6,
                  tau_syn: float = 8e-6, alpha: float = 50,
                  trace_shift_hidden: int = 0, trace_shift_out: int = 0,
                  weight_init_hidden: Optional[Tuple[float, float]] = None,
@@ -35,6 +36,7 @@ class SNN(torch.nn.Module):
         :param n_hidden: Number of hidden units.
         :param n_out: Number of output units.
         :param mock: Indicating whether to train in software or on hardware.
+        :param calib_path: Path to hardware calibration file.
         :param dt: Time-binning width.
         :param tau_mem: Membrane time constant.
         :param tau_syn: Synaptic time constant.
@@ -61,7 +63,12 @@ class SNN(torch.nn.Module):
             tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn)
 
         # Experiment instance to work on
-        self.exp = snn.Experiment(mock=mock, dt=dt)
+        self.exp = snn.Experiment(
+            mock=mock, dt=dt)
+        if not mock:
+            self.exp.load_calib(
+                calib_path if calib_path else calib_helper.nightly_calib_path(
+                    "spiking2"))
 
         # Repeat input
         self.input_repetitions = input_repetitions

@@ -29,8 +29,7 @@ namespace hxtorch {
 
 namespace {
 
-std::tuple<lola::vx::v3::Chip const, stadls::vx::ReinitStackEntry> load_and_apply_calibration(
-    std::string calibration_path, grenade::vx::execution::backend::Connection& connection)
+lola::vx::v3::Chip const load_and_apply_calibration(std::string calibration_path)
 {
 	auto logger = log4cxx::Logger::getLogger("hxtorch.load_and_apply_calibration");
 	LOG4CXX_INFO(logger, "Loading calibration from \"" << calibration_path << "\"");
@@ -55,94 +54,70 @@ std::tuple<lola::vx::v3::Chip const, stadls::vx::ReinitStackEntry> load_and_appl
 			throw error;
 		}
 	}
-	auto const chip = stadls::vx::v3::convert_to_chip(cocos);
-
-	auto calib_builder = stadls::vx::v3::generate(stadls::vx::v3::ExperimentInit()).builder;
-	calib_builder.merge_back(stadls::vx::v3::convert_to_builder(cocos));
-	auto calib = calib_builder.done();
-
-	// Register reinit so the calibration gets reappplied whenever we regain control of hw.
-	// On direct-access backends, this is a no-op.
-	auto reinit_calibration = connection.create_reinit_stack_entry();
-	reinit_calibration.set(calib, std::nullopt, true);
-	return std::make_tuple(std::move(chip), std::move(reinit_calibration));
+	return stadls::vx::v3::convert_to_chip(cocos);
 }
 
 } // namespace
 
 void init_hardware_minimal()
 {
-	detail::getConnection().reset();
-	auto init_generator = stadls::vx::v3::DigitalInit();
-	grenade::vx::execution::backend::Connection connection(
-	    hxcomm::vx::get_connection_from_env(), init_generator);
+	detail::getExecutor().reset();
 	lola::vx::v3::Chip const chip;
 	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() =
+	grenade::vx::execution::JITGraphExecutor executor;
+	detail::getExecutor() =
 	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
 }
 
-
-void init_hardware(std::optional<HWDBPath> const& hwdb_path, std::string calib_name)
+void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
 {
-	grenade::vx::execution::backend::Connection connection;
-
-	std::optional<std::string> hwdb_path_value;
-	std::string version = "stable/latest";
-	if (hwdb_path) {
-		hwdb_path_value = hwdb_path->path;
-		version = hwdb_path->version;
-	}
-	using namespace std::string_literals;
-
-	auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
-	                              connection.get_unique_identifier(hwdb_path_value) + "/"s +
-	                              version + "/" + calib_name + "_cocolist.pbin"s;
-
-	auto [chip, reinit] = load_and_apply_calibration(calibration_path, connection);
-	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() =
+	grenade::vx::execution::JITGraphExecutor executor;
+	detail::getExecutor() =
 	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
-	detail::getReinitCalibration() =
-	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
+
+	if (ann) {
+		std::optional<std::string> hwdb_path_value;
+		std::string version = "stable/latest";
+		if (hwdb_path) {
+			hwdb_path_value = hwdb_path->path;
+			version = hwdb_path->version;
+		}
+		using namespace std::string_literals;
+
+		auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
+		                              detail::getExecutor()
+		                                  ->get_unique_identifier(hwdb_path_value)
+		                                  .at(halco::hicann_dls::vx::DLSGlobal()) +
+		                              "/"s + version + "/" + "hagen_cocolist.pbin"s;
+
+		detail::getChip() = load_and_apply_calibration(calibration_path);
+	}
 }
 
 void init_hardware(CalibrationPath const& calibration_path)
 {
-	grenade::vx::execution::backend::Connection connection;
-
-	auto [chip, reinit] = load_and_apply_calibration(calibration_path.value, connection);
-	detail::getChip() = chip;
-	std::map<halco::hicann_dls::vx::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
-	detail::getConnection() =
+	detail::getChip() = load_and_apply_calibration(calibration_path.value);
+	grenade::vx::execution::JITGraphExecutor executor;
+	detail::getExecutor() =
 	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
-	detail::getReinitCalibration() =
-	    std::make_unique<stadls::vx::ReinitStackEntry>(std::move(reinit));
 }
 
-
-lola::vx::v3::Chip get_chip()
+std::string get_unique_identifier(std::optional<HWDBPath> const& hwdb_path)
 {
-	return detail::getChip();
+	std::optional<std::string> hwdb_path_value;
+	if (hwdb_path) {
+		hwdb_path_value = hwdb_path->path;
+	}
+	return detail::getExecutor()
+	    ->get_unique_identifier(hwdb_path_value)
+	    .at(halco::hicann_dls::vx::DLSGlobal());
 }
 
 void release_hardware()
 {
-	if (detail::getConnection()) {
-		auto connections = detail::getConnection()->release_connections();
-		detail::getConnection().reset();
-		detail::getReinitCalibration().reset();
+	if (detail::getExecutor()) {
+		auto connections = detail::getExecutor()->release_connections();
+		detail::getExecutor().reset();
 		connections.clear();
 	}
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include "lola/vx/v3/chip.h"
 #include <optional>
 #include <string>
 
@@ -21,11 +20,11 @@ struct HWDBPath
 /**
  * Initialize the hardware automatically from the environment.
  *
- * @param calibration_version Calibration version to load
- * @param hwdb_path Optional path to the hwdb to use
+ * @param hwdb_path Optional path to the hwdb to use. Only effective if param `ann` is true.
+ * @param ann Bool indicating whether additionally a default chip object is constructed for ANNs
+ * from a calibration loaded from `hwdb_path`, or if not given, from the latest nightly calibration.
  */
-void init_hardware(
-    std::optional<HWDBPath> const& hwdb_path = std::nullopt, std::string calib_name = "hagen");
+void init_hardware(std::optional<HWDBPath> const& hwdb_path = std::nullopt, bool ann = false);
 
 
 /**
@@ -51,9 +50,11 @@ void init_hardware(CalibrationPath const& calibration_path);
 void init_hardware_minimal();
 
 /**
- * Get copy of ChipConfig object
+ * Get unique identifier
+ *
+ * @param hwdb_path Optional path to the hwdb to use
  */
-lola::vx::v3::Chip get_chip();
+std::string get_unique_identifier(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
 
 /**
  * Release hardware resource.

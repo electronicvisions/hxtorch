@@ -4,17 +4,17 @@ Defining basic types to create hw-executable instances
 # pylint: disable=no-member, invalid-name
 from typing import Callable, Dict, List, Tuple, Union, Optional
 from abc import ABC, abstractmethod
-from copy import copy
+from pathlib import Path
 import itertools
 import torch
 import numpy as np
 
 from dlens_vx_v3 import hal, halco, sta, lola
 import pygrenade_vx as grenade
-import _hxtorch
 import hxtorch
 import hxtorch.snn.modules as snn_module
 from hxtorch.snn import handle
+from hxtorch.snn.utils import calib_helper
 from hxtorch.snn.backend.module_manager import BaseModuleManager, ModuleManager
 
 log = hxtorch.logger.get("hxtorch.snn.experiment")
@@ -153,6 +153,7 @@ class Experiment(BaseExperiment):
 
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
+            calib_path: Optional[Union[Path, str]] = None,
             hw_routing_func=grenade.network.placed_logical.build_routing) \
             -> None:
         """
@@ -164,6 +165,11 @@ class Experiment(BaseExperiment):
         """
         super().__init__(ModuleManager(), mock=mock, dt=dt)
 
+        # Load chip object
+        self._chip = None
+        if calib_path is not None:
+            self._chip = self.load_calib(calib_path)
+
         # Recording
         self.cadc_recording = {}
         self.has_madc_recording = False
@@ -171,10 +177,9 @@ class Experiment(BaseExperiment):
         # Grenade stuff
         self.grenade_network = None
         self.grenade_network_graph = None
-        self.initial_config = None
-        self._chip_config = None
 
         # Configs
+        self._static_config_prepared = False
         self.injection_pre_static_config = None
         self.injection_pre_realtime = None  # Unused
         self.injection_post_realtime = None  # Unused
@@ -202,9 +207,8 @@ class Experiment(BaseExperiment):
 
         self.grenade_network = None
         self.grenade_network_graph = None
-        self.initial_config = None
-        self._chip_config = None
 
+        self._static_config_prepared = False
         self.injection_pre_static_config = None
         self.injection_pre_realtime = None  # Unused
         self.injection_post_realtime = None  # Unused
@@ -222,10 +226,15 @@ class Experiment(BaseExperiment):
         configurations to. Additionally this method defines the
         pre_static_config builder injected to grenade at run.
         """
-        if self.initial_config is None:
-            self._chip_config = _hxtorch.get_chip()
-        else:
-            self._chip_config = copy(self.initial_config)
+        if self._static_config_prepared:  # Only do this once
+            return
+
+        # If chip is still None we load default nightly calib
+        if self._chip is None:
+            log.INFO(
+                "No chip object present. Using chip object with default "
+                + "nightly calib.")
+            self._chip = self.load_calib(calib_helper.nightly_calib_path())
 
         # NOTE: Reserved for inserted config.
         builder = sta.PlaybackProgramBuilder()
@@ -239,7 +248,23 @@ class Experiment(BaseExperiment):
         self.injection_inside_realtime_begin = inside_realtime_begin
         self.injection_inside_realtime_end = inside_realtime_end
         self.injection_post_realtime = post_realtime
+
+        self._static_config_prepared = True
         log.TRACE("Preparation of static config done.")
+
+    def load_calib(self, calib_path: Optional[Union[Path, str]] = None) \
+            -> lola.Chip:
+        """
+        Load a calibration from path `calib_path` and apply to the experiment`s
+        chip object. If no path is specified a nightly calib is applied.
+        :param calib_path: The path to the calibration. It None, the nightly
+            calib is loaded.
+        :return: Returns the chip object for the given calibration.
+        """
+        # If no calib path is given we load spiking nightly calib
+        log.INFO(f"Loading calibration from {calib_path}")
+        self._chip = calib_helper.chip_from_file(calib_path)
+        return self._chip
 
     def _generate_network_graphs(self) -> \
             grenade.network.placed_logical.NetworkGraph:
@@ -304,36 +329,27 @@ class Experiment(BaseExperiment):
 
         return self.grenade_network_graph
 
-    def _configure_populations(self, config: lola.Chip) \
-            -> lola.Chip:
+    def _configure_populations(self):
         """
         Configure the population on hardware.
-
-        :param config: The config object to write the population confiuration
-            at.
-
-        :return: Returns the config object with the configuration appended.
         """
         # Make sure experiment holds chip config
-        assert config is not None
+        assert self._chip is not None
 
         pop_changed_since_last_run = any(
             m.changed_since_last_run for m in self._populations)
         if not pop_changed_since_last_run:
-            return config
-
+            return
         for module in self._populations:
             if not isinstance(module, snn_module.Neuron):
                 continue
             log.TRACE(f"Configure population '{module}'.")
             for in_pop_id, unit_id in enumerate(module.unit_ids):
                 coord = self.neuron_placement.id2logicalneuron(unit_id)
-                config.neuron_block = module.configure_hw_entity(
-                    in_pop_id, config.neuron_block, coord)
+                self._chip.neuron_block = module.configure_hw_entity(
+                    in_pop_id, self._chip.neuron_block, coord)
                 log.TRACE(
                     f"Configured neuron at coord {coord}.")
-
-        return config
 
     def _generate_inputs(
         self, network_graph: grenade.network.placed_logical.NetworkGraph) \
@@ -507,7 +523,7 @@ class Experiment(BaseExperiment):
             population descriptors and values are tuples of values returned by
             the correpsonding module's `post_process` method.
         """
-        if not self.mock and self._chip_config is None:
+        if not self.mock:
             self._prepare_static_config()
 
         # Preprocess layer
@@ -527,11 +543,8 @@ class Experiment(BaseExperiment):
         # Generate network graph
         network = self._generate_network_graphs()
 
-        # Make sure chip config is present (by calling prepare_static_chfig)
-        assert self._chip_config is not None
-
         # configure populations
-        self._chip_config = self._configure_populations(self._chip_config)
+        self._configure_populations()
 
         # handle runtim
         runtime_in_clocks = int(
@@ -552,8 +565,7 @@ class Experiment(BaseExperiment):
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 
         outputs = hxtorch.snn.grenade_run(
-            self._chip_config, network, inputs,
-            self._generate_playback_hooks())
+            self._chip, network, inputs, self._generate_playback_hooks())
 
         hw_data = self._get_population_observables(
             network, outputs, runtime_in_clocks)

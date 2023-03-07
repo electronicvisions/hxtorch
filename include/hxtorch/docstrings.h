@@ -125,10 +125,11 @@ static const char* __doc_hxtorch_init_hardware_minimal =
     R"doc(Initialize automatically from the environment
 without ExperimentInit and without any calibration.)doc";
 
-static const char* __doc_hxtorch_get_chip =
-    R"doc(Return a copy of the chip config object created at hardware initialization.
+static const char* __doc_hxtorch_get_unique_identifier =
+    R"doc(Return the unique identifier of the chip with the initialized connection.
 
-@return A copy of ChipConfig object)doc";
+@param hwdb_path Optional path to the hwdb to use
+@return The identifier as string)doc";
 
 static const char* __doc_hxtorch_mac =
     R"doc(The bare mutliply-accumulate operation of BrainScaleS-2. A 1D input @p x

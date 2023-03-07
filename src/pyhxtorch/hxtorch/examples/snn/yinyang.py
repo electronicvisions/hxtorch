@@ -228,12 +228,7 @@ def main(args: argparse.Namespace) -> float:
     :return: Returns the achieved accuracy after the last test epoch.
     """
     if not args.mock:
-        if args.calibration_path:
-            hxtorch.init_hardware(
-                hxtorch.CalibrationPath(args.calibration_path))
-        else:
-            log.info("Apply latest nightly calibration")
-            hxtorch.init_hardware(calib_name="spiking2")  # defaults to a nightly calib
+        hxtorch.init_hardware()
 
     torch.manual_seed(args.seed)
 
@@ -263,6 +258,7 @@ def main(args: argparse.Namespace) -> float:
             n_hidden=args.n_hidden,
             n_out=3,
             mock=args.mock,
+            calib_path=args.calibration_path,
             dt=args.dt,
             tau_mem=args.tau_mem,
             tau_syn=args.tau_syn,
