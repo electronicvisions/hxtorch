@@ -11,6 +11,7 @@ from dlens_vx_v3 import lola, hal, halco
 import hxtorch
 import hxtorch.snn.functional as F
 from hxtorch.snn.handle import NeuronHandle
+from hxtorch.snn.morphology import Morphology
 from hxtorch.snn.modules.neuron import Neuron
 
 log = hxtorch.logger.get("hxtorch.snn.modules")
@@ -49,7 +50,7 @@ class IAFNeuron(Neuron):
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
-                 enable_v2_shape: bool = False) -> None:
+                 neuron_structure: Optional[Morphology] = None) -> None:
         """
         Initialize an IAFNeuron. This module creates a population of a non-
         leaking spiking neurons of size `size`. This module has a internal
@@ -113,36 +114,28 @@ class IAFNeuron(Neuron):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
-        :param enable_v2_shape: Enable the neurons to be comprised of two
-            vertically connected atomic neuron circuits.
+        :param neuron_structure: Structure of the neuron. If not supplied a
+            single neuron circuit is used.
         """
         super().__init__(
             size, instance, func, params, enable_spike_recording,
             enable_cadc_recording, enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
-            shift_cadc_to_first, interpolation_mode, enable_v2_shape)
+            shift_cadc_to_first, interpolation_mode, neuron_structure)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,
                             coord: halco.LogicalNeuronOnDLS) \
-            -> lola.AtomicNeuron:
+            -> lola.NeuronBlock:
         """
         Disables the neurons leak to behave like a integrate-and-fire neuron.
+
         :param neuron_id: In-population neuron index.
-        :param atomic_neuron: The neurons hardware entity representing the
-            neuron with index `neuron_id` on hardware.
-        :returns: Returns the AtomicNeuron with population-specific
-            configurations appended.
+        :param neuron_block: The neuron block hardware entity.
+        :param coord: Coordinate of neuron on hardware.
+        :returns: Configured neuron block.
         """
         neuron_block = super().configure_hw_entity(
             neuron_id, neuron_block, coord)
-
-        atomic_neuron = neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]]
-        atomic_neuron.leak.i_bias = 0
-
-        neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
+        self._neuron_structure.disable_leak(coord, neuron_block)
         return neuron_block

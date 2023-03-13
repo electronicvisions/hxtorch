@@ -13,6 +13,7 @@ import pygrenade_vx as grenade
 from _hxtorch._snn import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch
 import hxtorch.snn.functional as F
+from hxtorch.snn.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.snn.handle import NeuronHandle
 from hxtorch.snn.modules.hx_module import HXModule
 
@@ -52,7 +53,7 @@ class Neuron(HXModule):
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
-                 enable_v2_shape: bool = False) -> None:
+                 neuron_structure: Optional[Morphology] = None) -> None:
         """
         Initialize a Neuron. This module creates a population of spiking
         neurons of size `size`. This module has a internal spiking mask, which
@@ -115,8 +116,8 @@ class Neuron(HXModule):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
-        :param enable_v2_shape: Enable the neurons to be comprised of two
-            vertically connected atomic neuron circuits.
+        :param neuron_structure: Structure of the neuron. If not supplied a
+            single neuron circuit is used.
         """
         super().__init__(instance=instance, func=func)
 
@@ -145,7 +146,16 @@ class Neuron(HXModule):
         self.shift_cadc_to_first = shift_cadc_to_first
 
         self.interpolation_mode = interpolation_mode
-        self._enable_v2_shape = enable_v2_shape
+
+        if neuron_structure is None:
+            self._neuron_structure = SingleCompartmentNeuron(1)
+        else:
+            if len(neuron_structure.compartments.get_compartments()) > 1:
+                # Issue #4020 (we always record the first neuron circuit in
+                # the first compartment)
+                raise ValueError('Currently only neurons with a single '
+                                 'compartment are supported.')
+            self._neuron_structure = neuron_structure
 
     def register_hw_entity(self) -> None:
         """
@@ -154,7 +164,8 @@ class Neuron(HXModule):
         self.unit_ids = np.arange(
             self.instance.id_counter, self.instance.id_counter + self.size)
         self.instance.neuron_placement.register_id(
-            self.unit_ids, self.create_hw_shape(), self._placement_constraint)
+            self.unit_ids, self._neuron_structure.compartments,
+            self._placement_constraint)
         self.instance.id_counter += self.size
         self.instance.register_population(self)
 
@@ -190,22 +201,6 @@ class Neuron(HXModule):
                     + "single neuron.")
             self.instance.has_madc_recording = True
         log.TRACE(f"Registered hardware  entity '{self}'.")
-
-    def create_hw_shape(self) -> halco.LogicalNeuronCompartments:
-        """Builds a logical neuron compartment description."""
-        if self._enable_v2_shape:
-            return halco.LogicalNeuronCompartments(
-                {halco.CompartmentOnLogicalNeuron():
-                 [halco.AtomicNeuronOnLogicalNeuron(
-                  halco.NeuronColumnOnLogicalNeuron(),
-                  halco.NeuronRowOnLogicalNeuron(0)),
-                  halco.AtomicNeuronOnLogicalNeuron(
-                  halco.NeuronColumnOnLogicalNeuron(),
-                  halco.NeuronRowOnLogicalNeuron(1))]})
-
-        return halco.LogicalNeuronCompartments(
-            {halco.CompartmentOnLogicalNeuron():
-             [halco.AtomicNeuronOnLogicalNeuron()]})
 
     @property
     def mask(self) -> None:
@@ -255,46 +250,14 @@ class Neuron(HXModule):
         :param neuron_id: In-population neuron index.
         :param neuron_block: The neuron block hardware entity.
         :param coord: Coordinate of neuron on hardware.
-
-        :returns: Returns the AtomicNeuron with population-specific
-            configurations appended.
+        :returns: Configured neuron block.
         """
-        atomic_neuron = neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]]
-        # configure spike recording
-        atomic_neuron.event_routing.analog_output = \
-            atomic_neuron.EventRouting.AnalogOutputMode.normal
-        atomic_neuron.event_routing.enable_digital = self.mask[neuron_id]
-
-        # configure madc
+        self._neuron_structure.implement_morphology(coord, neuron_block)
+        self._neuron_structure.set_spike_recording(self.mask[neuron_id],
+                                                   coord, neuron_block)
         if neuron_id == self._record_neuron_id:
-            atomic_neuron.readout.enable_amplifier = True
-            atomic_neuron.readout.enable_buffered_access = True
-            atomic_neuron.readout.source = self._madc_readout_source
-
-        neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
-        if self._enable_v2_shape:
-            atomic_neuron_top = neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][0]]
-            atomic_neuron_bot = neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][1]]
-            # connect compartment
-            atomic_neuron_top.multicompartment.connect_vertical = True
-            atomic_neuron_bot.multicompartment.connect_vertical = True
-            neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][0]
-            ] = atomic_neuron_top
-            neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][1]
-            ] = atomic_neuron_bot
-
+            self._neuron_structure.enable_madc_recording(
+                coord, neuron_block, self._madc_readout_source)
         return neuron_block
 
     def add_to_network_graph(self,

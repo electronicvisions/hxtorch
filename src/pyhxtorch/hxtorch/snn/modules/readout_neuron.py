@@ -12,6 +12,7 @@ from _hxtorch._snn import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable
 import hxtorch
 import hxtorch.snn.functional as F
 from hxtorch.snn.handle import ReadoutNeuronHandle
+from hxtorch.snn.morphology import Morphology
 from hxtorch.snn.modules.neuron import Neuron
 
 log = hxtorch.logger.get("hxtorch.snn.modules")
@@ -43,7 +44,7 @@ class ReadoutNeuron(Neuron):
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
-                 enable_v2_shape: bool = False) -> None:
+                 neuron_structure: Optional[Morphology] = None) -> None:
         """
         Initialize a ReadoutNeuron. This module creates a population of non-
         spiking neurons of size `size` and is equivalent to Neuron when its
@@ -102,14 +103,14 @@ class ReadoutNeuron(Neuron):
             param `trace_offset`.
         :param interpolation_mode: The method used to interpolate the measured
             CADC traces onto the given time grid.
-        :param enable_v2_shape: Enable the neurons to be comprised of two
-            vertically connected atomic neuron circuits.
+        :param neuron_structure: Structure of the neuron. If not supplied a
+            single neuron circuit is used.
         """
         super().__init__(
             size, instance, func, params, False, enable_cadc_recording,
             enable_madc_recording, record_neuron_id, placement_constraint,
             trace_offset, trace_scale, cadc_time_shift, shift_cadc_to_first,
-            interpolation_mode, enable_v2_shape)
+            interpolation_mode, neuron_structure)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,
@@ -126,44 +127,14 @@ class ReadoutNeuron(Neuron):
         :param neuron_id: In-population neuron index.
         :param neuron_block: The neuron block hardware entity.
         :param coord: Coordinate of neuron on hardware.
-
-        :returns: Returns the AtomicNeuron with population-specific
-            configurations appended.
+        :returns: Configured neuron block.
         """
-        atomic_neuron = neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]]
+        self._neuron_structure.implement_morphology(coord, neuron_block)
+        self._neuron_structure.disable_spiking(coord, neuron_block)
 
-        # configure spike recording
-        atomic_neuron.event_routing.analog_output = \
-            atomic_neuron.EventRouting.AnalogOutputMode.normal
-        atomic_neuron.event_routing.enable_digital = False
-
-        # disable threshold comparator
-        atomic_neuron.threshold.enable = False
-
-        neuron_block.atomic_neurons[
-            coord.get_placed_compartments()[
-                halco.CompartmentOnLogicalNeuron(0)][0]] = atomic_neuron
-
-        if self._enable_v2_shape:
-            atomic_neuron_top = neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][0]]
-            atomic_neuron_bot = neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][1]]
-            # connect compartment
-            atomic_neuron_top.multicompartment.connect_vertical = True
-            atomic_neuron_bot.multicompartment.connect_vertical = True
-            neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][0]
-            ] = atomic_neuron_top
-            neuron_block.atomic_neurons[
-                coord.get_placed_compartments()[
-                    halco.CompartmentOnLogicalNeuron(0)][1]
-            ] = atomic_neuron_bot
+        if neuron_id == self._record_neuron_id:
+            self._neuron_structure.enable_madc_recording(
+                coord, neuron_block, self._madc_readout_source)
 
         return neuron_block
 
