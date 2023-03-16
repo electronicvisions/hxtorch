@@ -153,7 +153,7 @@ class Experiment(BaseExperiment):
 
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
-            hw_routing_func=grenade.build_routing) \
+            hw_routing_func=grenade.network.build_routing) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -244,7 +244,8 @@ class Experiment(BaseExperiment):
         log.TRACE("Preparation of static config done.")
 
     def _generate_network_graphs(self) -> Tuple[
-            grenade.logical_network.NetworkGraph, grenade.NetworkGraph]:
+            grenade.logical_network.NetworkGraph,
+            grenade.network.NetworkGraph]:
         """
         Generate grenade network graph from the populations and projections in
         modules
@@ -293,7 +294,7 @@ class Experiment(BaseExperiment):
         # route network if required
         routing_result = None
         if self.grenade_hardware_network is None \
-                or grenade.requires_routing(
+                or grenade.network.requires_routing(
                     network, self.grenade_hardware_network):
             routing_result = self.hw_routing_func(network)
 
@@ -302,10 +303,11 @@ class Experiment(BaseExperiment):
 
         # build or update network graph
         if routing_result is not None:
-            self.grenade_hardware_network_graph = grenade.build_network_graph(
-                self.grenade_hardware_network, routing_result)
+            self.grenade_hardware_network_graph = grenade.network\
+                .build_network_graph(
+                    self.grenade_hardware_network, routing_result)
         else:
-            grenade.update_network_graph(
+            grenade.network.update_network_graph(
                 self.grenade_hardware_network_graph,
                 self.grenade_hardware_network)
 
@@ -345,15 +347,15 @@ class Experiment(BaseExperiment):
 
     def _generate_inputs(
         self, network_graph: grenade.logical_network.NetworkGraph,
-        hardware_network_graph: grenade.NetworkGraph) \
-            -> grenade.IODataMap:
+        hardware_network_graph: grenade.network.NetworkGraph) \
+            -> grenade.signal_flow.IODataMap:
         """
         Generate external input events from the routed network graph
         representation.
         """
         assert hardware_network_graph.event_input_vertex is not None
         if hardware_network_graph.event_input_vertex is None:
-            return grenade.IODataMap()
+            return grenade.signal_flow.IODataMap()
 
         # Make sure all batch sizes are equal
         sizes = [
@@ -373,7 +375,7 @@ class Experiment(BaseExperiment):
         return input_generator.done()
 
     def _generate_playback_hooks(self) \
-            -> grenade.ExecutionInstancePlaybackHooks:
+            -> grenade.signal_flow.ExecutionInstancePlaybackHooks:
         """ Handle injected config (not suppored yet) """
         assert self.injection_pre_static_config is not None
         assert self.injection_pre_realtime is not None
@@ -390,14 +392,14 @@ class Experiment(BaseExperiment):
         inside_realtime_begin.copy_back(self.injection_inside_realtime_begin)
         inside_realtime_end.copy_back(self.injection_inside_realtime_end)
         post_realtime.copy_back(self.injection_post_realtime)
-        return grenade.ExecutionInstancePlaybackHooks(
+        return grenade.signal_flow.ExecutionInstancePlaybackHooks(
             pre_static_config, pre_realtime, inside_realtime_begin,
             inside_realtime_end, post_realtime)
 
     def _get_population_observables(
             self, network_graph: grenade.logical_network.NetworkGraph,
-            hardware_network_graph: grenade.NetworkGraph,
-            result_map: grenade.IODataMap, runtime) -> Dict[
+            hardware_network_graph: grenade.network.NetworkGraph,
+            result_map: grenade.signal_flow.IODataMap, runtime) -> Dict[
                 grenade.logical_network.PopulationDescriptor, np.ndarray]:
         """
         Takes the greade network graph and the result map returned by grenade
@@ -558,7 +560,8 @@ class Experiment(BaseExperiment):
         # generate external spike trains
         inputs = self._generate_inputs(logical_network, hardware_network)
         inputs.runtime = {
-            grenade.ExecutionInstance(): self._batch_size * [runtime_in_clocks]
+            grenade.signal_flow.ExecutionInstance(): self._batch_size * [
+                runtime_in_clocks]
         }
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 

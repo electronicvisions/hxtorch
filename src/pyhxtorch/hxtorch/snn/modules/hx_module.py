@@ -7,7 +7,7 @@ import inspect
 
 import torch
 
-import pygrenade_vx as grenade
+import pygrenade_vx.network as grenade
 from _hxtorch._snn import DataHandle  # pylint: disable=import-error
 import hxtorch
 from hxtorch.snn.handle import TensorHandle

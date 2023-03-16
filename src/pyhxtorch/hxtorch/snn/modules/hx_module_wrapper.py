@@ -5,7 +5,7 @@ Implementing a module wrapper to wrap multiple modules as one
 from typing import Callable, Dict, Tuple, Optional, List
 
 import torch
-import pygrenade_vx as grenade
+import pygrenade_vx.network as grenade
 
 import hxtorch
 from hxtorch.snn.handle import TensorHandle
