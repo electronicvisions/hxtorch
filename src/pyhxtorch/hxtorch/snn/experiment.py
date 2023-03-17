@@ -561,10 +561,9 @@ class Experiment(BaseExperiment):
 
         # generate external spike trains
         inputs = self._generate_inputs(logical_network, hardware_network)
-        inputs.runtime = {
-            grenade.signal_flow.ExecutionInstance(): self._batch_size * [
-                runtime_in_clocks]
-        }
+        inputs.runtime = [{
+            grenade.signal_flow.ExecutionInstance(): runtime_in_clocks
+        }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 
         outputs = hxtorch.snn.grenade_run(

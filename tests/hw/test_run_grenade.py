@@ -83,9 +83,10 @@ class TestRun(unittest.TestCase):
         inputs = input_generator.done()
 
         # Add runtime
-        inputs.runtime = {
-            grenade.signal_flow.ExecutionInstance(): self.batch_size * [
-                int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100]}
+        inputs.runtime = [{
+            grenade.signal_flow.ExecutionInstance():
+            int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] \
+            * self.batch_size
         return inputs
 
     def test_run(self):
