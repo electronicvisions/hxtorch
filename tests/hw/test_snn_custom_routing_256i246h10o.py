@@ -7,7 +7,8 @@ from hxtorch.snn.morphology import SingleCompartmentNeuron
 import torch
 import hxtorch
 from hxtorch import snn
-import pygrenade_vx.network.placed_atomic as grenade
+import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network.placed_atomic as grenade_atomic
 from dlens_vx_v3 import hal, halco
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.WARN)
@@ -40,7 +41,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             synapse_row_modes[row] = hal.SynapseDriverConfig.RowMode\
                 .inhibitory if row.toEnum().value() % 2 else hal\
                 .SynapseDriverConfig.RowMode.excitatory
-        ret.synapse_row_modes = synapse_row_modes
+        ret.atomic_routing_result.synapse_row_modes = synapse_row_modes
 
         # configure crossbar nodes
         crossbar_nodes = {}
@@ -107,7 +108,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             config.target = halco.NeuronLabel(1 << 13)
             crossbar_nodes[coord] = config
 
-        ret.crossbar_nodes = crossbar_nodes
+        ret.atomic_routing_result.crossbar_nodes = crossbar_nodes
 
         # no separation via synapse driver compare masks
         synapse_driver_compare_masks = {}
@@ -133,30 +134,32 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             halco.SynapseDriverOnDLS(
                 halco.SynapseDriverOnSynapseDriverBlock(127),
                 halco.SynapseDriverBlockOnDLS(1))] = 0b00010
-        ret.synapse_driver_compare_masks = synapse_driver_compare_masks
+        ret.atomic_routing_result.synapse_driver_compare_masks = synapse_driver_compare_masks
 
-        print(network)
+        #print(network)
 
         # use internal neuron labels linearly
         neurons_0 = network.populations[
             grenade.PopulationDescriptor(0)].neurons
-        assert len(neurons_0) == 246 * 2
+        assert len(neurons_0) == 246
         internal_neuron_labels_0 = []
         for i in range(246):
             internal_neuron_labels_0.append((i & 0b00011111) | 0b00000000)
             internal_neuron_labels_0.append(None)
-        ret.internal_neuron_labels[grenade.PopulationDescriptor(0)] = \
+        ret.atomic_routing_result.internal_neuron_labels[grenade.PopulationDescriptor(0)] = \
             internal_neuron_labels_0
         neurons_1 = network.populations[
             grenade.PopulationDescriptor(1)].neurons
-        assert len(neurons_1) == 10 * 2
+        assert len(neurons_1) == 10
         internal_neuron_labels_1 = []
         for i in range(246, 256):
             internal_neuron_labels_1.append((i & 0b00011111) | 0b00000000)
             internal_neuron_labels_1.append(None)
-        ret.internal_neuron_labels = {
-            grenade.PopulationDescriptor(0): internal_neuron_labels_0,
-            grenade.PopulationDescriptor(1): internal_neuron_labels_1
+        ret.atomic_routing_result.internal_neuron_labels = {
+            grenade_atomic.PopulationDescriptor(0):
+            internal_neuron_labels_0,
+            grenade_atomic.PopulationDescriptor(1):
+            internal_neuron_labels_1
         }
 
         # linearly assign input event label to synapse driver
@@ -172,55 +175,71 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 | ((i % halco.SynapseDriverOnPADIBus.size) + 32)  # unused synapse label above internal neuron labels
             )
             external_spike_labels.append([label])
-        ret.external_spike_labels = {
-            grenade.PopulationDescriptor(2): external_spike_labels}
+        ret.atomic_routing_result.external_spike_labels = {
+            grenade_atomic.PopulationDescriptor(2):
+            external_spike_labels}
 
         # linearly place projections
         connections = {}
+        connection_routing_result = {}
         for j in range(0, 2):
             projection = network.projections[
                 grenade.ProjectionDescriptor(j)]
-            is_inh = projection.receptor_type == grenade.Projection\
-                .ReceptorType.inhibitory
+            is_inh = projection.receptor.type == grenade.Receptor.Type\
+                .inhibitory
             connections_ho = []
             for i, connection in enumerate(network.projections[
                     grenade.ProjectionDescriptor(j)].connections):
-                placed_connection = grenade.RoutingResult\
+                placed_connection = grenade_atomic.RoutingResult\
                     .PlacedConnection()
-                placed_connection.weight = connection.weight
-                placed_connection.synapse_on_row = \
-                    halco.SynapseOnSynapseRow(connection.index_post // 2)
+                placed_connection.weight = connection.weight.value()
+                placed_connection.synapse_on_row = network.populations[
+                    projection.population_post].neurons[connection.index_post[0]]\
+                    .coordinate.get_placed_compartments()[connection.index_post[1]][0].toNeuronColumnOnDLS().toSynapseOnSynapseRow()
                 placed_connection.synapse_row = \
                     halco.SynapseRowOnDLS(
-                        halco.common.Enum(2 * connection.index_pre + is_inh))
-                placed_connection.label = (connection.index_pre % 32) + 32
+                        halco.common.Enum(2 * connection.index_pre[0] + is_inh))
+                placed_connection.label = (connection.index_pre[0] % 32) + 32
                 connections_ho.append(placed_connection)
             connections[
-                grenade.ProjectionDescriptor(j)] = connections_ho
+                grenade_atomic.ProjectionDescriptor(j)] = connections_ho
+            routes = grenade.ConnectionToHardwareRoutes()
+            routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
+            connection_routing_result.update({
+                grenade.ProjectionDescriptor(j): [
+                    routes] * len(connections_ho)})
 
         for j in range(2, 4):
             projection = network.projections[
                 grenade.ProjectionDescriptor(j)]
-            is_inh = projection.receptor_type == grenade.Projection\
-                .ReceptorType.inhibitory
+            is_inh = projection.receptor.type == grenade.Receptor.Type\
+                .inhibitory
             connections_ih = []
             for i, connection in enumerate(network.projections[
                     grenade.ProjectionDescriptor(j)].connections):
-                placed_connection = grenade.RoutingResult.PlacedConnection()
-                placed_connection.weight = connection.weight
+                placed_connection = grenade_atomic.RoutingResult\
+                    .PlacedConnection()
+                placed_connection.weight = connection.weight.value()
                 placed_connection.synapse_on_row = network.populations[
-                    projection.population_post].neurons[connection.index_post]\
-                    .toNeuronColumnOnDLS().toSynapseOnSynapseRow()
+                    projection.population_post].neurons[connection.index_post[0]]\
+                    .coordinate.get_placed_compartments()[connection.index_post[1]][0].toNeuronColumnOnDLS().toSynapseOnSynapseRow()
                 placed_connection.synapse_row = halco.SynapseRowOnDLS(
-                    halco.SynapseRowOnSynram(
-                        (connection.index_pre // 4) * 2 + is_inh),
+                    halco.SynapseRowOnSynram(connection.index_pre[0] + is_inh),
                     network.populations[projection.population_post].neurons[
-                        connection.index_post].toNeuronRowOnDLS()\
+                        connection.index_post[0]].coordinate.get_placed_compartments()[connection.index_post[1]][0].toNeuronRowOnDLS()\
                         .toSynramOnDLS())
-                placed_connection.label = (connection.index_pre // 2) % 32
+                placed_connection.label = (connection.index_pre[0] // 2) % 32
                 connections_ih.append(placed_connection)
-            connections[grenade.ProjectionDescriptor(j)] = connections_ih
-        ret.connections = connections
+            connections[grenade_atomic.ProjectionDescriptor(j)] = connections_ih
+            routes = grenade.ConnectionToHardwareRoutes()
+            routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
+            connection_routing_result.update({
+                grenade.ProjectionDescriptor(j): [
+                    routes] * len(connections_ho)})
+        ret.atomic_routing_result.connections = connections
+        ret.connection_routing_result = connection_routing_result
+
+        print(ret.atomic_routing_result)
 
         return ret
 

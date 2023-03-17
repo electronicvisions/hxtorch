@@ -1,5 +1,5 @@
 #include "hxtorch/snn/weight_to_connection.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
+#include "grenade/vx/network/placed_logical/projection.h"
 #include "lola/vx/v3/synapse.h"
 
 #include <ATen/ATen.h>

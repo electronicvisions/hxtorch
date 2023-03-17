@@ -230,14 +230,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("dt"));
 	m_snn.def(
 	    "extract_spikes", &hxtorch::snn::extract_spikes, pybind11::arg("data"),
-	    pybind11::arg("logical_network_graph"), pybind11::arg("network_graph"),
-	    pybind11::arg("runtime"));
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
 	m_snn.def(
 	    "extract_cadc", &hxtorch::snn::extract_cadc, pybind11::arg("data"),
-	    pybind11::arg("logical_network_graph"), pybind11::arg("network_graph"),
-	    pybind11::arg("runtime"));
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
 	m_snn.def(
 	    "extract_madc", &hxtorch::snn::extract_madc, pybind11::arg("data"),
-	    pybind11::arg("logical_network_graph"), pybind11::arg("network_graph"),
-	    pybind11::arg("runtime"));
+	    pybind11::arg("network_graph"), pybind11::arg("runtime"));
 }

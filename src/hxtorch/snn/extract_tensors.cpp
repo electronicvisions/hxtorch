@@ -13,8 +13,7 @@ namespace hxtorch::snn {
 
 std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
@@ -23,15 +22,15 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle
 	// return data
 	std::map<PopulationDescriptor, SpikeHandle> ret;
 
-	auto const grenade_spikes = extract_neuron_spikes(data, logical_network_graph, network_graph);
+	auto const grenade_spikes = extract_neuron_spikes(data, network_graph);
 
 	// get indices of events.
 	// NOTE: Would be nicer to use here torch.Tensors right away. However, we do not know the number
 	// of events per population trivially beforehand.
 	std::map<PopulationDescriptor, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;
 
-	assert(logical_network_graph.get_network());
-	for (auto const& [descriptor, pop] : logical_network_graph.get_network()->populations) {
+	assert(network_graph.get_network());
+	for (auto const& [descriptor, pop] : network_graph.get_network()->populations) {
 		if (!std::holds_alternative<Population>(pop)) {
 			continue;
 		}
@@ -89,9 +88,9 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle
 		torch::Tensor spike_tensor = torch::sparse_coo_tensor(
 		    indicies_tensor, values_tensor.clone(),
 		    {runtime + 1, static_cast<int>(data.batch_size()),
-		     static_cast<int>(std::get<Population>(
-		                          logical_network_graph.get_network()->populations.at(descriptor))
-		                          .neurons.size())},
+		     static_cast<int>(
+		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
+		             .neurons.size())},
 		    data_options);
 
 		// handle
@@ -105,8 +104,7 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle
 
 std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
@@ -115,17 +113,17 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle>
 	// return data
 	std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> ret;
 
-	assert(logical_network_graph.get_network());
-	if (!logical_network_graph.get_network()->madc_recording) {
+	assert(network_graph.get_network());
+	if (!network_graph.get_network()->madc_recording) {
 		return ret;
 	}
 
-	auto const descriptor = logical_network_graph.get_network()->madc_recording->population;
+	auto const descriptor = network_graph.get_network()->madc_recording->population;
 	auto const neuron_in_population =
-	    logical_network_graph.get_network()->madc_recording->neuron_on_population;
-	assert(logical_network_graph.get_network()->madc_recording->compartment_on_neuron.value() == 0);
+	    network_graph.get_network()->madc_recording->neuron_on_population;
+	assert(network_graph.get_network()->madc_recording->compartment_on_neuron.value() == 0);
 
-	auto const grenade_samples = extract_madc_samples(data, logical_network_graph, network_graph);
+	auto const grenade_samples = extract_madc_samples(data, network_graph);
 
 	std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>> samples;
 
@@ -163,7 +161,7 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle>
 	    indicies_tensor, values_tensor.clone(),
 	    {runtime + 1, static_cast<int>(data.batch_size()),
 	     static_cast<int>(
-	         std::get<Population>(logical_network_graph.get_network()->populations.at(descriptor))
+	         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
 	             .neurons.size())},
 	    data_options);
 
@@ -178,8 +176,7 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle>
 
 std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& logical_network_graph,
-    grenade::vx::network::placed_atomic::NetworkGraph const& network_graph,
+    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
     int runtime)
 {
 	using namespace grenade::vx;
@@ -188,11 +185,11 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle>
 	// return data
 	std::map<PopulationDescriptor, CADCHandle> ret;
 
-	auto const grenade_samples = extract_cadc_samples(data, logical_network_graph, network_graph);
+	auto const grenade_samples = extract_cadc_samples(data, network_graph);
 
 	// return if network does not cadc recording
-	assert(logical_network_graph.get_network());
-	if (!logical_network_graph.get_network()->cadc_recording) {
+	assert(network_graph.get_network());
+	if (!network_graph.get_network()->cadc_recording) {
 		return ret;
 	}
 
@@ -242,9 +239,9 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle>
 		torch::Tensor cadc_tensor = torch::sparse_coo_tensor(
 		    indicies_tensor, values_tensor.clone(),
 		    {runtime + 1, static_cast<int>(data.batch_size()),
-		     static_cast<int>(std::get<Population>(
-		                          logical_network_graph.get_network()->populations.at(descriptor))
-		                          .neurons.size())},
+		     static_cast<int>(
+		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
+		             .neurons.size())},
 		    data_options);
 
 		// handle

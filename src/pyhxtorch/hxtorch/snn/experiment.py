@@ -153,7 +153,7 @@ class Experiment(BaseExperiment):
 
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
-            hw_routing_func=grenade.network.placed_atomic.build_routing) \
+            hw_routing_func=grenade.network.placed_logical.build_routing) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -169,9 +169,8 @@ class Experiment(BaseExperiment):
         self.has_madc_recording = False
 
         # Grenade stuff
-        self.grenade_hardware_network = None
-        self.grenade_hardware_network_graph = None
-        self.grenade_logical_network_graph = None
+        self.grenade_network = None
+        self.grenade_network_graph = None
         self.initial_config = None
         self._chip_config = None
 
@@ -201,9 +200,8 @@ class Experiment(BaseExperiment):
         self.cadc_recording = {}
         self.has_madc_recording = False
 
-        self.grenade_hardware_network = None
-        self.grenade_hardware_network_graph = None
-        self.grenade_logical_network_graph = None
+        self.grenade_network = None
+        self.grenade_network_graph = None
         self.initial_config = None
         self._chip_config = None
 
@@ -243,9 +241,8 @@ class Experiment(BaseExperiment):
         self.injection_post_realtime = post_realtime
         log.TRACE("Preparation of static config done.")
 
-    def _generate_network_graphs(self) -> Tuple[
-            grenade.network.placed_logical.NetworkGraph,
-            grenade.network.placed_atomic.NetworkGraph]:
+    def _generate_network_graphs(self) -> \
+            grenade.network.placed_logical.NetworkGraph:
         """
         Generate grenade network graph from the populations and projections in
         modules
@@ -256,10 +253,8 @@ class Experiment(BaseExperiment):
 
         log.TRACE(f"Network changed since last run: {changed_since_last_run}")
         if not changed_since_last_run:
-            if self.grenade_hardware_network_graph is not None \
-                    and self.grenade_logical_network_graph is not None:
-                return (self.grenade_logical_network_graph,
-                        self.grenade_hardware_network_graph)
+            if self.grenade_network_graph is not None:
+                return self.grenade_network_graph
 
         # Create network builder
         network_builder = grenade.network.placed_logical.NetworkBuilder()
@@ -287,33 +282,27 @@ class Experiment(BaseExperiment):
 
         network = network_builder.done()
 
-        network_graph = grenade.network.placed_logical.build_network_graph(
-            network)
-        self.grenade_logical_network_graph = network_graph
-        network = network_graph.hardware_network
-
         # route network if required
         routing_result = None
-        if self.grenade_hardware_network is None \
-                or grenade.network.placed_atomic.requires_routing(
-                    network, self.grenade_hardware_network):
+        if self.grenade_network is None \
+                or grenade.network.placed_logical.requires_routing(
+                    network, self.grenade_network):
             routing_result = self.hw_routing_func(network)
 
         # Keep graph
-        self.grenade_hardware_network = network
+        self.grenade_network = network
 
         # build or update network graph
         if routing_result is not None:
-            self.grenade_hardware_network_graph = grenade.network\
-                .placed_atomic.build_network_graph(
-                    self.grenade_hardware_network, routing_result)
+            self.grenade_network_graph = grenade.network\
+                .placed_logical.build_network_graph(
+                    self.grenade_network, routing_result)
         else:
-            grenade.network.placed_atomic.update_network_graph(
-                self.grenade_hardware_network_graph,
-                self.grenade_hardware_network)
+            grenade.network.placed_logical.update_network_graph(
+                self.grenade_network_graph,
+                self.grenade_network)
 
-        return (self.grenade_logical_network_graph,
-                self.grenade_hardware_network_graph)
+        return self.grenade_network_graph
 
     def _configure_populations(self, config: lola.Chip) \
             -> lola.Chip:
@@ -347,15 +336,14 @@ class Experiment(BaseExperiment):
         return config
 
     def _generate_inputs(
-        self, network_graph: grenade.network.placed_logical.NetworkGraph,
-        hardware_network_graph: grenade.network.placed_atomic.NetworkGraph) \
+        self, network_graph: grenade.network.placed_logical.NetworkGraph) \
             -> grenade.signal_flow.IODataMap:
         """
         Generate external input events from the routed network graph
         representation.
         """
-        assert hardware_network_graph.event_input_vertex is not None
-        if hardware_network_graph.event_input_vertex is None:
+        assert network_graph.event_input_vertex is not None
+        if network_graph.event_input_vertex is None:
             return grenade.signal_flow.IODataMap()
 
         # Make sure all batch sizes are equal
@@ -366,7 +354,7 @@ class Experiment(BaseExperiment):
         self._batch_size = sizes[0]
 
         input_generator = grenade.network.placed_logical.InputGenerator(
-            network_graph, hardware_network_graph, self._batch_size)
+            network_graph, self._batch_size)
         for module in self._populations:
             in_handle = [
                 e["handle"] for _, _, e in self.modules.graph.in_edges(
@@ -399,7 +387,6 @@ class Experiment(BaseExperiment):
 
     def _get_population_observables(
             self, network_graph: grenade.network.placed_logical.NetworkGraph,
-            hardware_network_graph: grenade.network.placed_atomic.NetworkGraph,
             result_map: grenade.signal_flow.IODataMap, runtime) -> Dict[
                 grenade.network.placed_logical.PopulationDescriptor,
                 np.ndarray]:
@@ -411,8 +398,6 @@ class Experiment(BaseExperiment):
         Note: This function calles the modules `post_process` method.
         :param network_graph: The logical grenade network graph describing the
             logic of th experiment.
-        :param hardware_network_graph: The grenade hardware network graph
-            describing the experiment on hardware.
         :param result_map: The result map returned by grenade holding all
             recorded hardware observables.
         :param runtime: The runtime of the experiment executed on hardware in
@@ -423,11 +408,11 @@ class Experiment(BaseExperiment):
         """
         # Get hw data
         hw_spike_times = hxtorch.snn.extract_spikes(
-            result_map, network_graph, hardware_network_graph, runtime)
+            result_map, network_graph, runtime)
         hw_cadc_samples = hxtorch.snn.extract_cadc(
-            result_map, network_graph, hardware_network_graph, runtime)
+            result_map, network_graph, runtime)
         hw_madc_samples = hxtorch.snn.extract_madc(
-            result_map, network_graph, hardware_network_graph, runtime)
+            result_map, network_graph, runtime)
 
         # Data maps
         data_map: Dict[
@@ -540,7 +525,7 @@ class Experiment(BaseExperiment):
                 module.register_hw_entity()
 
         # Generate network graph
-        logical_network, hardware_network = self._generate_network_graphs()
+        network = self._generate_network_graphs()
 
         # Make sure chip config is present (by calling prepare_static_chfig)
         assert self._chip_config is not None
@@ -560,18 +545,18 @@ class Experiment(BaseExperiment):
                 + f"{max_runtime}")
 
         # generate external spike trains
-        inputs = self._generate_inputs(logical_network, hardware_network)
+        inputs = self._generate_inputs(network)
         inputs.runtime = [{
             grenade.signal_flow.ExecutionInstance(): runtime_in_clocks
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 
         outputs = hxtorch.snn.grenade_run(
-            self._chip_config, hardware_network, inputs,
+            self._chip_config, network, inputs,
             self._generate_playback_hooks())
 
         hw_data = self._get_population_observables(
-            logical_network, hardware_network, outputs, runtime_in_clocks)
+            network, outputs, runtime_in_clocks)
 
         self.modules.reset_changed_since_last_run()
 
