@@ -24,12 +24,11 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
     Leaky-integrate neuron integration for realization of readout neurons
     with exponential synapses.
     Integrates according to:
+        v^{t+1} = dt / \tau_{mem} * (v_l - v^t + i^t) + v^t
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
-        v^{t+1} = dt / \tau_{mem} * (v_l - v^t + i^{t+1}) + v^t
 
     Assumes i^0, v^0 = 0.
-    NOTE: The first time index returned corresponds to t=0, not t+1.
-
+    :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIParams object holding neuron parameters.
     :param dt: Integration step width

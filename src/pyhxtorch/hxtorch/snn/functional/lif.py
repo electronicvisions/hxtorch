@@ -34,12 +34,12 @@ def cuba_lif_integration(input: torch.Tensor,
     spiking neurons with exponential synapses.
     Integrates according to:
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
-        v^{t+1} = dt / \tau_{men} * (v_l - v^t + i^{t+1}) + v^t
+        v^{t+1} = dt / \tau_{men} * (v_l - v^t + i^t) + v^t
         z^{t+1} = 1 if v^{t+1} > params.v_th
         v^{t+1} = params.v_reset if z^{t+1} == 1
 
     Assumes i^0, v^0 = 0, v_leak
-    NOTE: The first time index returned corresponds to t=0, not t+1.
+    :note: One `dt` synaptic delay between input and output
 
     TODO: Issue 3992
 

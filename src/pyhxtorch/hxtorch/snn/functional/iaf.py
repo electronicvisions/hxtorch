@@ -69,6 +69,7 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
         z^{t+1} = 1 if v^{t+1} > params.v_th
         v^{t+1} = v_reset if z^{t+1} == 1
     Assumes i^0, v^0 = 0., v_reset
+    :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIFParams object holding neuron prameters.
     :return: Returns the spike trains in shape and membrane trace as a tuple.
@@ -109,13 +110,14 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
     Integrate and fire neuron integration for realization of simple
     spiking neurons with exponential synapses and refractory period.
     Integrates according to:
-        v^{t+1} = dt / \tau_{men} * i^{t+1} + v^t
+        v^{t+1} = dt / \tau_{men} * i^t + v^t
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
         z^{t+1} = 1 if v^{t+1} > params.v_th
-        v^{t+1} = params.v_reset if z^{t+1} == 1 or ref^{t+1} > 0
-        ref^{t+1} = params.tau_ref
+        v^{t+1} = params.v_reset if z^{t+1} == 1 or ref^t > 0
         ref^{t+1} -= 1
+        ref^{t+1} = params.tau_ref if z^{t+1} == 1
     Assumes i^0, v^0 = 0., v_reset
+    :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIFParams object holding neuron prameters.
     :return: Returns the spike trains in shape and membrane trace as a tuple.
