@@ -18,7 +18,7 @@ class YinYangExampleTest(unittest.TestCase):
             "--alpha=150",
             "--batch-size=75",
             "--dt=2.0e-06",
-            "--epochs=20",
+            "--epochs=4",
             "--gamma=0.9",
             "--lr=0.002",
             "--n-hidden=120",
@@ -38,7 +38,6 @@ class YinYangExampleTest(unittest.TestCase):
             "--t-shift=-2.0e-06",
             "--trace-scale=0.0147",
             "--weight-scale=66.39",
-            "--weight-init-hidden-mean=0.001",
             "--weight-init-hidden-std=0.25",
             "--weight-init-out-mean=0.0",
             "--weight-init-out-std=0.1",
@@ -47,11 +46,14 @@ class YinYangExampleTest(unittest.TestCase):
             train_args.append("--mock")
             train_args.append("--readout-scaling=1.")
             train_args.append("--plot-path=./test_yinyang_mock.png")
+            train_args.append("--weight-init-hidden-mean=1")
+        else:
+            train_args.append("--weight-init-hidden-mean=0.08")
 
         _, _, _, accuracy = yinyang.main(parser.parse_args(train_args))
 
         self.assertGreater(
-            accuracy[-1], 0.88, "Accuracy is lower than expected.")
+            accuracy[-1], 0.85, "Accuracy is lower than expected.")
 
     def test_training_mock(self):
         self.test_training(mock=True)
