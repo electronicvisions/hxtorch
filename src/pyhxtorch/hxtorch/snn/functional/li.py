@@ -16,7 +16,7 @@ class CUBALIParams(NamedTuple):
 
 
 # Allow redefining builtin for PyTorch consistancy
-# pylint: disable=redefined-builtin, invalid-name
+# pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
                         hw_data: Optional[torch.Tensor] = None,
                         dt: float = 1e-6) -> torch.Tensor:
@@ -45,7 +45,7 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
         v_hw = hw_data[0].to(dev)  # Use CADC values
         T = min(v_hw.shape[0], T)
         # Initialize with first measurement
-    membrane = []
+    membrane, current = [], []
 
     for ts in range(T):
         # Membrane
@@ -58,8 +58,9 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
 
         # Save data
         membrane.append(v)
+        current.append(i)
 
-    return torch.stack(membrane)
+    return torch.stack(membrane), torch.stack(current)
 
 
 class LI(torch.autograd.Function):

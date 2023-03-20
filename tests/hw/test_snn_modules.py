@@ -336,10 +336,10 @@ class TestHXModuleWrapper(unittest.TestCase):
         # Execute forward
         wrapper.exec_forward(inputs, outputs, {})
 
-        self.assertEqual(syn1.current, "syn1")
+        self.assertEqual(syn1.graded_spikes, "syn1")
         self.assertEqual(nrn1.spikes, "z1")
         self.assertEqual(nrn1.v_cadc, "v1")
-        self.assertEqual(syn2.current, "syn2")
+        self.assertEqual(syn2.graded_spikes, "syn2")
         self.assertEqual(nrn2.spikes, "nrn2")
 
         # Test with HW data
@@ -391,10 +391,10 @@ class TestHXModuleWrapper(unittest.TestCase):
         # Execute forward
         wrapper.exec_forward(inputs, outputs, hw_data)
 
-        self.assertEqual(syn1.current, "syn1")
+        self.assertEqual(syn1.graded_spikes, "syn1")
         self.assertEqual(nrn1.spikes, "z1")
         self.assertEqual(nrn1.v_cadc, "v1")
-        self.assertEqual(syn2.current, "syn2")
+        self.assertEqual(syn2.graded_spikes, "syn2")
         self.assertEqual(nrn2.spikes, "nrn2")
 
 
@@ -859,7 +859,7 @@ class TestSynapse(HWTestCase):
         # Test output handle
         synapse_handle = synapse(snn.NeuronHandle(spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(synapse_handle, snn.SynapseHandle))
-        self.assertIsNone(synapse_handle.current)
+        self.assertIsNone(synapse_handle.graded_spikes)
 
     def test_weight_shape(self):
         """

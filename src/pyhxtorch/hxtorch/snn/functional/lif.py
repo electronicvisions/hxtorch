@@ -59,7 +59,7 @@ def cuba_lif_integration(input: torch.Tensor,
         z_hw = hw_data[0].to(dev)
         v_hw = hw_data[1].to(dev)  # Use CADC values
         T = min(v_hw.shape[0], T)
-    spikes, membrane = [], []
+    current, spikes, membrane = [], [], []
 
     for ts in range(T):
         # Membrane decay
@@ -79,10 +79,11 @@ def cuba_lif_integration(input: torch.Tensor,
             v = (1 - z.detach()) * v + z.detach() * params.v_reset
 
         # Save data
+        current.append(i)
         spikes.append(z)
         membrane.append(v)
 
-    return torch.stack(spikes), torch.stack(membrane)
+    return torch.stack(spikes), torch.stack(membrane), torch.stack(current)
 
 
 class LIF(torch.autograd.Function):

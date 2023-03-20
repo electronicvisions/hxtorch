@@ -38,7 +38,8 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_lif_integration(graded_spikes, params, dt=1e-6)
+        spikes, membrane, current = cuba_lif_integration(
+            graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -47,6 +48,9 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # No error
         loss = spikes.sum()
@@ -56,6 +60,8 @@ class TestLIFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
 
         plt.savefig(self.plot_path.joinpath("./cuba_lif_dynamics_mock.png"))
 
@@ -78,7 +84,8 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_lif_integration(graded_spikes, params, dt=1e-6)
+        spikes, membrane, current = cuba_lif_integration(
+            graded_spikes, params, dt=1e-6)
 
         # Add jitter
         membrane += torch.rand(membrane.shape) * 0.05
@@ -88,7 +95,7 @@ class TestLIFIntegration(unittest.TestCase):
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw = cuba_lif_integration(
+        spikes_hw, membrane_hw, current = cuba_lif_integration(
             graded_spikes, params, hw_data=(spikes, membrane), dt=1e-6)
 
         # Shapes
@@ -98,6 +105,9 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # Check HW data is still the same
         self.assertTrue(torch.equal(membrane_hw, membrane))
@@ -111,6 +121,8 @@ class TestLIFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_lif_dynamics_hw.png"))
 
 

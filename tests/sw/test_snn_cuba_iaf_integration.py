@@ -40,7 +40,7 @@ class TestIAFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_iaf_integration(graded_spikes, params, dt=1e-6)
+        spikes, membrane, current = cuba_iaf_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -49,6 +49,9 @@ class TestIAFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # No error
         loss = spikes.sum()
@@ -58,6 +61,8 @@ class TestIAFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics.png"))
 
     def test_iaf_integration_hw_data(self):
@@ -79,7 +84,8 @@ class TestIAFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_iaf_integration(graded_spikes, params, dt=1e-6)
+        spikes, membrane, current = cuba_iaf_integration(
+            graded_spikes, params, dt=1e-6)
 
         # Add jitter
         membrane += torch.rand(membrane.shape) * 0.05
@@ -89,7 +95,7 @@ class TestIAFIntegration(unittest.TestCase):
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw = cuba_iaf_integration(
+        spikes_hw, membrane_hw, current = cuba_iaf_integration(
             graded_spikes, params, hw_data=(spikes, membrane), dt=1e-6)
 
         # Shapes
@@ -99,6 +105,9 @@ class TestIAFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # Check HW data is still the same
         self.assertTrue(torch.equal(membrane_hw, membrane))
@@ -112,6 +121,8 @@ class TestIAFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics_hw.png"))
 
     def test_refractory_iaf_integration(self):
@@ -133,7 +144,7 @@ class TestIAFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_refractory_iaf_integration(
+        spikes, membrane, current = cuba_refractory_iaf_integration(
             graded_spikes, params, dt=1e-6)
 
         # Shapes
@@ -143,6 +154,9 @@ class TestIAFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # No error
         loss = spikes.sum()
@@ -152,6 +166,8 @@ class TestIAFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_iaf_dynamics.png"))
 
@@ -174,7 +190,7 @@ class TestIAFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane = cuba_refractory_iaf_integration(
+        spikes, membrane, current = cuba_refractory_iaf_integration(
             graded_spikes, params, dt=1e-6)
 
         # Add jitter
@@ -185,7 +201,7 @@ class TestIAFIntegration(unittest.TestCase):
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw = cuba_refractory_iaf_integration(
+        spikes_hw, membrane_hw, current = cuba_refractory_iaf_integration(
             graded_spikes, params, hw_data=(spikes, membrane), dt=1e-6)
 
         # Shapes
@@ -195,6 +211,9 @@ class TestIAFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
 
         # Check HW data is still the same
         self.assertTrue(torch.equal(membrane_hw, membrane))
@@ -208,6 +227,8 @@ class TestIAFIntegration(unittest.TestCase):
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+        ax.plot(
+            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_iaf_dynamics_hw.png"))
 

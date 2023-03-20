@@ -130,21 +130,25 @@ class NeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["spikes", "v_cadc", "v_madc"]
+    _carries = ["spikes", "v_cadc", "current", "v_madc"]
     _obsv_state = "spikes"
 
     def __init__(self, spikes: Optional[torch.Tensor] = None,
                  v_cadc: Optional[torch.Tensor] = None,
+                 current: Optional[torch.Tensor] = None,
                  v_madc: Optional[torch.Tensor] = None) -> None:
         """
         Instantiate a neuron handle able to hold spike and membrane tensors.
 
         :param spikes: Optional spike tensor.
-        :param membrane: Optional membrane tensor.
+        :param v_cadc: Optional membrane tensor, holding CADC recordings.
+        :param current: Optional current tensor, holding synpatic current.
+        :param v_madc: Optional membrane tensor, holding MADC recordings.
         """
         super().__init__()
         self.spikes = spikes
         self.v_cadc = v_cadc
+        self.current = current
         self.v_madc = v_madc
 
 
@@ -152,20 +156,24 @@ class ReadoutNeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["v_cadc", "v_madc"]
+    _carries = ["v_cadc", "current", "v_madc"]
     _obsv_state = "v_cadc"
 
     def __init__(self, v_cadc: Optional[torch.Tensor] = None,
+                 current: Optional[torch.Tensor] = None,
                  v_madc: Optional[torch.Tensor] = None) -> None:
         """
-        Instantiate a readout neuron handle able to hold MADC and CADC data.
-        This handle defines the CADC values as the observable state, this can
-        be changed by deriving this class.
+        Instantiate a readout neuron handle able to hold MADC, current, and
+        CADC data. This handle defines the CADC values as the observable state,
+        this can be changed by deriving this class.
 
-        :param membrane: Optional membrane tensor.
+        :param v_cadc: Optional membrane tensor, holding CADC recordings.
+        :param current: Optional current tensor, holding synpatic current.
+        :param v_madc: Optional membrane tensor, holding MADC recordings.
         """
         super().__init__()
         self.v_cadc = v_cadc
+        self.current = current
         self.v_madc = v_madc
 
 
@@ -173,15 +181,15 @@ class SynapseHandle(TensorHandle):
 
     """ Specialization for HX synapses """
 
-    _carries = ["current"]
-    _obsv_state = "current"
+    _carries = ["graded_spikes"]
+    _obsv_state = "graded_spikes"
 
-    def __init__(self, current: Optional[torch.Tensor] = None) -> None:
+    def __init__(self, graded_spikes: Optional[torch.Tensor] = None) -> None:
         """
-        Instantiate a synapse handle able to hold a current tensors as input to
-        neurons.
+        Instantiate a synapse handle able to hold a graded spikes tensors as
+        input to neurons.
 
-        :param current: Optional current tensor.
+        :param graded_spikes: Optional tensor holding graded spikes.
         """
         super().__init__()
-        self.current = current
+        self.graded_spikes = graded_spikes
