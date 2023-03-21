@@ -85,8 +85,8 @@ class SpikeTimesToSparseTensor(torch.nn.Module):
         mesh = torch.meshgrid([torch.arange(s) for s in spikes.shape])
 
         indices = torch.stack(
-            bins.to(dev)[mask].reshape(-1),
-            (mesh[0].to(dev)[mask].reshape(-1),
+            (bins.to(dev)[mask].reshape(-1),
+             mesh[0].to(dev)[mask].reshape(-1),
              *(mesh[i].to(dev)[mask].reshape(-1)
                for i in range(1, len(mesh)))))
 
