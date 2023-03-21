@@ -892,7 +892,51 @@ class TestBatchDropout(HWTestCase):
     """ Test hxtorch.snn.modules.BatchDropout """
 
     def test_output_type(self):
-        pass
+        """ Test BatchDropout returns expected handle """
+        experiment = snn.Experiment()
+        dropout = snn.BatchDropout(33, 0.5, experiment)
+        # Test output handle
+        dropout_handle = dropout(snn.NeuronHandle(spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(dropout_handle, snn.NeuronHandle))
+        self.assertIsNone(dropout_handle.spikes)
+        self.assertIsNone(dropout_handle.current)
+        self.assertIsNone(dropout_handle.v_cadc)
+        self.assertIsNone(dropout_handle.v_madc)
+
+    def test_set_mask(self):
+        """ Test mask is updated properly """
+        experiment = snn.Experiment()
+        dropout = snn.BatchDropout(33, 0.5, experiment)
+
+        # train mode
+        dropout.train()
+        mask1 = dropout.set_mask()
+        self.assertTrue(torch.equal(mask1, dropout._mask))
+        mask2 = dropout.set_mask()
+        self.assertFalse(torch.equal(mask1, mask2))
+
+        # eval mode
+        dropout.eval()
+        mask1 = dropout.set_mask()
+        mask2 = dropout.set_mask()
+        self.assertTrue(torch.equal(mask1, mask2))
+        self.assertTrue(
+            torch.equal(mask1, torch.ones_like(mask1)))
+
+        # Test correct mask is passed to func
+        def bd(x, mask):
+            return x, mask
+        experiment = snn.Experiment()
+        dropout = snn.BatchDropout(33, 0.5, experiment, bd)
+        dropout.set_mask()
+        input = torch.zeros(10, 10, 33)
+        output, mask1 = dropout.func((input,))
+        self.assertTrue(torch.equal(mask1, dropout._mask))
+        self.assertTrue(torch.equal(output, input))
+        new_mask = dropout.set_mask()
+        input, mask2 = dropout.func((input,))
+        self.assertTrue(torch.equal(mask2, dropout._mask))
+        self.assertTrue(torch.equal(new_mask, mask2))
 
 
 class TestInputNeuron(HWTestCase):

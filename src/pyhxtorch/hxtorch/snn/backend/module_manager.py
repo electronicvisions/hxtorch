@@ -468,8 +468,8 @@ class ModuleManager(BaseModuleManager):
         This includes input module injection as well as setting the dropout
         masks.
         """
+        self._handle_dropout_mask()
         if instance.mock:
-            self._handle_dropout_mask()
             return
         self._handle_inputs(instance)
 
