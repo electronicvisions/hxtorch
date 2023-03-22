@@ -8,7 +8,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dlens_vx_v3 import lola
+from dlens_vx_v3 import lola, halco
 import hxtorch
 from hxtorch import snn
 from hxtorch.snn.utils import calib_helper
@@ -431,6 +431,50 @@ class TestNeuron(HWTestCase):
         self.assertIsNone(neuron_handle.v_cadc)
         self.assertIsNone(neuron_handle.v_madc)
 
+    def test_register_hw_entity(self):
+        """
+        Test hw entitiy is registered as expected
+        """
+        scales = torch.rand(10)
+        offsets = torch.rand(10)
+
+        experiment = snn.Experiment()
+        neuron = snn.Neuron(10, experiment)
+        neuron.register_hw_entity()
+        self.assertEqual(experiment.id_counter, 10)
+        self.assertEqual(len(experiment._populations), 1)
+        self.assertEqual(experiment._populations[0], neuron)
+
+        experiment = snn.Experiment()
+        neuron = snn.Neuron(
+            10, experiment, trace_offset=offsets, trace_scale=scales)
+        neuron.register_hw_entity()
+        self.assertTrue(torch.equal(neuron.scale, scales))
+        self.assertTrue(torch.equal(neuron.offset, offsets))
+
+        scales_dict = {}
+        offsets_dict = {}
+        for i in range(scales.shape[0]):
+            scales_dict[halco.LogicalNeuronOnDLS(
+                halco.LogicalNeuronCompartments(
+                    {halco.CompartmentOnLogicalNeuron():
+                        [halco.AtomicNeuronOnLogicalNeuron()]}
+                ),
+                halco.AtomicNeuronOnDLS(halco.EnumRanged_512_(i)))] \
+                = scales[i]
+            offsets_dict[halco.LogicalNeuronOnDLS(
+                halco.LogicalNeuronCompartments(
+                    {halco.CompartmentOnLogicalNeuron():
+                        [halco.AtomicNeuronOnLogicalNeuron()]}
+                ), halco.AtomicNeuronOnDLS(halco.EnumRanged_512_(i)))] \
+                = offsets[i]
+        experiment = snn.Experiment()
+        neuron = snn.Neuron(
+            10, experiment, trace_offset=offsets_dict, trace_scale=scales_dict)
+        neuron.register_hw_entity()
+        self.assertTrue(torch.equal(neuron.scale, scales))
+        self.assertTrue(torch.equal(neuron.offset, offsets))
+
     def test_record_spikes(self):
         """
         Test spike recording with bypass mode.
@@ -443,7 +487,8 @@ class TestNeuron(HWTestCase):
 
         # Modules
         linear = snn.Synapse(10, 10, experiment=experiment)
-        lif = snn.Neuron(10, enable_cadc_recording=False,  experiment=experiment)
+        lif = snn.Neuron(
+            10, enable_cadc_recording=False,  experiment=experiment)
 
         # Weights
         linear.weight.data.fill_(0.)
