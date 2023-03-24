@@ -2,6 +2,6 @@
 host=brainscales-r.kip.uni-heidelberg.de
 port=29418
 project=hxtorch
-defaultbranch=master
+defaultbranch=ebrains-4.0
 defaultremote=review
 defaultrebase=0

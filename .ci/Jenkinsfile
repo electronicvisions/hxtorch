@@ -1,9 +1,10 @@
-@Library("jenlib") _
+@Library("jenlib@ebrains-4.0") _
 
 try {
 	Map<String, Object> commonPipelineOptions = [
 			projects           : ["hxtorch"],
 			moduleOptions      : [modules: ["ppu-toolchain"]],
+			setupOptions       : "--release-branch=ebrains-4.0",
 			notificationChannel: "#jenkins-trashbin"  // success is checked globally
 	]
 
