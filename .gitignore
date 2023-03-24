@@ -1,2 +1,3 @@
 tests/hw/plots
 tests/sw/plots
+test_*.png
