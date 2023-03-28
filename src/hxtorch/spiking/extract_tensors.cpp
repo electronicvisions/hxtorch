@@ -3,7 +3,11 @@
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include <vector>
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
 #include <torch/torch.h>
+
+namespace py = pybind11;
 
 
 // TODO: Use tensor accessors

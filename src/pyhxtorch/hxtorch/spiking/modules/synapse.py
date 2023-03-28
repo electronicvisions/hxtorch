@@ -11,7 +11,7 @@ from torch.nn.parameter import Parameter
 
 import pygrenade_vx.network as grenade
 
-from _hxtorch_spiking import weight_to_connection
+import _hxtorch_core
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.handle import SynapseHandle
@@ -138,8 +138,10 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         weight_inh[weight_inh >= 0.] = 0
 
         # TODO: Make sure this doesn't require rerouting
-        connections_exc = weight_to_connection(weight_exc)  # pylint: disable=no-member
-        connections_inh = weight_to_connection(weight_inh)  # pylint: disable=no-member
+        connections_exc = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
+            weight_exc.numpy())
+        connections_inh = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
+            weight_inh.numpy())
 
         projection_exc = grenade.Projection(
             grenade.Receptor(

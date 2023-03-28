@@ -13,7 +13,6 @@
 #include "hxtorch/spiking/extract_tensors.h"
 #include "hxtorch/spiking/run.h"
 #include "hxtorch/spiking/tensor_to_spike_times.h"
-#include "hxtorch/spiking/weight_to_connection.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -57,8 +56,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "run", &hxtorch::spiking::run, pybind11::arg("config"), pybind11::arg("network_graph"),
 	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
-	m.def("weight_to_connection", &hxtorch::spiking::weight_to_connection, pybind11::arg("weight"));
-
 	m.def(
 	    "tensor_to_spike_times", &hxtorch::spiking::tensor_to_spike_times, pybind11::arg("times"),
 	    pybind11::arg("dt"));

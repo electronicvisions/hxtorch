@@ -106,7 +106,7 @@ def build(bld):
         target = 'hxtorch_core_cpp',
         use = ['hxtorch_inc', 'grenade_vx', 'grenade_vx_serialization'],
         install_path='${PREFIX}/lib',
-        uselib = 'HXTORCH_LIBRARIES',
+        uselib = ['PYEXT']
     )
 
     bld(
@@ -134,7 +134,6 @@ def build(bld):
         source = 'src/hxtorch/hxtorch_core.cpp',
         target = '_hxtorch_core',
         use = ['hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH'],
-        rpath = bld.env.LIBPATH_TORCH,
     )
 
     bld(
@@ -155,7 +154,6 @@ def build(bld):
         rpath = bld.env.LIBPATH_TORCH,
     )
 
-    # hxtorch Python module
     bld(
         target='hxtorch',
         features='py use',
