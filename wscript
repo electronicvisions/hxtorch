@@ -99,33 +99,72 @@ def build(bld):
         export_includes = 'include',
     )
 
+    # shared C++ libraries w/o Python linkage (but potentially missing Python symbols)
     bld(
-        # pyext needed due to op registration, i.e. this can't be a shared lib
-        # for non-Python usage
-        features = 'cxx pyext',
-        source = bld.path.ant_glob('src/hxtorch/**/*.cpp', excl='src/hxtorch/hxtorch.cpp'),
-        target = 'hxtorch_cpp',
-        use = ['hxtorch_inc', 'grenade_vx', 'TORCH_CPP'],
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('src/hxtorch/core/**/*.cpp'),
+        target = 'hxtorch_core_cpp',
+        use = ['hxtorch_inc', 'grenade_vx'],
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
+    )
+
+    bld(
+        # ECM: no pyext feature, as this changes waf handling of shlibs!
+        #     => instead we add PYEXT below, as we need the Python headers
+        #        (i.e. include path)
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('src/hxtorch/perceptron/**/*.cpp'),
+        target = 'hxtorch_perceptron_cpp',
+        use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP'],
+        install_path='${PREFIX}/lib',
+        uselib = ['PYEXT'],
+    )
+
+    bld(
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('src/hxtorch/spiking/**/*.cpp'),
+        target = 'hxtorch_spiking_cpp',
+        use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP'],
+        install_path='${PREFIX}/lib',
+        uselib = ['PYEXT'],
+    )
+
+    # shared C++ libraries with pyext semantics
+    bld(
+        features = 'cxx cxxshlib pyext',
+        source = 'src/hxtorch/hxtorch_core.cpp',
+        target = '_hxtorch_core',
+        use = ['hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH'],
+        install_path='${PREFIX}/lib',
         rpath = bld.env.LIBPATH_TORCH,
     )
 
     bld(
         features = 'cxx cxxshlib pyext',
-        source = 'src/hxtorch/hxtorch.cpp',
-        target = '_hxtorch',
-        use = ['hxtorch_cpp', 'grenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
-        defines = ['TORCH_EXTENSION_NAME=_hxtorch'],
+        source = 'src/hxtorch/hxtorch_perceptron.cpp',
+        target = '_hxtorch_perceptron',
+        use = ['hxtorch_perceptron_cpp', 'hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
+        defines = ['TORCH_EXTENSION_NAME=_hxtorch_perceptron'],
         install_path='${PREFIX}/lib',
-        uselib = 'HXTORCH_LIBRARIES',
         rpath = bld.env.LIBPATH_TORCH,
     )
 
     bld(
+        features = 'cxx cxxshlib pyext',
+        source = 'src/hxtorch/hxtorch_spiking.cpp',
+        target = '_hxtorch_spiking',
+        use = ['hxtorch_spiking_cpp', 'hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
+        defines = ['TORCH_EXTENSION_NAME=_hxtorch_spiking'],
+        install_path='${PREFIX}/lib',
+        rpath = bld.env.LIBPATH_TORCH,
+    )
+
+    # hxtorch Python module
+    bld(
         target='hxtorch',
         features='py use',
-        use=['pylogging', '_hxtorch', 'pygrenade_vx', 'dlens_vx_v3'],
+        use=['pylogging', '_hxtorch_core', '_hxtorch_spiking', '_hxtorch_perceptron', 'pygrenade_vx', 'dlens_vx_v3'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_path = '${PREFIX}/lib',
@@ -135,7 +174,7 @@ def build(bld):
     bld(
         target='hxtorch_linting',
         features='py use pylint pycodestyle',
-        use=['pylogging', '_hxtorch', 'pygrenade_vx', 'dlens_vx_v3'],
+        use=['pylogging', '_hxtorch_core', '_hxtorch_spiking', '_hxtorch_perceptron', 'pygrenade_vx', 'dlens_vx_v3'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         pylint_config=os.path.join(get_toplevel_path(), "code-format", "pylintrc"),
@@ -164,7 +203,7 @@ def build(bld):
         target = 'hxtorch_cpp_swtests',
         features = 'gtest cxx cxxprogram pyembed',
         source = bld.path.ant_glob('tests/sw/test-*.cpp'),
-        use = ['hxtorch_cpp', 'GTEST'],
+        use = ['hxtorch_perceptron_cpp', 'hxtorch_core_cpp', 'GTEST'],
         linkflags = '-Wl,-z,defs',
         rpath = bld.env.LIBPATH_TORCH,
         install_path = '${PREFIX}/bin',
@@ -173,7 +212,7 @@ def build(bld):
     bld(
         name = 'mnist_model_state',
         features = 'install_task',
-        install_to = '${PREFIX}/bin/tests/hw/',
+        install_to = '${PREFIX}/bin/tests/hw/perceptron',
         install_from = bld.path.ant_glob('mnist_model_state.pkl'),
         type = 'install_files',
         relative_trick=True,
