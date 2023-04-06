@@ -1,5 +1,4 @@
 #include "hxtorch/snn/extract_tensors.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
