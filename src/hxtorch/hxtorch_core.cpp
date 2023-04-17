@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 
 #include "hxtorch/core/connection.h"
+#include "hxtorch/core/dense_spikes_to_list.h"
 #include "hxtorch/core/docstrings.h"
 #include "hxtorch/core/extract_data.h"
 #include "hxtorch/core/weight_to_connection.h"
@@ -45,4 +46,7 @@ PYBIND11_MODULE(_hxtorch_core, m)
 	    "extract_n_spikes", &hxtorch::core::extract_n_spikes, pybind11::arg("data"),
 	    pybind11::arg("network_graph"), pybind11::arg("runtime"), pybind11::arg("n_spikes"));
 	m.def("weight_to_connection", &hxtorch::core::weight_to_connection, pybind11::arg("weight"));
+	m.def(
+	    "dense_spikes_to_list", &hxtorch::core::dense_spikes_to_list, pybind11::arg("spikes"),
+	    pybind11::arg("input_size"));
 }
