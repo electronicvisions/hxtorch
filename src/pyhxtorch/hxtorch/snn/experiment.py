@@ -309,9 +309,9 @@ class Experiment(BaseExperiment):
 
         # route network if required
         routing_result = None
-        if self.grenade_network is None \
+        if self.grenade_network_graph is None \
                 or grenade.network.placed_logical.requires_routing(
-                    network, self.grenade_network):
+                    network, self.grenade_network_graph):
             routing_result = self.hw_routing_func(network)
 
         # Keep graph
