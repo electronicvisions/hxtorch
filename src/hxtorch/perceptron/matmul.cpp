@@ -17,7 +17,9 @@ torch::Tensor matmul(
     torch::Tensor const& other,
     int64_t const num_sends,
     int64_t wait_between_events,
-    bool mock)
+    bool mock,
+    int64_t madc_recording_neuron_id,
+    std::string madc_recording_path)
 {
 	size_t const dim1 = input.dim();
 	size_t const dim2 = other.dim();
@@ -32,7 +34,9 @@ torch::Tensor matmul(
 
 	torch::Tensor res;
 	if (dim1 <= 2 && dim2 <= 2) {
-		res = mac(t1, t2, num_sends, wait_between_events, mock);
+		res =
+		    mac(t1, t2, num_sends, wait_between_events, mock, madc_recording_neuron_id,
+		        madc_recording_path);
 	} else if (dim1 >= 3 && dim2 <= 2) {
 		// fold input's batch into its leading matrix dimension
 		auto size1 = t1.sizes();
@@ -43,7 +47,9 @@ torch::Tensor matmul(
 			output_size.push_back(size2[dim2 - 1]);
 		}
 		t1 = t1.reshape({-1, size1[size1.size() - 1]});
-		res = mac(t1, t2, num_sends, wait_between_events, mock).view(output_size);
+		res = mac(t1, t2, num_sends, wait_between_events, mock, madc_recording_neuron_id,
+		          madc_recording_path)
+		          .view(output_size);
 	} else {
 		// TODO: implement >2D weights
 		// TODO: implement batched mode

@@ -13,10 +13,18 @@ namespace hxtorch::perceptron::detail {
  * @param x Input (1D or 2D)
  * @param weights 2D weight matrix
  * @param num_sends How often to send the (same) input vector
+ * @param madc_recording_neuron_id Neuron ID to record via MADC
+ * @param madc_recording_path Path to which to store MADC neuron membrane recordings. If file exists
+ * new data is appended. By default recording is disabled.
  * @return Resulting tensor
  */
 torch::Tensor mac_forward(
-    torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events);
+    torch::Tensor x,
+    torch::Tensor weights,
+    int64_t num_sends,
+    int64_t wait_between_events,
+    int64_t madc_recording_neuron_id,
+    std::string madc_recording_path);
 
 /**
  * Mocks the forward-pass of the multiply accumulate operation.

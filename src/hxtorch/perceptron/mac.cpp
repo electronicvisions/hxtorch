@@ -17,10 +17,17 @@ torch::autograd::variable_list MAC::forward(
     torch::autograd::Variable weights,
     int64_t num_sends,
     int64_t wait_between_events,
-    bool mock)
+    bool mock,
+    int64_t madc_recording_neuron_id,
+    std::string madc_recording_path)
 {
+	if (mock && (madc_recording_path != "")) {
+		throw std::runtime_error("Recording with MADC in mock-mode is not implemented.");
+	}
 	auto ret = mock ? detail::mac_mock_forward(x, weights, num_sends)
-	                : detail::mac_forward(x, weights, num_sends, wait_between_events);
+	                : detail::mac_forward(
+	                      x, weights, num_sends, wait_between_events, madc_recording_neuron_id,
+	                      madc_recording_path);
 	ctx->save_for_backward({x, weights, torch::tensor(num_sends)});
 	return {ret};
 }
@@ -41,9 +48,13 @@ torch::Tensor mac(
     torch::Tensor const& weights,
     int64_t const num_sends,
     int64_t const wait_between_events,
-    bool const mock)
+    bool const mock,
+    int64_t madc_recording_neuron_id,
+    std::string madc_recording_path)
 {
-	auto ret = MAC::apply(x, weights, num_sends, wait_between_events, mock);
+	auto ret = MAC::apply(
+	    x, weights, num_sends, wait_between_events, mock, madc_recording_neuron_id,
+	    madc_recording_path);
 	return ret[0];
 }
 

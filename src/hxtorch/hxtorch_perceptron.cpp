@@ -36,7 +36,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("weights"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") =
 	        hxtorch::perceptron::constants::defaults::wait_between_events,
-	    pybind11::arg("mock") = false);
+	    pybind11::arg("mock") = false, pybind11::arg("madc_recording_neuron_id") = 0,
+	    pybind11::arg("madc_recording_path") = "");
 	m.def(
 	    "measure_mock_parameter", &hxtorch::perceptron::measure_mock_parameter,
 	    __doc_hxtorch_measure_mock_parameter);
@@ -61,7 +62,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    pybind11::arg("other"), pybind11::arg("num_sends") = 1,
 	    pybind11::arg("wait_between_events") =
 	        hxtorch::perceptron::constants::defaults::wait_between_events,
-	    pybind11::arg("mock") = false);
+	    pybind11::arg("mock") = false, pybind11::arg("madc_recording_neuron_id") = 0,
+	    pybind11::arg("madc_recording_path") = "");
 
 	typedef torch::Tensor (*single_stride_conv_type)(
 	    torch::Tensor const&, torch::Tensor const&, c10::optional<torch::Tensor> const&, int64_t,

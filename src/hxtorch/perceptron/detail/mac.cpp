@@ -2,6 +2,7 @@
 
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/signal_flow/event.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hxtorch/core/detail/connection.h"
 #include "hxtorch/perceptron/constants.h"
 #include "hxtorch/perceptron/detail/conversion.h"
@@ -83,7 +84,12 @@ torch::Tensor mac_mock_forward(
 }
 
 torch::Tensor mac_forward(
-    torch::Tensor x, torch::Tensor weights, int64_t num_sends, int64_t wait_between_events)
+    torch::Tensor x,
+    torch::Tensor weights,
+    int64_t num_sends,
+    int64_t wait_between_events,
+    int64_t madc_recording_neuron_id,
+    std::string madc_recording_path)
 {
 	detail::tracer_check_input(x);
 
@@ -134,8 +140,12 @@ torch::Tensor mac_forward(
 	}
 
 	grenade::vx::compute::MAC mac{
-	    std::move(m_weights), static_cast<size_t>(num_sends),
-	    grenade::vx::common::Time(wait_between_events)};
+	    std::move(m_weights),
+	    static_cast<size_t>(num_sends),
+	    grenade::vx::common::Time(wait_between_events),
+	    false,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(halco::common::Enum(madc_recording_neuron_id)),
+	    madc_recording_path};
 
 	if (!hxtorch::core::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
@@ -168,7 +178,7 @@ torch::autograd::variable_list mac_backward(
 		grad_output = grad_output.unsqueeze(0);
 	}
 	auto grad_weights = x.t().matmul(grad_output);
-	return {grad_x, grad_weights, {}, {}, {}};
+	return {grad_x, grad_weights, {}, {}, {}, {}, {}};
 }
 
 } // namespace hxtorch::perceptron::detail
