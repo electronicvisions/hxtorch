@@ -1,12 +1,12 @@
 #include "hxtorch/core/connection.h"
 
+#include "cereal/types/haldls/cereal.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/core/detail/connection.h"
-#include "lola/vx/cerealization.h"
 #include "lola/vx/v3/chip.h"
 #include "stadls/vx/reinit_stack_entry.h"
 #include "stadls/vx/v3/dumper.h"
