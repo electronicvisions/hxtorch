@@ -155,10 +155,13 @@ class Experiment(BaseExperiment):
 
     """ Experiment class for describing experiments on hardware """
 
+    # pylint: disable=too-many-arguments
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.placed_logical.build_routing) \
+            hw_routing_func=grenade.network.placed_logical.build_routing,
+            execution_instance: grenade.signal_flow.ExecutionInstance
+            = grenade.signal_flow.ExecutionInstance()) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -198,6 +201,7 @@ class Experiment(BaseExperiment):
 
         self.neuron_placement = NeuronPlacement()
         self.hw_routing_func = hw_routing_func
+        self.execution_instance = execution_instance
 
     def clear(self) -> None:
         """
@@ -325,7 +329,8 @@ class Experiment(BaseExperiment):
         if routing_result is not None:
             self.grenade_network_graph = grenade.network\
                 .placed_logical.build_network_graph(
-                    self.grenade_network, routing_result)
+                    self.grenade_network, routing_result,
+                    self.execution_instance)
         else:
             grenade.network.placed_logical.update_network_graph(
                 self.grenade_network_graph,
