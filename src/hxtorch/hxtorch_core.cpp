@@ -45,7 +45,17 @@ PYBIND11_MODULE(_hxtorch_core, m)
 	m.def(
 	    "extract_n_spikes", &hxtorch::core::extract_n_spikes, pybind11::arg("data"),
 	    pybind11::arg("network_graph"), pybind11::arg("runtime"), pybind11::arg("n_spikes"));
-	m.def("weight_to_connection", &hxtorch::core::weight_to_connection, pybind11::arg("weight"));
+	m.def(
+	    "weight_to_connection",
+	    (grenade::vx::network::Projection::Connections(*)(pybind11::array_t<int>)) &
+	        hxtorch::core::weight_to_connection,
+	    pybind11::arg("weight"));
+	m.def(
+	    "weight_to_connection",
+	    (grenade::vx::network::Projection::Connections(*)(
+	        pybind11::array_t<int>, std::vector<std::vector<int>>)) &
+	        hxtorch::core::weight_to_connection,
+	    pybind11::arg("weight"), pybind11::arg("connections"));
 	m.def(
 	    "dense_spikes_to_list", &hxtorch::core::dense_spikes_to_list, pybind11::arg("spikes"),
 	    pybind11::arg("input_size"));

@@ -7,3 +7,4 @@ from hxtorch.spiking.modules.iaf_neuron import IAFNeuron
 from hxtorch.spiking.modules.input_neuron import InputNeuron
 from hxtorch.spiking.modules.batch_dropout import BatchDropout
 from hxtorch.spiking.modules.synapse import Synapse
+from hxtorch.spiking.modules.sparse_synapse import SparseSynapse

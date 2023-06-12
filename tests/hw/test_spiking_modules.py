@@ -1007,6 +1007,62 @@ class TestSynapse(HWTestCase):
         pass
 
 
+class TestSparseSynapse(HWTestCase):
+    """ Test hxtorch.snn.modules.SparseSynapse """
+
+    def test_output_type(self):
+        """
+        Test Synapse returns the expected handle
+        """
+        connections = (torch.randn(30, 44) < 0.1).float()
+        experiment = hxsnn.Experiment()
+        synapse = hxsnn.SparseSynapse(connections.to_sparse(), experiment)
+        # Test output handle
+        synapse_handle = synapse(
+            hxsnn.NeuronHandle(spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(synapse_handle, hxsnn.SynapseHandle))
+        self.assertIsNone(synapse_handle.graded_spikes)
+
+    def test_weight_shape(self):
+        """
+        Test synapse weights are of correct shape.
+        """
+        connections = (torch.randn(30, 44) < 0.1).float()
+        experiment = hxsnn.Experiment()
+        synapse = hxsnn.SparseSynapse(connections, experiment)
+        # Test shape
+        self.assertEqual(synapse.weight.shape[0], 44)
+        self.assertEqual(synapse.weight.shape[1], 30)
+
+    def test_weight_reset(self):
+        """
+        Test reset_parameters is working correctly
+        """
+        connections = (torch.randn(30, 44) < 0.1).float()
+        experiment = hxsnn.Experiment()
+        synapse = hxsnn.SparseSynapse(connections, experiment)
+        # Test weights are not zero (weight are initialized as zero and
+        # reset_params is called implicitly)
+        self.assertFalse(
+            torch.equal(torch.zeros(44, 30), synapse.weight.to_dense()))
+
+    def test_execution(self):
+        """
+        Test synapse is represented on hardware as expected
+        """
+        connections = (torch.randn(30, 44) < 0.1).float()
+        experiment = hxsnn.Experiment(
+            dt=self.dt,
+            calib_path=calib_helper.nightly_calib_path())
+        linear = hxsnn.SparseSynapse(
+            connections.to_sparse(), experiment=experiment)
+        lif = hxsnn.ReadoutNeuron(44, experiment=experiment)
+        spikes = torch.zeros(50, 1, 30)
+        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        lif(i_handle)
+        hxsnn.run(experiment, 110)
+
+
 class TestBatchDropout(HWTestCase):
     """ Test hxtorch.snn.modules.BatchDropout """
 
