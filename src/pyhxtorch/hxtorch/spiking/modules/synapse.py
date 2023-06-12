@@ -15,14 +15,14 @@ from _hxtorch_spiking import weight_to_connection
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.handle import SynapseHandle
-from hxtorch.spiking.modules.hx_module import HXModule
+from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class Synapse(HXModule):  # pylint: disable=abstract-method
+class Synapse(Projection):  # pylint: disable=abstract-method
     """
     Synapse layer
 
@@ -31,10 +31,6 @@ class Synapse(HXModule):  # pylint: disable=abstract-method
     a subsequent Neuron module.
     """
 
-    __constants__ = ['in_features', 'out_features']
-    in_features: int
-    out_features: int
-    weight: torch.Tensor
     output_type: Type = SynapseHandle
 
     # pylint: disable=too-many-arguments

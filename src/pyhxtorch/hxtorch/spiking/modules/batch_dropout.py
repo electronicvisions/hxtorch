@@ -9,14 +9,14 @@ import torch
 
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
-from hxtorch.spiking.modules.hx_module import HXModule
+from hxtorch.spiking.modules.types import Population
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class BatchDropout(HXModule):  # pylint: disable=abstract-method
+class BatchDropout(Population):  # pylint: disable=abstract-method
     """
     Batch dropout layer
 

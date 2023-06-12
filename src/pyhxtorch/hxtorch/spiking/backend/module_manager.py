@@ -350,7 +350,7 @@ class ModuleManager(BaseModuleManager):
             v = vs.pop()
 
             module = self.get_module_by_id(v)
-            if not isinstance(module, spiking_module.Synapse):
+            if not isinstance(module, spiking_module.Projection):
                 continue
 
             in_module = self._inputs.get(module)
