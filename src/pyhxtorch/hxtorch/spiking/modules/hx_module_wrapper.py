@@ -57,6 +57,15 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
         self.modules = modules
         self.update_args(modules)
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        reprs = "modules=("
+        for module in self.modules:
+            reprs += f"\n\t{module}"
+        reprs += ")\n, "
+        reprs += f"{super().extra_repr()}"
+        return reprs
+
     def contains(self, modules: List[HXModule]) -> bool:
         """
         Checks whether a list of modules `modules` is registered in the

@@ -39,6 +39,10 @@ class InputNeuron(HXModule):
         super().__init__(experiment, func=F.input_neuron)
         self.size = size
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        return f"size={self.size}, {super().extra_repr()}"
+
     def register_hw_entity(self) -> None:
         """
         Register instance in member `experiment`.

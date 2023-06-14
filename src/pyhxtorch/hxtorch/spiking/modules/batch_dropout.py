@@ -52,6 +52,11 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
         self._dropout = dropout
         self._mask: Optional[torch.Tensor] = None
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        return f"size={self.size}, dropout={self._dropout}, " \
+            + f"{super().extra_repr()}"
+
     def set_mask(self) -> None:
         """
         Creates a new random dropout mask, applied to the spiking neurons in

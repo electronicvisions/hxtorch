@@ -54,6 +54,10 @@ class HXModule(torch.nn.Module):
             grenade.PopulationOnNetwork, grenade.ProjectionOnNetwork,
             Tuple[grenade.ProjectionOnNetwork, ...]]] = None
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        return f"function={self._func_name}, experiment={self.experiment}"
+
     @property
     def func(self) -> Callable:
         if not self._func_is_wrapped:

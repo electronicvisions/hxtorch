@@ -68,6 +68,11 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self.reset_parameters(1.0e-3, 1. / np.sqrt(in_features))
         self.extra_args = (self.weight, None)  # No bias
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        return f"input_features={self.in_features}, " \
+            + f"output_features={self.out_features}, {super().extra_repr()}"
+
     @property
     def changed_since_last_run(self) -> bool:
         """

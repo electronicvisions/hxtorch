@@ -14,6 +14,7 @@ from hxtorch import spiking as hxsnn
 from hxtorch.spiking.utils import calib_helper
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
+logger = hxtorch.logger.get("hxtorch.test.hw.test_spiking_modules")
 
 
 class TestHXModules(unittest.TestCase):
@@ -41,6 +42,14 @@ class TestHXModules(unittest.TestCase):
                 experiment.modules.nodes[module], data=True)]
         self.assertEqual(sources, [input_handle])
         self.assertEqual(targets, [synapse_handle])
+
+    def test_print(self):
+        """ Test module printing """
+        def func(input, params=None, hw_data=None):
+            return input, params, hw_data
+        experiment = hxsnn.Experiment(mock=True)
+        module = hxsnn.HXModule(experiment, func)
+        logger.INFO(module)
 
     def test_prepare_function(self):
         """
@@ -252,6 +261,16 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertFalse(wrapper.contains([lif2]))
         self.assertFalse(wrapper.contains([linear, lif2]))
 
+    def test_print(self):
+        """ Test module printing """
+        def func(input, params=None, hw_data=None):
+            return input, params, hw_data
+        experiment = hxsnn.Experiment()
+        linear = hxsnn.Synapse(10, 10, experiment=experiment)
+        lif = hxsnn.Neuron(10, experiment=experiment)
+        module = hxsnn.HXModuleWrapper(experiment, [linear, lif], func)
+        logger.INFO(module)
+
     def test_extra_args(self):
         """ test extra args """
         # Experiment
@@ -430,6 +449,12 @@ class TestNeuron(HWTestCase):
         self.assertIsNone(neuron_handle.spikes)
         self.assertIsNone(neuron_handle.v_cadc)
         self.assertIsNone(neuron_handle.v_madc)
+
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.Neuron(10, experiment=experiment)
+        logger.INFO(module)
 
     def test_register_hw_entity(self):
         """
@@ -651,6 +676,12 @@ class TestReadoutNeuron(HWTestCase):
         self.assertIsNone(neuron_handle.v_cadc)
         self.assertIsNone(neuron_handle.v_madc)
 
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.ReadoutNeuron(10, experiment=experiment)
+        logger.INFO(module)
+
     def test_record_cadc(self):
         """
         Test CADC recording.
@@ -756,6 +787,12 @@ class TestIAFNeuron(HWTestCase):
         self.assertIsNone(neuron_handle.spikes)
         self.assertIsNone(neuron_handle.v_cadc)
         self.assertIsNone(neuron_handle.v_madc)
+
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.IAFNeuron(10, experiment=experiment)
+        logger.INFO(module)
 
     def test_record_spikes(self):
         """
@@ -930,6 +967,12 @@ class TestSynapse(HWTestCase):
         self.assertTrue(isinstance(synapse_handle, hxsnn.SynapseHandle))
         self.assertIsNone(synapse_handle.graded_spikes)
 
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.Synapse(10, 22, experiment=experiment)
+        logger.INFO(module)
+
     def test_weight_shape(self):
         """
         Test synapse weights are of correct shape.
@@ -971,6 +1014,12 @@ class TestBatchDropout(HWTestCase):
         self.assertIsNone(dropout_handle.current)
         self.assertIsNone(dropout_handle.v_cadc)
         self.assertIsNone(dropout_handle.v_madc)
+
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.BatchDropout(33, 0.5, experiment)
+        logger.INFO(module)
 
     def test_set_mask(self):
         """ Test mask is updated properly """

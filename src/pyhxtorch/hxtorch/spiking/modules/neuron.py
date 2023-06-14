@@ -162,6 +162,24 @@ class Neuron(Population):
                                  'compartment are supported.')
             self._neuron_structure = neuron_structure
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        reprs = f"size={self.size}, " \
+            + f"params={self.params}, "
+        if not self.experiment.mock:
+            reprs += f"spike_recording={self._enable_spike_recording}, " \
+                + f"cadc_recording={self._enable_cadc_recording}, " \
+                + f"madc_recording={self._enable_madc_recording}, " \
+                + f"record_neuron_id={self._record_neuron_id}, " \
+                + f"trace_scale={self.scale}, " \
+                + f"trace_offset={self.offset}, " \
+                + f"cadc_time_schift={self.cadc_time_shift}, " \
+                + f"shift_cadc_to_first={self.shift_cadc_to_first}, " \
+                + f"interpolation_mode={self.interpolation_mode}, " \
+                + f"neuron_structure={self._neuron_structure}, "
+        reprs += f"{super().extra_repr()}"
+        return reprs
+
     def register_hw_entity(self) -> None:
         """
         Infere neuron ids on hardware and register them.
