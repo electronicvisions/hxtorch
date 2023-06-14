@@ -104,7 +104,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/hxtorch/core/**/*.cpp'),
         target = 'hxtorch_core_cpp',
-        use = ['hxtorch_inc', 'grenade_vx'],
+        use = ['hxtorch_inc', 'grenade_vx', 'grenade_vx_serialization'],
         install_path='${PREFIX}/lib',
         uselib = 'HXTORCH_LIBRARIES',
     )
@@ -116,7 +116,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/hxtorch/perceptron/**/*.cpp'),
         target = 'hxtorch_perceptron_cpp',
-        use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP'],
+        use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP', 'grenade_vx_serialization'],
         install_path='${PREFIX}/lib',
         uselib = ['PYEXT'],
     )
