@@ -15,7 +15,7 @@ try {
 	Map<String, Object> pipelineNoDeploymentOptions = [
 			container              : [app: "dls-core"],
 			configureInstallOptions: "--build-profile=ci",
-			testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+			testSlurmResource: getHxTestResource(3),
 			preTestHook      : { configureHxCubeBitfile() },
 			testOptions      : "--test-execall -j1",
 			postTestHook     : { archiveArtifacts artifacts: "hxtorch/tests/hw/plots/*", allowEmptyArchive: true },
