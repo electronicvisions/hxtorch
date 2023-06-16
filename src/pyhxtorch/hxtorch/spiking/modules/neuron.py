@@ -17,6 +17,7 @@ from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disa
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.modules.hx_module import HXModule
 from hxtorch.spiking.modules.types import Population
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
