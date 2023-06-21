@@ -9,7 +9,7 @@ import pylogging as logger
 import torch
 from torch.nn.parameter import Parameter
 
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 
 from _hxtorch_spiking import weight_to_connection
 import hxtorch.spiking.functional as F

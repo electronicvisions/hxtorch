@@ -1,6 +1,6 @@
 #pragma once
-#include "grenade/vx/network/placed_logical/network_graph.h"
-#include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/network/population.h"
 #include "hxtorch/spiking/types.h"
 #include <map>
 #include <torch/torch.h>
@@ -25,9 +25,9 @@ namespace hxtorch::spiking {
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and spike handles.
  */
-std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
+    grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 
 /** Convert recorded MADC samples in IODataMap to population-specific MADCHandles holding the
@@ -38,9 +38,9 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, SpikeHandle
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and MADC handles.
  */
-std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
+    grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 
 /** Convert recorded CADC samples in IODataMap to population-specific CADCHandles holding the
@@ -51,9 +51,9 @@ std::map<grenade::vx::network::placed_logical::PopulationDescriptor, MADCHandle>
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and CADC handles.
  */
-std::map<grenade::vx::network::placed_logical::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
-    grenade::vx::network::placed_logical::NetworkGraph const& network_graph,
+    grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
 
 } // namespace hxtorch::spiking

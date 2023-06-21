@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from dlens_vx_v3 import lola, hal, halco
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 
 from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F

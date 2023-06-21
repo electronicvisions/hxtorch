@@ -23,35 +23,35 @@ class TestRun(unittest.TestCase):
 
     def generate_network(self):
         # Builder
-        network_builder = grenade.network.placed_logical.NetworkBuilder()
+        network_builder = grenade.network.NetworkBuilder()
 
         # Populations
-        neurons = [grenade.network.placed_logical.Population.Neuron(
+        neurons = [grenade.network.Population.Neuron(
             halco.LogicalNeuronOnDLS(halco.LogicalNeuronCompartments({
                 halco.CompartmentOnLogicalNeuron():
                 [halco.AtomicNeuronOnLogicalNeuron()]}),
                 halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)),
             {halco.CompartmentOnLogicalNeuron(): grenade.network
-             .placed_logical.Population.Neuron
-             .Compartment(grenade.network.placed_logical.Population.Neuron
+             .Population.Neuron
+             .Compartment(grenade.network.Population.Neuron
              .Compartment.SpikeMaster(0, True),
-             [{grenade.network.placed_logical.Receptor(grenade.network
-               .placed_logical.Receptor.ID(),
-               grenade.network.placed_logical.Receptor.Type.excitatory)}])})
+             [{grenade.network.Receptor(grenade.network
+               .Receptor.ID(),
+               grenade.network.Receptor.Type.excitatory)}])})
             for coord in halco.iter_all(halco.NeuronColumnOnDLS)][
                 :self.int_pop_size]
-        int_pop = grenade.network.placed_logical.Population(neurons)
-        ext_pop = grenade.network.placed_logical.ExternalPopulation(
+        int_pop = grenade.network.Population(neurons)
+        ext_pop = grenade.network.ExternalPopulation(
             self.ext_pop_size)
         int_pop_descr = network_builder.add(int_pop)
         self.ext_pop_descr = network_builder.add(ext_pop)
 
         # Some CADC recording
-        cadc_recording = grenade.network.placed_logical.CADCRecording()
+        cadc_recording = grenade.network.CADCRecording()
         recorded_neurons = list()
         for nrn_id in range(self.int_pop_size):
             recorded_neurons.append(
-                grenade.network.placed_logical.CADCRecording.Neuron(
+                grenade.network.CADCRecording.Neuron(
                     int_pop_descr, nrn_id,
                     halco.CompartmentOnLogicalNeuron(), 0,
                     lola.AtomicNeuron.Readout.Source.membrane))
@@ -62,27 +62,27 @@ class TestRun(unittest.TestCase):
         connections = []
         for i in range(self.ext_pop_size):
             connections.append(
-                grenade.network.placed_logical.Projection.Connection(
+                grenade.network.Projection.Connection(
                     (i, halco.CompartmentOnLogicalNeuron()),
                     (i, halco.CompartmentOnLogicalNeuron()),
-                    grenade.network.placed_logical.Projection.Connection
+                    grenade.network.Projection.Connection
                     .Weight(63)))
-        proj = grenade.network.placed_logical.Projection(
-            grenade.network.placed_logical.Receptor(
-                grenade.network.placed_logical.Receptor.ID(),
-                grenade.network.placed_logical.Receptor.Type.excitatory),
+        proj = grenade.network.Projection(
+            grenade.network.Receptor(
+                grenade.network.Receptor.ID(),
+                grenade.network.Receptor.Type.excitatory),
             connections, self.ext_pop_descr, int_pop_descr)
         network_builder.add(proj)
 
         # Build network graph
         network = network_builder.done()
-        routing_result = grenade.network.placed_logical.build_routing(network)
-        return grenade.network.placed_logical.build_network_graph(
+        routing_result = grenade.network.build_routing(network)
+        return grenade.network.build_network_graph(
             network, routing_result)
 
     def generate_inputs(self, network_graph):
         # Inputs
-        input_generator = grenade.network.placed_logical.InputGenerator(
+        input_generator = grenade.network.InputGenerator(
             network_graph, self.batch_size)
 
         # Add inputs

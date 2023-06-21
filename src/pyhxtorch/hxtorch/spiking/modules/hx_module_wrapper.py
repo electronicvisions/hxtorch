@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Dict, Tuple, Optional, List
 import pylogging as logger
 
 import torch
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 
 from hxtorch.spiking.handle import TensorHandle
 from hxtorch.spiking.modules.hx_module import HXModule

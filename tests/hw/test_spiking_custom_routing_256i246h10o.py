@@ -7,7 +7,7 @@ from hxtorch.spiking.morphology import SingleCompartmentNeuron
 import torch
 import hxtorch
 from hxtorch import spiking as hxsnn
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 from hxtorch.spiking.utils import calib_helper
 from dlens_vx_v3 import hal, halco
 

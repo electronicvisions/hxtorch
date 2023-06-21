@@ -7,7 +7,7 @@ import pylogging as logger
 
 import torch
 
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 
 from _hxtorch_spiking import tensor_to_spike_times, DataHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F

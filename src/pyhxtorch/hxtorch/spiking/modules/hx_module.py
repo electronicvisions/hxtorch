@@ -10,7 +10,7 @@ import pylogging as logger
 
 import torch
 
-import pygrenade_vx.network.placed_logical as grenade
+import pygrenade_vx.network as grenade
 from _hxtorch_spiking import DataHandle  # pylint: disable=import-error
 from hxtorch.spiking.handle import TensorHandle
 if TYPE_CHECKING:
