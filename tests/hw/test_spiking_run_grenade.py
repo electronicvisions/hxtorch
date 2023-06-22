@@ -41,7 +41,7 @@ class TestRun(unittest.TestCase):
             for coord in halco.iter_all(halco.NeuronColumnOnDLS)][
                 :self.int_pop_size]
         int_pop = grenade.network.Population(neurons)
-        ext_pop = grenade.network.ExternalPopulation(
+        ext_pop = grenade.network.ExternalSourcePopulation(
             self.ext_pop_size)
         int_pop_descr = network_builder.add(int_pop)
         self.ext_pop_descr = network_builder.add(ext_pop)

@@ -55,7 +55,7 @@ class InputNeuron(HXModule):
         :returns: External population descriptor.
         """
         # create grenade population
-        gpopulation = grenade.ExternalPopulation(self.size)
+        gpopulation = grenade.ExternalSourcePopulation(self.size)
         # add to builder
         self.descriptor = builder.add(gpopulation)
         log.TRACE(f"Added Input Population: {self}")
