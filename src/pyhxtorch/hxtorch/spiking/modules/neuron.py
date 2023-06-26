@@ -344,13 +344,16 @@ class Neuron(Population):
         # add MADC recording
         # NOTE: If two populations register MADC reordings grenade should
         #       throw in the following
-        madc_recording = grenade.MADCRecording()
-        madc_recording.population = self.descriptor
-        madc_recording.source = self._madc_readout_source
-        madc_recording.neuron_on_population = int(self._record_neuron_id)
-        madc_recording.compartment_on_neuron = \
+        madc_recording_neuron = grenade.MADCRecording.Neuron()
+        madc_recording_neuron.coordinate.population = self.descriptor
+        madc_recording_neuron.source = self._madc_readout_source
+        madc_recording_neuron.coordinate.neuron_on_population = int(
+            self._record_neuron_id)
+        madc_recording_neuron.coordinate.compartment_on_neuron = \
             halco.CompartmentOnLogicalNeuron()
-        madc_recording.atomic_neuron_on_compartment = 0
+        madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
+        madc_recording = grenade.MADCRecording()
+        madc_recording.neurons = [madc_recording_neuron]
         builder.add(madc_recording)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 

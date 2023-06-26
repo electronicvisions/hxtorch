@@ -117,17 +117,25 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
 		return ret;
 	}
 
-	auto const descriptor = network_graph.get_network()->madc_recording->population;
+	// TODO: support two channels
+	if (network_graph.get_network()->madc_recording->neurons.size() != 1) {
+		throw std::runtime_error("Unsupported number of recorded MADC channels.");
+	}
+	auto const descriptor =
+	    network_graph.get_network()->madc_recording->neurons.at(0).coordinate.population;
 	auto const neuron_in_population =
-	    network_graph.get_network()->madc_recording->neuron_on_population;
-	assert(network_graph.get_network()->madc_recording->compartment_on_neuron.value() == 0);
+	    network_graph.get_network()->madc_recording->neurons.at(0).coordinate.neuron_on_population;
+	assert(
+	    network_graph.get_network()
+	        ->madc_recording->neurons.at(0)
+	        .coordinate.compartment_on_neuron.value() == 0);
 
 	auto const grenade_samples = extract_madc_samples(data, network_graph);
 
 	std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>> samples;
 
 	for (size_t b = 0; b < grenade_samples.size(); ++b) {
-		for (auto const& [time, value] : grenade_samples.at(b)) {
+		for (auto const& [time, _, value] : grenade_samples.at(b)) {
 			samples.push_back(std::tuple{
 			    static_cast<int64_t>(value.value()), static_cast<int64_t>(time.value()),
 			    static_cast<int64_t>(b), static_cast<int64_t>(neuron_in_population)});
