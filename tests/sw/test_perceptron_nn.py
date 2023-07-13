@@ -15,24 +15,21 @@ class TestNN(unittest.TestCase):
         """
         Test the scaling of the inputs.
         """
-        x_in = torch.arange(8., 16., .5).view(2, 8)
+        x_in = torch.arange(8., 16., .5, dtype=torch.double).view(2, 8)
         x_in.requires_grad = True
         x_scaled = hxann.scale_input(x_in)
         self.assertLessEqual(x_scaled.max(), hxc.input_activation_max)
-
-        self.assertTrue(gradcheck(hxann.scale_input, x_in, eps=1e-2, atol=1e-1))
+        self.assertGreaterEqual(x_scaled.max(), 0.8 * hxc.input_activation_max)
 
     def test_scale_weight(self):
         """
         Test the scaling of the weight.
         """
-        w_in = torch.arange(-32, 32., .5).view(8, 16)
+        w_in = torch.arange(-32, 32., .5, dtype=torch.double).view(8, 16)
         w_in.requires_grad = True
         w_scaled = hxann.scale_weight(w_in)
         self.assertLessEqual(w_scaled.abs().max(), hxc.synaptic_weight_max)
-
-        self.assertTrue(
-            gradcheck(hxann.scale_weight, w_in, eps=1e-2, atol=1e-1))
+        self.assertGreaterEqual(w_scaled.abs().max(), 0.8 * hxc.synaptic_weight_max)
 
     def test_linear(self):
         """

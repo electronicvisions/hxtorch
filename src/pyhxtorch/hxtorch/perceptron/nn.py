@@ -19,9 +19,12 @@ def scale_input(x_in: torch.Tensor) -> torch.Tensor:
     """
     Scales the tensor to the maximal input range of BrainScaleS-2.
     """
-    max_in = torch.max(x_in)
-    factor = \
-        _hxtorch.constants.input_activation_max / max_in if max_in > 0 else 1
+
+    with torch.no_grad():
+        max_in = torch.max(x_in)
+        factor = \
+            _hxtorch.constants.input_activation_max / max_in \
+            if max_in > 0 else 1
     return x_in * factor
 
 
@@ -29,9 +32,12 @@ def scale_weight(weight: torch.Tensor) -> torch.Tensor:
     """
     Scales the tensor to the maximal weight range of BrainScaleS-2.
     """
-    max_in = torch.max(torch.abs(weight))
-    factor = \
-        _hxtorch.constants.synaptic_weight_max / max_in if max_in > 0 else 1
+
+    with torch.no_grad():
+        max_in = torch.max(torch.abs(weight))
+        factor = \
+            _hxtorch.constants.synaptic_weight_max / max_in \
+            if max_in > 0 else 1
     return weight * factor
 
 
