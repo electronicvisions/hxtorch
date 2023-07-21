@@ -217,7 +217,7 @@ std::tuple<torch::Tensor, torch::Tensor> sparse_cadc_to_dense_raw(torch::Tensor 
 			if (min_size < 0) {
 				min_size = n_entry.sizes()[1];
 			}
-			min_size = n_entry.sizes()[0] < min_size ? n_entry.sizes()[0] : min_size;
+			min_size = n_entry.sizes()[1] < min_size ? n_entry.sizes()[1] : min_size;
 		}
 		cadc_data.push_back(b_data);
 		cadc_times.push_back(b_times);
