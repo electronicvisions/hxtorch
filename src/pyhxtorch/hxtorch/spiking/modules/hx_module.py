@@ -38,6 +38,7 @@ class HXModule(torch.nn.Module):
         super().__init__()
 
         self._func_is_wrapped = False
+        self._func_name = None
         self._changed_since_last_run = True
 
         self.experiment = experiment
@@ -62,11 +63,16 @@ class HXModule(torch.nn.Module):
         return self._func
 
     @func.setter
-    def func(self, function: Callable) -> None:
+    def func(self, function: Optional[Callable]) -> None:
         """ Assign a PyTorch-differentiable function to the module.
 
         :param function: The function describing the modules f"""
         self._func = function
+        try:
+            self._func_name = function.__name__ if function is not None \
+                else None
+        except AttributeError:
+            self._func_name = "unknown"
         self._func_is_wrapped = False
 
     @property
