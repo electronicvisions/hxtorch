@@ -3,6 +3,7 @@ Implementing SNN modules
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Tuple, Type, Union
+import math
 import numpy as np
 import pylogging as logger
 
@@ -71,7 +72,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self._weight_old = torch.zeros_like(self.weight.data)
         self.weight_transform = transform
 
-        self.reset_parameters(1.0e-3, 1. / np.sqrt(in_features))
+        self.reset_parameters()
         self.extra_args = (self.weight, None)  # No bias
 
     def extra_repr(self) -> str:
@@ -98,17 +99,12 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self._weight_old = torch.clone(self.weight.data)
         return super().reset_changed_since_last_run()
 
-    def reset_parameters(self, mean: float, std: float) -> None:
+    def reset_parameters(self) -> None:
         """
-        Resets the synapses weights by reinitialization using torch.nn.normal_
-        with mean=`mean` and std=`std`.
-
-        :param mean: The mean of the normal distribution used to initialize the
-            weights from.
-        :param std: The standard deviation of the normal distribution used to
-            initialized the weights from.
+        Resets the synapses weights by reinitialization using
+        `torch.nn.kaiming_uniform_`.
         """
-        torch.nn.init.normal_(self.weight, mean=mean, std=std)
+        torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     def register_hw_entity(self) -> None:
         """
