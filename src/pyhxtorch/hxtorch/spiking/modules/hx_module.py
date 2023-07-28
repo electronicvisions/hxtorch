@@ -50,10 +50,9 @@ class HXModule(torch.nn.Module):
         self._output_handle = self.output_type()
 
         # Grenade descriptor
-        self.descriptor: Optional[
-            grenade.PopulationOnNetwork,
-            Union[grenade.ProjectionOnNetwork, Tuple[
-                grenade.ProjectionOnNetwork, ...]]] = None
+        self.descriptor: Optional[Union[
+            grenade.PopulationOnNetwork, grenade.ProjectionOnNetwork,
+            Tuple[grenade.ProjectionOnNetwork, ...]]] = None
 
     @property
     def func(self) -> Callable:
