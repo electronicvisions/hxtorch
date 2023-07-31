@@ -159,7 +159,7 @@ class Experiment(BaseExperiment):
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.build_routing,
+            hw_routing_func=grenade.network.routing.PortfolioRouter(),
             execution_instance: grenade.signal_flow.ExecutionInstance
             = grenade.signal_flow.ExecutionInstance()) \
             -> None:

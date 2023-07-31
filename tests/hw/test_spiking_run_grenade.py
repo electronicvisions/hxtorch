@@ -76,7 +76,8 @@ class TestRun(unittest.TestCase):
 
         # Build network graph
         network = network_builder.done()
-        routing_result = grenade.network.build_routing(network)
+        routing_result = grenade.network.routing\
+            .PortfolioRouter()(network)
         return grenade.network.build_network_graph(
             network, routing_result)
 
