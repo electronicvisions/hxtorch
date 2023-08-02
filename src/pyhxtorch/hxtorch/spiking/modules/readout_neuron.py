@@ -148,8 +148,8 @@ class ReadoutNeuron(Neuron):
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],
                      hw_cadc: Optional[CADCHandle],
-                     hw_madc: Optional[MADCHandle]) \
-            -> Tuple[Optional[torch.Tensor], ...]:
+                     hw_madc: Optional[MADCHandle],
+                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -167,12 +167,15 @@ class ReadoutNeuron(Neuron):
             events in a sparse tensor.
         :param hw_madc: The MADCHandle holding the MADC membrane readout
             events in a sparse tensor.
+        :param runtime: The requested runtime of the experiment on hardware in
+            s.
 
         :returns: Returns a tuple of optional torch.Tensors holding the
             hardware data (madc or cadc,)
         """
         # No spikes here
         assert not self._enable_spike_recording
-        _, cadc, madc = super().post_process(hw_spikes, hw_cadc, hw_madc)
+        _, cadc, madc = super().post_process(
+            hw_spikes, hw_cadc, hw_madc, runtime)
 
         return cadc, madc

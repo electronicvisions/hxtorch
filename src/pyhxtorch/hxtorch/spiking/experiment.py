@@ -334,11 +334,11 @@ class Experiment(BaseExperiment):
         """
         # Get hw data
         hw_spike_times = _hxtorch_spiking.extract_spikes(
-            result_map, network_graph, runtime)
+            result_map, network_graph)
         hw_cadc_samples = _hxtorch_spiking.extract_cadc(
-            result_map, network_graph, runtime)
+            result_map, network_graph)
         hw_madc_samples = _hxtorch_spiking.extract_madc(
-            result_map, network_graph, runtime)
+            result_map, network_graph)
 
         # Data maps
         data_map: Dict[
@@ -352,7 +352,8 @@ class Experiment(BaseExperiment):
             data_map[module.descriptor] = module.post_process(
                 hw_spike_times.get(module.descriptor),
                 hw_cadc_samples.get(module.descriptor),
-                hw_madc_samples.get(module.descriptor))
+                hw_madc_samples.get(module.descriptor),
+                runtime / int(hal.Timer.Value.fpga_clock_cycles_per_us) / 1e6)
 
         return data_map
 

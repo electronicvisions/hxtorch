@@ -413,8 +413,8 @@ class Neuron(Population):
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],
                      hw_cadc: Optional[CADCHandle],
-                     hw_madc: Optional[MADCHandle]) \
-            -> Tuple[Optional[torch.Tensor], ...]:
+                     hw_madc: Optional[MADCHandle],
+                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -432,6 +432,8 @@ class Neuron(Population):
             events in a sparse tensor.
         :param hw_madc: The MADCHandle holding the MADC membrane readout
             events in a sparse tensor.
+        :param runtime: The requested runtime of the experiment on hardware in
+            s.
 
         :returns: Returns a tuple of optional torch.Tensors holding the
             hardware data (madc or cadc,)
@@ -442,7 +444,7 @@ class Neuron(Population):
         if self._enable_cadc_recording:
             # Get dense representation
             cadc = hw_cadc.to_dense(
-                self.experiment.dt, mode=self.interpolation_mode)
+                runtime, self.experiment.dt, mode=self.interpolation_mode)
 
             # Shift CADC samples in time
             if self.cadc_time_shift != 0:
@@ -467,7 +469,7 @@ class Neuron(Population):
 
         # Get spikes
         if self._enable_spike_recording:
-            spikes = hw_spikes.to_dense(self.experiment.dt).float()
+            spikes = hw_spikes.to_dense(runtime, self.experiment.dt).float()
 
         # Get madc trace
         if self._enable_madc_recording:

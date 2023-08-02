@@ -1,54 +1,61 @@
 #pragma once
 #include <string>
 #include <tuple>
-#include <ATen/SparseTensorUtils.h>
 #include <torch/torch.h>
 
 namespace hxtorch::spiking {
 
+template <typename T>
 class DataHandle
 {
 private:
-	/* Data tensor
-	 * `at::sparse::SparseTensor` is alias for `torch::Tensor`
-	 */
-	at::sparse::SparseTensor m_data;
-
-	/* Giving the temporal resolution of the data hold
-	 */
-	float m_dt;
+	T m_data;
+	int m_batch_size;
+	int m_population_size;
 
 public:
-	/* Default constructor without time resolution
-	 */
-	DataHandle();
-
+	DataHandle() : m_batch_size(0), m_population_size(0){};
 	/* Constructor with time resolution
 	 * @param data Sparse data tensor assigned to handle
-	 * @param dt Time resolution of data
 	 */
-	DataHandle(at::sparse::SparseTensor data, float dt);
-
-	/* Getter for time resolution dt
-	 */
-	float get_dt();
+	template <typename U>
+	DataHandle(U&& data, int batch_size, int population_size) :
+	    m_data(std::forward<U>(data)), m_batch_size(batch_size), m_population_size(population_size)
+	{}
 
 	/* Setter for sparse data tensor
 	 * @param data Sparse data tensor assigned to handle
 	 * @param dt Time resolution of data
 	 */
-	void set_data(at::sparse::SparseTensor data, float dt);
-
+	template <typename U>
+	void set_data(U&& data, int batch_size, int population_size)
+	{
+		m_data = std::forward<U>(data);
+		m_batch_size = batch_size;
+		m_population_size = population_size;
+	}
 	/* Getter for sparse data tensor
 	 */
-	at::sparse::SparseTensor get_data();
+	T& get_data()
+	{
+		return m_data;
+	};
+
+	int batch_size()
+	{
+		return m_batch_size;
+	};
+	int population_size()
+	{
+		return m_population_size;
+	};
 };
 
 
 /*
  * Specialization for spike data handle since we to_dense behaves differently
  */
-class SpikeHandle : public DataHandle
+class SpikeHandle : public DataHandle<std::vector<std::tuple<int64_t, int64_t, int64_t>>>
 {
 public:
 	using DataHandle::DataHandle;
@@ -56,14 +63,14 @@ public:
 	/* Transform the sparse data into a dense tensor
 	 * @param dt Desired temporal resoltion of dense tensor
 	 */
-	torch::Tensor to_dense(float dt);
+	torch::Tensor to_dense(float runtime, float dt);
 };
 
 
 /*
  * Specialization for madc data handle since we to_dense behaves differently
  */
-class MADCHandle : public DataHandle
+class MADCHandle : public DataHandle<std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>>>
 {
 public:
 	using DataHandle::DataHandle;
@@ -73,7 +80,7 @@ public:
 /*
  * Specialization for cadc data handle since we to_dense behaves differently
  */
-class CADCHandle : public DataHandle
+class CADCHandle : public DataHandle<std::vector<std::tuple<int32_t, int64_t, int64_t, int64_t>>>
 {
 public:
 	using DataHandle::DataHandle;
@@ -83,7 +90,7 @@ public:
 	 * @param mode The mode used to transform the sparse CADC tensor to a dense tensor. Currently
 	 * supported: 'linear'.
 	 */
-	torch::Tensor to_dense(float dt, std::string mode = "linear");
+	torch::Tensor to_dense(float runtime, float dt, std::string mode = "linear");
 
 	/* Transform the sparse data into a dense tensor representing the hardware data as close as
 	 * possible.
@@ -91,7 +98,7 @@ public:
 	 * @returns Returns the dense tensor together with the assumed temporal resolution given by the
 	 * average time step.
 	 */
-	std::tuple<torch::Tensor, float> to_dense(std::string mode = "linear");
+	std::tuple<torch::Tensor, float> to_dense(float runtime, std::string mode = "linear");
 
 	/* Transform the sparse data into a dense tensor holding raw data
 	 * @returns Returns a tuple of a tensor holding the CADC data and a tensor holding the

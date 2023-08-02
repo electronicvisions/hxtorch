@@ -11,7 +11,7 @@ import pylogging as logger
 import torch
 
 import pygrenade_vx.network as grenade
-from _hxtorch_spiking import DataHandle  # pylint: disable=import-error
+from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle
 from hxtorch.spiking.handle import TensorHandle
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
@@ -93,14 +93,23 @@ class HXModule(torch.nn.Module):
         """
         self._changed_since_last_run = False
 
-    def post_process(self, hw_spikes: Optional[DataHandle],
-                     hw_cadc: Optional[DataHandle],
-                     hw_madc: Optional[DataHandle]) \
-            -> Tuple[Optional[torch.Tensor], ...]:
+    def post_process(self, hw_spikes: Optional[SpikeHandle],
+                     hw_cadc: Optional[CADCHandle],
+                     hw_madc: Optional[MADCHandle],
+                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
         """
         This methods needs to be overridden for every derived module that
         demands hardware observables.
 
+        :param hw_spikes: The optional SpikeHandle holding raw spike data from
+            hardware.
+        :param hw_cadc: The optional CADCHandle holding raw CADC measurements
+            from hardware.
+        :param hw_madc: The optional MADCHandle holding raw MADC measurements
+            from hardware.
+        :param runtime: The requested runtime of the experiment on hardware in
+            s.
+        :param dt: The expected temporal resolution in hxtorch.
         :returns: Hardware data represented as torch.Tensors. Note that
             torch.Tensors are required here to enable gradient flow.
         """
