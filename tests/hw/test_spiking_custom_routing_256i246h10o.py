@@ -64,7 +64,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 halco.SPL1Address(coutput).toCrossbarInputOnDLS())
             config = hal.CrossbarNode()
             config.mask = halco.NeuronLabel(1 << 13)
-            config.target = halco.NeuronLabel(0 << 13)
+            config.target = halco.NeuronLabel(1 << 13)
             crossbar_nodes[coord] = config
 
         # enable input from L2 to bottom half
@@ -75,25 +75,10 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 halco.SPL1Address(coutput).toCrossbarInputOnDLS())
             config = hal.CrossbarNode()
             config.mask = halco.NeuronLabel(1 << 13)
-            config.target = halco.NeuronLabel(1 << 13)
+            config.target = halco.NeuronLabel(0 << 13)
             crossbar_nodes[coord] = config
 
-        # enable input from left half to top half
-        for output in halco.iter_all(
-                halco.NeuronEventOutputOnNeuronBackendBlock):
-            coord = halco.CrossbarNodeOnDLS(
-                halco.PADIBusOnDLS(
-                    halco.PADIBusOnPADIBusBlock(output),
-                    halco.PADIBusBlockOnDLS.top).toCrossbarOutputOnDLS(),
-                halco.NeuronEventOutputOnDLS(
-                    output, halco.NeuronBackendConfigBlockOnDLS(0))
-                .toCrossbarInputOnDLS())
-            config = hal.CrossbarNode()
-            config.mask = halco.NeuronLabel(1 << 13)
-            config.target = halco.NeuronLabel(1 << 13)
-            crossbar_nodes[coord] = config
-
-        # enable input from right half to bottom half
+        # disable input from left half to bottom half
         for output in halco.iter_all(
                 halco.NeuronEventOutputOnNeuronBackendBlock):
             coord = halco.CrossbarNodeOnDLS(
@@ -101,11 +86,26 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                     halco.PADIBusOnPADIBusBlock(output),
                     halco.PADIBusBlockOnDLS.bottom).toCrossbarOutputOnDLS(),
                 halco.NeuronEventOutputOnDLS(
+                    output, halco.NeuronBackendConfigBlockOnDLS(0))
+                .toCrossbarInputOnDLS())
+            config = hal.CrossbarNode()
+            config.mask = halco.NeuronLabel(0)
+            config.target = halco.NeuronLabel(1)
+            crossbar_nodes[coord] = config
+
+        # disable input from right half to top half
+        for output in halco.iter_all(
+                halco.NeuronEventOutputOnNeuronBackendBlock):
+            coord = halco.CrossbarNodeOnDLS(
+                halco.PADIBusOnDLS(
+                    halco.PADIBusOnPADIBusBlock(output),
+                    halco.PADIBusBlockOnDLS.top).toCrossbarOutputOnDLS(),
+                halco.NeuronEventOutputOnDLS(
                     output, halco.NeuronBackendConfigBlockOnDLS(1))
                 .toCrossbarInputOnDLS())
             config = hal.CrossbarNode()
-            config.mask = halco.NeuronLabel(1 << 13)
-            config.target = halco.NeuronLabel(1 << 13)
+            config.mask = halco.NeuronLabel(0)
+            config.target = halco.NeuronLabel(1)
             crossbar_nodes[coord] = config
 
         ret.crossbar_nodes = crossbar_nodes
@@ -114,29 +114,8 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         synapse_driver_compare_masks = {}
         for driver in halco.iter_all(halco.SynapseDriverOnDLS):
             synapse_driver_compare_masks[driver] = 0
-        synapse_driver_compare_masks[
-            halco.SynapseDriverOnDLS(
-                halco.SynapseDriverOnSynapseDriverBlock(123),
-                halco.SynapseDriverBlockOnDLS(1))] = 0b00010
-        synapse_driver_compare_masks[
-            halco.SynapseDriverOnDLS(
-                halco.SynapseDriverOnSynapseDriverBlock(124),
-                halco.SynapseDriverBlockOnDLS(1))] = 0b00010
-        synapse_driver_compare_masks[
-            halco.SynapseDriverOnDLS(
-                halco.SynapseDriverOnSynapseDriverBlock(125),
-                halco.SynapseDriverBlockOnDLS(1))] = 0b00010
-        synapse_driver_compare_masks[
-            halco.SynapseDriverOnDLS(
-                halco.SynapseDriverOnSynapseDriverBlock(126),
-                halco.SynapseDriverBlockOnDLS(1))] = 0b00010
-        synapse_driver_compare_masks[
-            halco.SynapseDriverOnDLS(
-                halco.SynapseDriverOnSynapseDriverBlock(127),
-                halco.SynapseDriverBlockOnDLS(1))] = 0b00010
         ret.synapse_driver_compare_masks = synapse_driver_compare_masks
 
-        #print(network)
 
         # use internal neuron labels linearly
         neurons_0 = network.populations[
@@ -144,7 +123,8 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         assert len(neurons_0) == 246
         internal_neuron_labels_0 = []
         for i in range(246):
-            internal_neuron_labels_0.append({halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111) | 0b00000000, None]})
+            internal_neuron_labels_0.append(
+              {halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111), None]})
         ret.internal_neuron_labels[grenade.PopulationOnNetwork(0)] = \
             internal_neuron_labels_0
         neurons_1 = network.populations[
@@ -152,7 +132,8 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         assert len(neurons_1) == 10
         internal_neuron_labels_1 = []
         for i in range(246, 256):
-            internal_neuron_labels_1.append({halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111) | 0b00000000, None]})
+            internal_neuron_labels_1.append(
+              {halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111), None]})
         ret.internal_neuron_labels = {
             grenade.PopulationOnNetwork(0):
             internal_neuron_labels_0,
@@ -167,10 +148,10 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         for i in range(input_size):
             label = halco.SpikeLabel(
                 ((i < input_size // 2) << 13)  # top/bottom hemisphere
-                | (((i // halco.SynapseDriverOnPADIBus.size)
-                    % halco.PADIBusOnPADIBusBlock.size) << 14)  # PADI-bus selection
+                | ((i % halco.PADIBusOnPADIBusBlock.size) << 14)  # PADI-bus selection
                 | (0b00010 << 6)  # deselection of last 10 drivers for hidden -> output layer
-                | ((i % halco.SynapseDriverOnPADIBus.size) + 32)  # unused synapse label above internal neuron labels
+                | (((i // halco.PADIBusOnPADIBusBlock.size)
+                    % halco.SynapseDriverOnPADIBus.size) + 32)  # unused synapse label above internal neuron labels
             )
             external_spike_labels.append([label])
         ret.external_spike_labels = {
@@ -193,14 +174,16 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 placed_connection.weight = connection.weight.value()
                 placed_connection.synapse_on_row = network.populations[
                     projection.population_post].neurons[connection.index_post[0]]\
-                    .coordinate.get_placed_compartments()[connection.index_post[1]][0].toNeuronColumnOnDLS().toSynapseOnSynapseRow()
+                    .coordinate.get_placed_compartments()[connection.index_post[1]][0]\
+                    .toNeuronColumnOnDLS().toSynapseOnSynapseRow()
                 placed_connection.synapse_row = \
                     halco.SynapseRowOnDLS(
                         halco.common.Enum(2 * connection.index_pre[0] + is_inh))
-                placed_connection.label = (connection.index_pre[0] % 32) + 32
+                placed_connection.label = ((connection.index_pre[0] // 4) % 32) + 32
                 connections_ho.append([placed_connection])
                 routes = grenade.ConnectionToHardwareRoutes()
-                routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
+                routes.atomic_neurons_on_target_compartment = [
+                    placed_connection.synapse_row.toSynramOnDLS().value()]
                 if grenade.ProjectionOnNetwork(j) not in connection_routing_result:
                     connection_routing_result.update({
                         grenade.ProjectionOnNetwork(j): []})
@@ -221,13 +204,18 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 placed_connection.weight = connection.weight.value()
                 placed_connection.synapse_on_row = network.populations[
                     projection.population_post].neurons[connection.index_post[0]]\
-                    .coordinate.get_placed_compartments()[connection.index_post[1]][0].toNeuronColumnOnDLS().toSynapseOnSynapseRow()
+                    .coordinate.get_placed_compartments()[connection.index_post[1]][0]\
+                    .toNeuronColumnOnDLS().toSynapseOnSynapseRow()
                 placed_connection.synapse_row = halco.SynapseRowOnDLS(
-                    halco.common.Enum(2 * connection.index_pre[0] + is_inh))
-                placed_connection.label = (connection.index_pre[0] // 2) % 32
+                    halco.common.Enum(2 * (
+                        (connection.index_pre[0] * 4) % 128
+                        + (connection.index_pre[0] // 32) % 4
+                        + (connection.index_pre[0] // 128) * 128) + is_inh))
+                placed_connection.label = connection.index_pre[0] % 32
                 connections_ih.append([placed_connection])
                 routes = grenade.ConnectionToHardwareRoutes()
-                routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
+                routes.atomic_neurons_on_target_compartment = [
+                    placed_connection.synapse_row.toSynramOnDLS().value()]
                 if grenade.ProjectionOnNetwork(j) not in connection_routing_result:
                     connection_routing_result.update({
                         grenade.ProjectionOnNetwork(j): []})
