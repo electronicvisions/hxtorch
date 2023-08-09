@@ -140,30 +140,30 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
         # use internal neuron labels linearly
         neurons_0 = network.populations[
-            grenade.PopulationDescriptor(0)].neurons
+            grenade.PopulationOnNetwork(0)].neurons
         assert len(neurons_0) == 246
         internal_neuron_labels_0 = []
         for i in range(246):
             internal_neuron_labels_0.append({halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111) | 0b00000000, None]})
-        ret.internal_neuron_labels[grenade.PopulationDescriptor(0)] = \
+        ret.internal_neuron_labels[grenade.PopulationOnNetwork(0)] = \
             internal_neuron_labels_0
         neurons_1 = network.populations[
-            grenade.PopulationDescriptor(1)].neurons
+            grenade.PopulationOnNetwork(1)].neurons
         assert len(neurons_1) == 10
         internal_neuron_labels_1 = []
         for i in range(246, 256):
             internal_neuron_labels_1.append({halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111) | 0b00000000, None]})
         ret.internal_neuron_labels = {
-            grenade.PopulationDescriptor(0):
+            grenade.PopulationOnNetwork(0):
             internal_neuron_labels_0,
-            grenade.PopulationDescriptor(1):
+            grenade.PopulationOnNetwork(1):
             internal_neuron_labels_1
         }
 
         # linearly assign input event label to synapse driver
         external_spike_labels = []
         input_size = network.populations[
-            grenade.PopulationDescriptor(2)].size
+            grenade.PopulationOnNetwork(2)].size
         for i in range(input_size):
             label = halco.SpikeLabel(
                 ((i < input_size // 2) << 13)  # top/bottom hemisphere
@@ -174,7 +174,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             )
             external_spike_labels.append([label])
         ret.external_spike_labels = {
-            grenade.PopulationDescriptor(2):
+            grenade.PopulationOnNetwork(2):
             external_spike_labels}
 
         # linearly place projections
@@ -182,12 +182,12 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         connection_routing_result = {}
         for j in range(0, 2):
             projection = network.projections[
-                grenade.ProjectionDescriptor(j)]
+                grenade.ProjectionOnNetwork(j)]
             is_inh = projection.receptor.type == grenade.Receptor.Type\
                 .inhibitory
             connections_ho = []
             for i, connection in enumerate(network.projections[
-                    grenade.ProjectionDescriptor(j)].connections):
+                    grenade.ProjectionOnNetwork(j)].connections):
                 placed_connection = grenade.RoutingResult\
                     .PlacedConnection()
                 placed_connection.weight = connection.weight.value()
@@ -201,21 +201,21 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 connections_ho.append([placed_connection])
                 routes = grenade.ConnectionToHardwareRoutes()
                 routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
-                if grenade.ProjectionDescriptor(j) not in connection_routing_result:
+                if grenade.ProjectionOnNetwork(j) not in connection_routing_result:
                     connection_routing_result.update({
-                        grenade.ProjectionDescriptor(j): []})
-                connection_routing_result[grenade.ProjectionDescriptor(j)].append(routes)
+                        grenade.ProjectionOnNetwork(j): []})
+                connection_routing_result[grenade.ProjectionOnNetwork(j)].append(routes)
             connections[
-                grenade.ProjectionDescriptor(j)] = connections_ho
+                grenade.ProjectionOnNetwork(j)] = connections_ho
 
         for j in range(2, 4):
             projection = network.projections[
-                grenade.ProjectionDescriptor(j)]
+                grenade.ProjectionOnNetwork(j)]
             is_inh = projection.receptor.type == grenade.Receptor.Type\
                 .inhibitory
             connections_ih = []
             for i, connection in enumerate(network.projections[
-                    grenade.ProjectionDescriptor(j)].connections):
+                    grenade.ProjectionOnNetwork(j)].connections):
                 placed_connection = grenade.RoutingResult\
                     .PlacedConnection()
                 placed_connection.weight = connection.weight.value()
@@ -228,11 +228,11 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 connections_ih.append([placed_connection])
                 routes = grenade.ConnectionToHardwareRoutes()
                 routes.atomic_neurons_on_target_compartment = [placed_connection.synapse_row.toSynramOnDLS().value()]
-                if grenade.ProjectionDescriptor(j) not in connection_routing_result:
+                if grenade.ProjectionOnNetwork(j) not in connection_routing_result:
                     connection_routing_result.update({
-                        grenade.ProjectionDescriptor(j): []})
-                connection_routing_result[grenade.ProjectionDescriptor(j)].append(routes)
-            connections[grenade.ProjectionDescriptor(j)] = connections_ih
+                        grenade.ProjectionOnNetwork(j): []})
+                connection_routing_result[grenade.ProjectionOnNetwork(j)].append(routes)
+            connections[grenade.ProjectionOnNetwork(j)] = connections_ih
         ret.connections = connections
         ret.connection_routing_result = connection_routing_result
 

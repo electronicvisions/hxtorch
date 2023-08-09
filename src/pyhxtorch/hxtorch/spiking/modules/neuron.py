@@ -267,7 +267,7 @@ class Neuron(Population):
 
     def add_to_network_graph(self,
                              builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationDescriptor:
+            -> grenade.PopulationOnNetwork:
         """
         Add the layer's neurons to grenades network builder. If
         `enable_spike_recording` is enabled the neuron's spikes are recorded

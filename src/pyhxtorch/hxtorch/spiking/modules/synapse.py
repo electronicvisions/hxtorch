@@ -107,10 +107,10 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
     def add_to_network_graph(
             self,
-            pre: grenade.PopulationDescriptor,
-            post: grenade.PopulationDescriptor,
+            pre: grenade.PopulationOnNetwork,
+            post: grenade.PopulationOnNetwork,
             builder: grenade.NetworkBuilder) -> Tuple[
-                grenade.ProjectionDescriptor, ...]:
+                grenade.ProjectionOnNetwork, ...]:
         """
         Adds the projection to a grenade network builder by providing the
         population descriptor of the corresponding pre and post population.
@@ -121,7 +121,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param post: Population descriptor of post-population.
         :param builder: Greande netowrk builder to add projection to.
 
-        :returns: A tuple of grenade ProjectionDescriptors holding the
+        :returns: A tuple of grenade ProjectionOnNetworks holding the
             descriptors for the excitatory and inhibitory projection.
         """
         weight_transformed = self.weight_transform(

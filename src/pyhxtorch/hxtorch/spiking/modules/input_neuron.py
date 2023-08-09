@@ -47,7 +47,7 @@ class InputNeuron(HXModule):
 
     def add_to_network_graph(
         self, builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationDescriptor:
+            -> grenade.PopulationOnNetwork:
         """
         Adds instance to grenade's network builder.
 

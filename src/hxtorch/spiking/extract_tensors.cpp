@@ -10,7 +10,7 @@
 
 namespace hxtorch::spiking {
 
-std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -19,14 +19,14 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
 	using namespace grenade::vx::network;
 
 	// return data
-	std::map<PopulationDescriptor, SpikeHandle> ret;
+	std::map<PopulationOnNetwork, SpikeHandle> ret;
 
 	auto const grenade_spikes = extract_neuron_spikes(data, network_graph);
 
 	// get indices of events.
 	// NOTE: Would be nicer to use here torch.Tensors right away. However, we do not know the number
 	// of events per population trivially beforehand.
-	std::map<PopulationDescriptor, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;
+	std::map<PopulationOnNetwork, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;
 
 	assert(network_graph.get_network());
 	for (auto const& [descriptor, pop] : network_graph.get_network()->populations) {
@@ -101,7 +101,7 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
 }
 
 
-std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -110,7 +110,7 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
 	using namespace grenade::vx::network;
 
 	// return data
-	std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> ret;
+	std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> ret;
 
 	assert(network_graph.get_network());
 	if (!network_graph.get_network()->madc_recording) {
@@ -181,7 +181,7 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
 }
 
 
-std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime)
@@ -190,7 +190,7 @@ std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
 	using namespace grenade::vx::network;
 
 	// return data
-	std::map<PopulationDescriptor, CADCHandle> ret;
+	std::map<PopulationOnNetwork, CADCHandle> ret;
 
 	auto const grenade_samples = extract_cadc_samples(data, network_graph);
 
@@ -202,7 +202,7 @@ std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
 
 	// get indices and values of events. NOTE: Would be nicer to use here torch.Tensors right away.
 	// However, we do not know the number of events per population trivially beforehand.
-	std::map<PopulationDescriptor, std::vector<std::tuple<int32_t, int64_t, int64_t, int64_t>>>
+	std::map<PopulationOnNetwork, std::vector<std::tuple<int32_t, int64_t, int64_t, int64_t>>>
 	    samples;
 
 	for (size_t b = 0; b < grenade_samples.size(); ++b) {

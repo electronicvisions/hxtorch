@@ -50,9 +50,9 @@ class HXModule(torch.nn.Module):
 
         # Grenade descriptor
         self.descriptor: Optional[
-            grenade.PopulationDescriptor,
-            Union[grenade.ProjectionDescriptor, Tuple[
-                grenade.ProjectionDescriptor, ...]]] = None
+            grenade.PopulationOnNetwork,
+            Union[grenade.ProjectionOnNetwork, Tuple[
+                grenade.ProjectionOnNetwork, ...]]] = None
 
     @property
     def func(self) -> Callable:
@@ -199,7 +199,7 @@ class HXModule(torch.nn.Module):
     # pylint: disable=redefined-builtin
     def exec_forward(self, input: Union[Tuple[TensorHandle], TensorHandle],
                      output: TensorHandle,
-                     hw_map: Dict[grenade.PopulationDescriptor,
+                     hw_map: Dict[grenade.PopulationOnNetwork,
                                   Tuple[torch.Tensor]]) -> None:
         """
         Inject hardware observables into TensorHandles or execute forward in

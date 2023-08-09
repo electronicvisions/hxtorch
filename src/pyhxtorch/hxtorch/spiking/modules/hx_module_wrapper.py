@@ -97,7 +97,7 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
     # pylint: disable=redefined-builtin
     def exec_forward(self, input: Tuple[TensorHandle],
                      output: Tuple[TensorHandle],
-                     hw_map: Dict[grenade.PopulationDescriptor,
+                     hw_map: Dict[grenade.PopulationOnNetwork,
                                   Tuple[torch.Tensor]]) -> None:
         """
         Execute the the forward function of the wrapper. This method assigns

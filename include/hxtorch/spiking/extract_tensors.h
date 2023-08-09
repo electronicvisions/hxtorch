@@ -25,7 +25,7 @@ namespace hxtorch::spiking {
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and spike handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes(
+std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
@@ -38,7 +38,7 @@ std::map<grenade::vx::network::PopulationDescriptor, SpikeHandle> extract_spikes
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and MADC handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
+std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);
@@ -51,7 +51,7 @@ std::map<grenade::vx::network::PopulationDescriptor, MADCHandle> extract_madc(
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
  * @returns Returns a mapping between population descriptors and CADC handles.
  */
-std::map<grenade::vx::network::PopulationDescriptor, CADCHandle> extract_cadc(
+std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
     grenade::vx::signal_flow::IODataMap const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime);

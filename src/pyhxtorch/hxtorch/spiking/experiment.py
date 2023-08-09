@@ -146,7 +146,7 @@ class BaseExperiment(ABC):
 
     @abstractmethod
     def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.network.PopulationDescriptor,
+            -> Dict[grenade.network.PopulationOnNetwork,
                     Tuple[Optional[torch.Tensor], ...]]:
         raise NotImplementedError
 
@@ -413,7 +413,7 @@ class Experiment(BaseExperiment):
     def _get_population_observables(
             self, network_graph: grenade.network.NetworkGraph,
             result_map: grenade.signal_flow.IODataMap, runtime) -> Dict[
-                grenade.network.PopulationDescriptor,
+                grenade.network.PopulationOnNetwork,
                 np.ndarray]:
         """
         Takes the greade network graph and the result map returned by grenade
@@ -519,7 +519,7 @@ class Experiment(BaseExperiment):
         self._projections.append(module)
 
     def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.network.PopulationDescriptor,
+            -> Dict[grenade.network.PopulationOnNetwork,
                     Tuple[Optional[torch.Tensor], ...]]:
         """
         Executes the experiment in mock or on hardware using the information
