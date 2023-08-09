@@ -367,8 +367,8 @@ class Experiment(BaseExperiment):
         Generate external input events from the routed network graph
         representation.
         """
-        assert network_graph.event_input_vertex is not None
-        if network_graph.event_input_vertex is None:
+        assert network_graph.graph_translation.event_input_vertex is not None
+        if network_graph.graph_translation.event_input_vertex is None:
             return grenade.signal_flow.IODataMap()
 
         # Make sure all batch sizes are equal
