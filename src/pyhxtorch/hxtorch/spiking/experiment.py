@@ -160,8 +160,8 @@ class Experiment(BaseExperiment):
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
             hw_routing_func=grenade.network.routing.PortfolioRouter(),
-            execution_instance: grenade.signal_flow.ExecutionInstance
-            = grenade.signal_flow.ExecutionInstance()) \
+            execution_instance: grenade.common.ExecutionInstanceID
+            = grenade.common.ExecutionInstanceID()) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -569,7 +569,7 @@ class Experiment(BaseExperiment):
         # generate external spike trains
         inputs = self._generate_inputs(network)
         inputs.runtime = [{
-            grenade.signal_flow.ExecutionInstance(): runtime_in_clocks
+            grenade.common.ExecutionInstanceID(): runtime_in_clocks
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 

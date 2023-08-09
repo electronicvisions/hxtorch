@@ -100,7 +100,7 @@ class TestRun(unittest.TestCase):
 
         # Add runtime
         inputs.runtime = [{
-            grenade.signal_flow.ExecutionInstance():
+            grenade.common.ExecutionInstanceID():
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] \
             * self.batch_size
         return inputs
