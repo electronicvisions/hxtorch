@@ -206,14 +206,13 @@ std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
 	    samples;
 
 	for (size_t b = 0; b < grenade_samples.size(); ++b) {
-		for (auto const& [time, population, neuron_on_population, compartment_on_neuron, _, value] :
-		     grenade_samples.at(b)) {
-			assert(compartment_on_neuron.value() == 0);
+		for (auto const& [time, atomic_neuron_on_network, value] : grenade_samples.at(b)) {
+			assert(atomic_neuron_on_network.compartment_on_neuron.value() == 0);
 			if (static_cast<int64_t>(time.value()) <= runtime) {
-				samples[population].push_back(std::tuple{
+				samples[atomic_neuron_on_network.population].push_back(std::tuple{
 				    static_cast<int32_t>(static_cast<int8_t>(value + 128)),
 				    static_cast<int64_t>(time.value()), static_cast<int64_t>(b),
-				    static_cast<int64_t>(neuron_on_population)});
+				    static_cast<int64_t>(atomic_neuron_on_network.neuron_on_population)});
 			}
 		}
 	}

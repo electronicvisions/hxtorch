@@ -331,10 +331,10 @@ class Neuron(Population):
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
                 neuron = grenade.CADCRecording.Neuron()
-                neuron.population = self.descriptor
-                neuron.neuron_on_population = in_pop_id
-                neuron.compartment_on_neuron = 0
-                neuron.atomic_neuron_on_compartment = 0
+                neuron.coordinate.population = self.descriptor
+                neuron.coordinate.neuron_on_population = in_pop_id
+                neuron.coordinate.compartment_on_neuron = 0
+                neuron.coordinate.atomic_neuron_on_compartment = 0
                 self.experiment.cadc_recording[unit_id] = neuron
 
         # No recording registered -> return
