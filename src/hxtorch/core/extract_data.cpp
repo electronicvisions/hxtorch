@@ -31,21 +31,26 @@ extract_n_spikes(
 	assert(network_graph.get_network());
 
 	// create return map with numpy arrays
-	for (auto const& [descriptor, population] : network_graph.get_network()->populations) {
-		if (!std::holds_alternative<Population>(population)) {
-			continue;
+	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
+		for (auto const& [descriptor, population] : execution_instance.populations) {
+			if (!std::holds_alternative<Population>(population)) {
+				continue;
+			}
+			// create numpy arrays of correct size
+			pybind11::array_t<int> numpy_indices(
+			    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
+			     static_cast<pybind11::ssize_t>(
+			         n_spikes[grenade::vx::network::PopulationOnNetwork(descriptor, id)])});
+			pybind11::array_t<float> numpy_values(
+			    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
+			     static_cast<pybind11::ssize_t>(
+			         n_spikes[grenade::vx::network::PopulationOnNetwork(descriptor, id)])});
+			numpy_indices[pybind11::make_tuple(pybind11::ellipsis())] = -1;
+			numpy_values[pybind11::make_tuple(pybind11::ellipsis())] =
+			    std::numeric_limits<float>::infinity();
+			ret[grenade::vx::network::PopulationOnNetwork(descriptor, id)] =
+			    std::make_tuple(numpy_indices, numpy_values);
 		}
-		// create numpy arrays of correct size
-		pybind11::array_t<int> numpy_indices(
-		    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
-		     static_cast<pybind11::ssize_t>(n_spikes[descriptor])});
-		pybind11::array_t<float> numpy_values(
-		    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
-		     static_cast<pybind11::ssize_t>(n_spikes[descriptor])});
-		numpy_indices[pybind11::make_tuple(pybind11::ellipsis())] = -1;
-		numpy_values[pybind11::make_tuple(pybind11::ellipsis())] =
-		    std::numeric_limits<float>::infinity();
-		ret[descriptor] = std::make_tuple(numpy_indices, numpy_values);
 	}
 
 	for (size_t b = 0; b < grenade_spikes.size(); ++b) {

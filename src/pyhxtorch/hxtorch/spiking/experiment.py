@@ -317,7 +317,7 @@ class Experiment(BaseExperiment):
         if self.cadc_recording:
             cadc_recording = grenade.network.CADCRecording()
             cadc_recording.neurons = list(self.cadc_recording.values())
-            network_builder.add(cadc_recording)
+            network_builder.add(cadc_recording, self.execution_instance)
 
         network = network_builder.done()
 
@@ -335,8 +335,7 @@ class Experiment(BaseExperiment):
         if routing_result is not None:
             self.grenade_network_graph = grenade.network\
                 .build_network_graph(
-                    self.grenade_network, routing_result,
-                    self.execution_instance)
+                    self.grenade_network, routing_result)
         else:
             grenade.network.update_network_graph(
                 self.grenade_network_graph,
@@ -373,8 +372,10 @@ class Experiment(BaseExperiment):
         Generate external input events from the routed network graph
         representation.
         """
-        assert network_graph.graph_translation.event_input_vertex is not None
-        if network_graph.graph_translation.event_input_vertex is None:
+        assert network_graph.graph_translation.execution_instances[
+            self.execution_instance].event_input_vertex is not None
+        if network_graph.graph_translation.execution_instances[
+                self.execution_instance].event_input_vertex is None:
             return grenade.signal_flow.IODataMap()
 
         # Make sure all batch sizes are equal

@@ -52,7 +52,7 @@ class TestRun(unittest.TestCase):
         for nrn_id in range(self.int_pop_size):
             recorded_neurons.append(
                 grenade.network.CADCRecording.Neuron(
-                    grenade.network.AtomicNeuronOnNetwork(
+                    grenade.network.AtomicNeuronOnExecutionInstance(
                         int_pop_descr, nrn_id,
                         halco.CompartmentOnLogicalNeuron(), 0),
                     lola.AtomicNeuron.Readout.Source.membrane))

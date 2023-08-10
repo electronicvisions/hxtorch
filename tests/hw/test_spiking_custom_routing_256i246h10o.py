@@ -8,6 +8,7 @@ import torch
 import hxtorch
 from hxtorch import spiking as hxsnn
 import pygrenade_vx.network as grenade
+import pygrenade_vx.common as grenade_common
 from hxtorch.spiking.utils import calib_helper
 from dlens_vx_v3 import hal, halco
 
@@ -30,9 +31,13 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
     @staticmethod
     def hw_routing_func(network: grenade.Network) \
             -> grenade.RoutingResult:
-        assert len(network.populations) == 3
+        assert len(network.execution_instances[
+            grenade_common.ExecutionInstanceID()].populations) == 3
 
         ret = grenade.RoutingResult()
+        ret.execution_instances = {
+            grenade_common.ExecutionInstanceID():
+            grenade.RoutingResult.ExecutionInstance()}
 
         # set synapse row modes to signed double rows per synapse driver
         # excitatory even, inhibitory odd row index
@@ -41,7 +46,8 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             synapse_row_modes[row] = hal.SynapseDriverConfig.RowMode\
                 .inhibitory if row.toEnum().value() % 2 else hal\
                 .SynapseDriverConfig.RowMode.excitatory
-        ret.synapse_row_modes = synapse_row_modes
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .synapse_row_modes = synapse_row_modes
 
         # configure crossbar nodes
         crossbar_nodes = {}
@@ -108,33 +114,39 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
             config.target = halco.NeuronLabel(1)
             crossbar_nodes[coord] = config
 
-        ret.crossbar_nodes = crossbar_nodes
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .crossbar_nodes = crossbar_nodes
 
         # no separation via synapse driver compare masks
         synapse_driver_compare_masks = {}
         for driver in halco.iter_all(halco.SynapseDriverOnDLS):
             synapse_driver_compare_masks[driver] = 0
-        ret.synapse_driver_compare_masks = synapse_driver_compare_masks
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .synapse_driver_compare_masks = synapse_driver_compare_masks
 
 
         # use internal neuron labels linearly
-        neurons_0 = network.populations[
-            grenade.PopulationOnNetwork(0)].neurons
+        neurons_0 = network.execution_instances[
+            grenade_common.ExecutionInstanceID()].populations[
+            grenade.PopulationOnExecutionInstance(0)].neurons
         assert len(neurons_0) == 246
         internal_neuron_labels_0 = []
         for i in range(246):
             internal_neuron_labels_0.append(
               {halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111), None]})
-        ret.internal_neuron_labels[grenade.PopulationOnNetwork(0)] = \
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .internal_neuron_labels[grenade.PopulationOnNetwork(0)] = \
             internal_neuron_labels_0
-        neurons_1 = network.populations[
-            grenade.PopulationOnNetwork(1)].neurons
+        neurons_1 = network.execution_instances[
+            grenade_common.ExecutionInstanceID()].populations[
+            grenade.PopulationOnExecutionInstance(1)].neurons
         assert len(neurons_1) == 10
         internal_neuron_labels_1 = []
         for i in range(246, 256):
             internal_neuron_labels_1.append(
               {halco.CompartmentOnLogicalNeuron(): [(i & 0b00011111), None]})
-        ret.internal_neuron_labels = {
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .internal_neuron_labels = {
             grenade.PopulationOnNetwork(0):
             internal_neuron_labels_0,
             grenade.PopulationOnNetwork(1):
@@ -143,8 +155,9 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
         # linearly assign input event label to synapse driver
         external_spike_labels = []
-        input_size = network.populations[
-            grenade.PopulationOnNetwork(2)].size
+        input_size = network.execution_instances[
+            grenade_common.ExecutionInstanceID()].populations[
+            grenade.PopulationOnExecutionInstance(2)].size
         for i in range(input_size):
             label = halco.SpikeLabel(
                 ((i < input_size // 2) << 13)  # top/bottom hemisphere
@@ -154,7 +167,8 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                     % halco.SynapseDriverOnPADIBus.size) + 32)  # unused synapse label above internal neuron labels
             )
             external_spike_labels.append([label])
-        ret.external_spike_labels = {
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .external_spike_labels = {
             grenade.PopulationOnNetwork(2):
             external_spike_labels}
 
@@ -162,17 +176,20 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         connections = {}
         connection_routing_result = {}
         for j in range(0, 2):
-            projection = network.projections[
-                grenade.ProjectionOnNetwork(j)]
+            projection = network.execution_instances[
+                grenade_common.ExecutionInstanceID()].projections[
+                grenade.ProjectionOnExecutionInstance(j)]
             is_inh = projection.receptor.type == grenade.Receptor.Type\
                 .inhibitory
             connections_ho = []
-            for i, connection in enumerate(network.projections[
-                    grenade.ProjectionOnNetwork(j)].connections):
-                placed_connection = grenade.RoutingResult\
+            for i, connection in enumerate(network.execution_instances[
+                grenade_common.ExecutionInstanceID()].projections[
+                    grenade.ProjectionOnExecutionInstance(j)].connections):
+                placed_connection = grenade.RoutingResult.ExecutionInstance\
                     .PlacedConnection()
                 placed_connection.weight = connection.weight.value()
-                placed_connection.synapse_on_row = network.populations[
+                placed_connection.synapse_on_row = network.execution_instances[
+                grenade_common.ExecutionInstanceID()].populations[
                     projection.population_post].neurons[connection.index_post[0]]\
                     .coordinate.get_placed_compartments()[connection.index_post[1]][0]\
                     .toNeuronColumnOnDLS().toSynapseOnSynapseRow()
@@ -192,17 +209,20 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                 grenade.ProjectionOnNetwork(j)] = connections_ho
 
         for j in range(2, 4):
-            projection = network.projections[
-                grenade.ProjectionOnNetwork(j)]
+            projection = network.execution_instances[
+                grenade_common.ExecutionInstanceID()].projections[
+                grenade.ProjectionOnExecutionInstance(j)]
             is_inh = projection.receptor.type == grenade.Receptor.Type\
                 .inhibitory
             connections_ih = []
-            for i, connection in enumerate(network.projections[
-                    grenade.ProjectionOnNetwork(j)].connections):
-                placed_connection = grenade.RoutingResult\
+            for i, connection in enumerate(network.execution_instances[
+                    grenade_common.ExecutionInstanceID()].projections[
+                    grenade.ProjectionOnExecutionInstance(j)].connections):
+                placed_connection = grenade.RoutingResult.ExecutionInstance\
                     .PlacedConnection()
                 placed_connection.weight = connection.weight.value()
-                placed_connection.synapse_on_row = network.populations[
+                placed_connection.synapse_on_row = network.execution_instances[
+                    grenade_common.ExecutionInstanceID()].populations[
                     projection.population_post].neurons[connection.index_post[0]]\
                     .coordinate.get_placed_compartments()[connection.index_post[1]][0]\
                     .toNeuronColumnOnDLS().toSynapseOnSynapseRow()
@@ -221,8 +241,10 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
                         grenade.ProjectionOnNetwork(j): []})
                 connection_routing_result[grenade.ProjectionOnNetwork(j)].append(routes)
             connections[grenade.ProjectionOnNetwork(j)] = connections_ih
-        ret.connections = connections
-        ret.connection_routing_result = connection_routing_result
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .connections = connections
+        ret.execution_instances[grenade_common.ExecutionInstanceID()]\
+            .connection_routing_result = connection_routing_result
 
         return ret
 

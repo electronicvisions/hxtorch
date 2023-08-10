@@ -154,8 +154,10 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                 grenade.Receptor.Type.inhibitory),
             connections_inh, pre, post)
 
-        exc_descriptor = builder.add(projection_exc)
-        inh_descriptor = builder.add(projection_inh)
+        exc_descriptor = builder.add(
+            projection_exc, self.experiment.execution_instance)
+        inh_descriptor = builder.add(
+            projection_inh, self.experiment.execution_instance)
         self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added projection '{self}' to grenade graph.")
 

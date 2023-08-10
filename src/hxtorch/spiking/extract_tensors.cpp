@@ -33,19 +33,21 @@ std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
 	std::map<PopulationOnNetwork, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;
 
 	assert(network_graph.get_network());
-	for (auto const& [descriptor, pop] : network_graph.get_network()->populations) {
-		if (!std::holds_alternative<Population>(pop)) {
-			continue;
-		}
-		auto const& neurons = std::get<Population>(pop).neurons;
-		if (std::any_of(neurons.begin(), neurons.end(), [](auto const& nrn) {
-			    return std::any_of(
-			        nrn.compartments.begin(), nrn.compartments.end(), [](auto const& comp) {
-				        return comp.second.spike_master &&
-				               comp.second.spike_master->enable_record_spikes;
-			        });
-		    })) {
-			indices[descriptor] = {};
+	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
+		for (auto const& [descriptor, pop] : execution_instance.populations) {
+			if (!std::holds_alternative<Population>(pop)) {
+				continue;
+			}
+			auto const& neurons = std::get<Population>(pop).neurons;
+			if (std::any_of(neurons.begin(), neurons.end(), [](auto const& nrn) {
+				    return std::any_of(
+				        nrn.compartments.begin(), nrn.compartments.end(), [](auto const& comp) {
+					        return comp.second.spike_master &&
+					               comp.second.spike_master->enable_record_spikes;
+				        });
+			    })) {
+				indices[PopulationOnNetwork(descriptor, id)] = {};
+			}
 		}
 	}
 
@@ -91,9 +93,11 @@ std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
 		torch::Tensor spike_tensor = torch::sparse_coo_tensor(
 		    indicies_tensor, values_tensor.clone(),
 		    {runtime + 1, static_cast<int>(data.batch_size()),
-		     static_cast<int>(
-		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
-		             .neurons.size())},
+		     static_cast<int>(std::get<Population>(
+		                          network_graph.get_network()
+		                              ->execution_instances.at(descriptor.toExecutionInstanceID())
+		                              .populations.at(descriptor.toPopulationOnExecutionInstance()))
+		                          .neurons.size())},
 		    data_options);
 
 		// handle
@@ -116,71 +120,74 @@ std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
 	// return data
 	std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> ret;
 
-	assert(network_graph.get_network());
-	if (!network_graph.get_network()->madc_recording) {
-		return ret;
-	}
-
-	// TODO: support two channels
-	if (network_graph.get_network()->madc_recording->neurons.size() != 1) {
-		throw std::runtime_error("Unsupported number of recorded MADC channels.");
-	}
-	auto const descriptor =
-	    network_graph.get_network()->madc_recording->neurons.at(0).coordinate.population;
-	auto const neuron_in_population =
-	    network_graph.get_network()->madc_recording->neurons.at(0).coordinate.neuron_on_population;
-	assert(
-	    network_graph.get_network()
-	        ->madc_recording->neurons.at(0)
-	        .coordinate.compartment_on_neuron.value() == 0);
-
 	auto const grenade_samples = extract_madc_samples(data, network_graph);
 
-	std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>> samples;
-
-	for (size_t b = 0; b < grenade_samples.size(); ++b) {
-		for (auto const& [time, _, value] : grenade_samples.at(b)) {
-			samples.push_back(std::tuple{
-			    static_cast<int64_t>(value.value()), static_cast<int64_t>(time.value()),
-			    static_cast<int64_t>(b), static_cast<int64_t>(neuron_in_population)});
+	assert(network_graph.get_network());
+	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
+		if (!execution_instance.madc_recording) {
+			continue;
 		}
+
+		// TODO: support two channels
+		if (execution_instance.madc_recording->neurons.size() != 1) {
+			throw std::runtime_error("Unsupported number of recorded MADC channels.");
+		}
+		auto const descriptor =
+		    execution_instance.madc_recording->neurons.at(0).coordinate.population;
+		auto const neuron_in_population =
+		    execution_instance.madc_recording->neurons.at(0).coordinate.neuron_on_population;
+		assert(
+		    execution_instance.madc_recording->neurons.at(0)
+		        .coordinate.compartment_on_neuron.value() == 0);
+
+		std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>> samples;
+
+		for (size_t b = 0; b < grenade_samples.size(); ++b) {
+			for (auto const& [time, atomic_neuron_on_network, value] : grenade_samples.at(b)) {
+				if (atomic_neuron_on_network.population.toExecutionInstanceID() != id) {
+					continue;
+				}
+				samples.push_back(std::tuple{
+				    static_cast<int64_t>(value.value()), static_cast<int64_t>(time.value()),
+				    static_cast<int64_t>(b), static_cast<int64_t>(neuron_in_population)});
+			}
+		}
+		std::sort(samples.begin(), samples.end(), [](auto const& a, auto const& b) {
+			return std::get<1>(a) < std::get<1>(b);
+		});
+
+		// tensor options
+		auto const& data_options = torch::TensorOptions().dtype(torch::kInt16);
+		auto const& index_options = torch::TensorOptions().dtype(torch::kLong);
+
+		// tensor data
+		auto values_tensor = torch::empty({static_cast<int64_t>(samples.size())}, data_options);
+		auto indicies_tensor =
+		    torch::empty({3, static_cast<int64_t>(samples.size())}, index_options);
+
+		// convert to tensor
+		auto accessor_v = values_tensor.accessor<int16_t, 1>();
+		auto accessor_i = indicies_tensor.accessor<long, 2>();
+		for (size_t i = 0; i < samples.size(); ++i) {
+			accessor_v[i] = std::get<0>(samples.at(i));
+			accessor_i[0][i] = std::get<1>(samples.at(i));
+			accessor_i[1][i] = std::get<2>(samples.at(i));
+			accessor_i[2][i] = std::get<3>(samples.at(i));
+		}
+
+		// create sparse COO tensor
+		torch::Tensor madc_tensor = torch::sparse_coo_tensor(
+		    indicies_tensor, values_tensor.clone(),
+		    {runtime + 1, static_cast<int>(data.batch_size()),
+		     static_cast<int>(std::get<Population>(execution_instance.populations.at(descriptor))
+		                          .neurons.size())},
+		    data_options);
+
+		// handle
+		ret[PopulationOnNetwork(descriptor, id)] = MADCHandle(
+		    madc_tensor,
+		    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
 	}
-	std::sort(samples.begin(), samples.end(), [](auto const& a, auto const& b) {
-		return std::get<1>(a) < std::get<1>(b);
-	});
-
-	// tensor options
-	auto const& data_options = torch::TensorOptions().dtype(torch::kInt16);
-	auto const& index_options = torch::TensorOptions().dtype(torch::kLong);
-
-	// tensor data
-	auto values_tensor = torch::empty({static_cast<int64_t>(samples.size())}, data_options);
-	auto indicies_tensor = torch::empty({3, static_cast<int64_t>(samples.size())}, index_options);
-
-	// convert to tensor
-	auto accessor_v = values_tensor.accessor<int16_t, 1>();
-	auto accessor_i = indicies_tensor.accessor<long, 2>();
-	for (size_t i = 0; i < samples.size(); ++i) {
-		accessor_v[i] = std::get<0>(samples.at(i));
-		accessor_i[0][i] = std::get<1>(samples.at(i));
-		accessor_i[1][i] = std::get<2>(samples.at(i));
-		accessor_i[2][i] = std::get<3>(samples.at(i));
-	}
-
-	// create sparse COO tensor
-	torch::Tensor madc_tensor = torch::sparse_coo_tensor(
-	    indicies_tensor, values_tensor.clone(),
-	    {runtime + 1, static_cast<int>(data.batch_size()),
-	     static_cast<int>(
-	         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
-	             .neurons.size())},
-	    data_options);
-
-	// handle
-	ret[descriptor] = MADCHandle(
-	    madc_tensor,
-	    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
-
 	return ret;
 }
 
@@ -198,66 +205,72 @@ std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
 
 	auto const grenade_samples = extract_cadc_samples(data, network_graph);
 
-	// return if network does not cadc recording
-	assert(network_graph.get_network());
-	if (!network_graph.get_network()->cadc_recording) {
-		return ret;
-	}
-
 	// get indices and values of events. NOTE: Would be nicer to use here torch.Tensors right away.
 	// However, we do not know the number of events per population trivially beforehand.
 	std::map<PopulationOnNetwork, std::vector<std::tuple<int32_t, int64_t, int64_t, int64_t>>>
 	    samples;
 
-	for (size_t b = 0; b < grenade_samples.size(); ++b) {
-		for (auto const& [time, atomic_neuron_on_network, value] : grenade_samples.at(b)) {
-			assert(atomic_neuron_on_network.compartment_on_neuron.value() == 0);
-			if (static_cast<int64_t>(time.value()) <= runtime) {
-				samples[atomic_neuron_on_network.population].push_back(std::tuple{
-				    static_cast<int32_t>(static_cast<int8_t>(value + 128)),
-				    static_cast<int64_t>(time.value()), static_cast<int64_t>(b),
-				    static_cast<int64_t>(atomic_neuron_on_network.neuron_on_population)});
+	assert(network_graph.get_network());
+	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
+		if (!execution_instance.cadc_recording) {
+			continue;
+		}
+
+		for (size_t b = 0; b < grenade_samples.size(); ++b) {
+			for (auto const& [time, atomic_neuron_on_network, value] : grenade_samples.at(b)) {
+				if (atomic_neuron_on_network.population.toExecutionInstanceID() != id) {
+					continue;
+				}
+				assert(atomic_neuron_on_network.compartment_on_neuron.value() == 0);
+				if (static_cast<int64_t>(time.value()) <= runtime) {
+					samples[atomic_neuron_on_network.population].push_back(std::tuple{
+					    static_cast<int32_t>(static_cast<int8_t>(value + 128)),
+					    static_cast<int64_t>(time.value()), static_cast<int64_t>(b),
+					    static_cast<int64_t>(atomic_neuron_on_network.neuron_on_population)});
+				}
 			}
 		}
-	}
-	for (auto& [_, s] : samples) {
-		std::sort(s.begin(), s.end(), [](auto const& a, auto const& b) {
-			return std::get<1>(a) < std::get<1>(b);
-		});
-	}
-
-	for (auto const& [descriptor, pop_data] : samples) {
-		// tensor options
-		auto const& data_options = torch::TensorOptions().dtype(torch::kInt);
-		auto const& index_options = torch::TensorOptions().dtype(torch::kLong);
-
-		// sparse tensor data
-		auto values_tensor = torch::empty({static_cast<int64_t>(pop_data.size())}, data_options);
-		auto indicies_tensor =
-		    torch::empty({3, static_cast<int64_t>(pop_data.size())}, index_options);
-
-		// convert to tensor
-		auto accessor_v = values_tensor.accessor<int32_t, 1>();
-		auto accessor_i = indicies_tensor.accessor<long, 2>();
-		for (size_t i = 0; i < pop_data.size(); ++i) {
-			accessor_v[i] = std::get<0>(pop_data.at(i));
-			accessor_i[0][i] = std::get<1>(pop_data.at(i));
-			accessor_i[1][i] = std::get<2>(pop_data.at(i));
-			accessor_i[2][i] = std::get<3>(pop_data.at(i));
+		for (auto& [_, s] : samples) {
+			std::sort(s.begin(), s.end(), [](auto const& a, auto const& b) {
+				return std::get<1>(a) < std::get<1>(b);
+			});
 		}
 
-		torch::Tensor cadc_tensor = torch::sparse_coo_tensor(
-		    indicies_tensor, values_tensor.clone(),
-		    {runtime + 1, static_cast<int>(data.batch_size()),
-		     static_cast<int>(
-		         std::get<Population>(network_graph.get_network()->populations.at(descriptor))
-		             .neurons.size())},
-		    data_options);
+		for (auto const& [descriptor, pop_data] : samples) {
+			// tensor options
+			auto const& data_options = torch::TensorOptions().dtype(torch::kInt);
+			auto const& index_options = torch::TensorOptions().dtype(torch::kLong);
 
-		// handle
-		ret[descriptor] = CADCHandle(
-		    cadc_tensor,
-		    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
+			// sparse tensor data
+			auto values_tensor =
+			    torch::empty({static_cast<int64_t>(pop_data.size())}, data_options);
+			auto indicies_tensor =
+			    torch::empty({3, static_cast<int64_t>(pop_data.size())}, index_options);
+
+			// convert to tensor
+			auto accessor_v = values_tensor.accessor<int32_t, 1>();
+			auto accessor_i = indicies_tensor.accessor<long, 2>();
+			for (size_t i = 0; i < pop_data.size(); ++i) {
+				accessor_v[i] = std::get<0>(pop_data.at(i));
+				accessor_i[0][i] = std::get<1>(pop_data.at(i));
+				accessor_i[1][i] = std::get<2>(pop_data.at(i));
+				accessor_i[2][i] = std::get<3>(pop_data.at(i));
+			}
+
+			torch::Tensor cadc_tensor = torch::sparse_coo_tensor(
+			    indicies_tensor, values_tensor.clone(),
+			    {runtime + 1, static_cast<int>(data.batch_size()),
+			     static_cast<int>(
+			         std::get<Population>(execution_instance.populations.at(
+			                                  descriptor.toPopulationOnExecutionInstance()))
+			             .neurons.size())},
+			    data_options);
+
+			// handle
+			ret[descriptor] = CADCHandle(
+			    cadc_tensor,
+			    1. / 1e6 / static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us));
+		}
 	}
 	return ret;
 }

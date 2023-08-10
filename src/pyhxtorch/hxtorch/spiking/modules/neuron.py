@@ -344,7 +344,8 @@ class Neuron(Population):
         gpopulation = grenade.Population(neurons)
 
         # add to builder
-        self.descriptor = builder.add(gpopulation)
+        self.descriptor = builder.add(
+            gpopulation, self.experiment.execution_instance)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
@@ -372,7 +373,7 @@ class Neuron(Population):
         madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
         madc_recording = grenade.MADCRecording()
         madc_recording.neurons = [madc_recording_neuron]
-        builder.add(madc_recording)
+        builder.add(madc_recording, self.experiment.execution_instance)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
         return self.descriptor
