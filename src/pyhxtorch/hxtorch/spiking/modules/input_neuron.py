@@ -95,7 +95,7 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
         # maybe support sparse input tensor?
         # TODO: Expects ms relative. Align to time handling.
         spike_times = tensor_to_spike_times(  # pylint: disable=no-member
-            input.spikes, dt=self.experiment.dt / 1e-3)
+            input.spikes.cpu(), dt=self.experiment.dt / 1e-3)
         builder.add(spike_times, self.descriptor)
 
     def post_process(self, hw_spikes: Optional[SpikeHandle],
