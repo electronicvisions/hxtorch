@@ -125,14 +125,16 @@ class HXModule(torch.nn.Module):
 
         # In case of HW execution and func is autograd func we override forward
         if is_autograd_func and not self.experiment.mock:
-            def func(*inputs, hw_data):
+            def func(inputs, hw_data):
+                if hw_data is None:
+                    return function.apply(*inputs, *self.extra_args)
+
                 class LocalAutograd(function):
                     @staticmethod
                     def forward(  # pylint: disable=dangerous-default-value
                             ctx, *data, extra_kwargs=self.extra_kwargs):
                         ctx.extra_kwargs = extra_kwargs
-                        ctx.save_for_backward(
-                            *data, *hw_data if hw_data is not None else None)
+                        ctx.save_for_backward(*data, *hw_data)
                         return hw_data
                 return LocalAutograd.apply(*inputs, *self.extra_args)
 
