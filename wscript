@@ -117,7 +117,6 @@ def build(bld):
         source = bld.path.ant_glob('src/hxtorch/perceptron/**/*.cpp'),
         target = 'hxtorch_perceptron_cpp',
         use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP', 'grenade_vx_serialization'],
-        install_path='${PREFIX}/lib',
         uselib = ['PYEXT'],
     )
 
@@ -126,7 +125,6 @@ def build(bld):
         source = bld.path.ant_glob('src/hxtorch/spiking/**/*.cpp'),
         target = 'hxtorch_spiking_cpp',
         use = ['hxtorch_inc', 'hxtorch_core_cpp', 'grenade_vx', 'TORCH_CPP'],
-        install_path='${PREFIX}/lib',
         uselib = ['PYEXT'],
     )
 
@@ -136,7 +134,6 @@ def build(bld):
         source = 'src/hxtorch/hxtorch_core.cpp',
         target = '_hxtorch_core',
         use = ['hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH'],
-        install_path='${PREFIX}/lib',
         rpath = bld.env.LIBPATH_TORCH,
     )
 
@@ -146,7 +143,6 @@ def build(bld):
         target = '_hxtorch_perceptron',
         use = ['hxtorch_perceptron_cpp', 'hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
         defines = ['TORCH_EXTENSION_NAME=_hxtorch_perceptron'],
-        install_path='${PREFIX}/lib',
         rpath = bld.env.LIBPATH_TORCH,
     )
 
@@ -156,7 +152,6 @@ def build(bld):
         target = '_hxtorch_spiking',
         use = ['hxtorch_spiking_cpp', 'hxtorch_core_cpp', 'grenade_vx', 'pygrenade_vx', 'stadls_vx_v3', 'PYBIND11HXTORCH', 'TORCH'],
         defines = ['TORCH_EXTENSION_NAME=_hxtorch_spiking'],
-        install_path='${PREFIX}/lib',
         rpath = bld.env.LIBPATH_TORCH,
     )
 
@@ -167,7 +162,6 @@ def build(bld):
         use=['pylogging', '_hxtorch_core', '_hxtorch_spiking', '_hxtorch_perceptron', 'pygrenade_vx', 'dlens_vx_v3'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
-        install_path = '${PREFIX}/lib',
         install_from='src/pyhxtorch',
     )
 
