@@ -142,10 +142,14 @@ class Experiment(BaseExperiment):
         configurations to. Additionally this method defines the
         pre_static_config builder injected to grenade at run.
         """
+        self._execution_instances.update([
+            module.execution_instance for module in self.modules.nodes])
         if self._static_config_prepared:  # Only do this once
             return
         for execution_instance in self._execution_instances:
-            execution_instance.prepare_static_config()
+            modules = [m for m in self.modules.nodes
+                       if m.execution_instance == execution_instance]
+            execution_instance.modules = modules
         self._static_config_prepared = True
         log.TRACE("Preparation of static config done.")
 
@@ -360,6 +364,11 @@ class Experiment(BaseExperiment):
         """
         self._projections.append(module)
 
+    def _calibrate(self):
+        """ """
+        for execution_instance in self._execution_instances:
+            execution_instance.calibrate()
+
     def get_hw_results(self, runtime: Optional[int]) \
             -> Dict[grenade.network.PopulationOnNetwork,
                     Tuple[Optional[torch.Tensor], ...]]:
@@ -375,8 +384,6 @@ class Experiment(BaseExperiment):
             the corresponding module's `post_process` method.
         """
         if not self.mock:
-            self._execution_instances.update([
-                module.execution_instance for module in self.modules.nodes])
             self._prepare_static_config()
 
         # Preprocess layer
@@ -392,6 +399,9 @@ class Experiment(BaseExperiment):
                     not in itertools.chain(
                         self._projections, self._populations):
                 module.register_hw_entity()
+
+        # Calibration
+        self._calibrate()
 
         # Generate network graph
         network = self._generate_network_graphs()

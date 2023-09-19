@@ -24,9 +24,9 @@ def refractory_update(z: torch.Tensor, v: torch.Tensor,
     # Refractory mask
     ref_mask = (ref_state > 0).long()
     # Update neuron states
-    v = (1 - ref_mask) * v + ref_mask * params.v_reset
+    v = (1 - ref_mask) * v + ref_mask * params.reset
     z = (1 - ref_mask) * z
     # Update refractory state
     ref_state = (1 - z) * torch.nn.functional.relu(ref_state - ref_mask) \
-        + z * params.tau_ref / dt
+        + z * params.refractory_time / dt
     return z, v, ref_state

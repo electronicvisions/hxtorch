@@ -4,6 +4,7 @@ Test SNN examples
 import unittest
 
 from hxtorch.examples.spiking import yinyang
+from hxtorch.examples.spiking import calib_neuron
 
 
 class YinYangExampleTest(unittest.TestCase):
@@ -57,6 +58,16 @@ class YinYangExampleTest(unittest.TestCase):
 
     def test_training_mock(self):
         self.test_training(mock=True)
+
+
+class CalibNeuronExampleTest(unittest.TestCase):
+    """ Test example calibration of neuron """
+
+    def test_calib_neuron(self) -> None:
+        spikes, _ = calib_neuron.main()
+
+        self.assertGreater(spikes.to_sparse().shape[0], 0)
+
 
 
 if __name__ == "__main__":

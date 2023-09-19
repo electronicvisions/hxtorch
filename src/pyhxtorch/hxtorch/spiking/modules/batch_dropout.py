@@ -11,6 +11,7 @@ import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.hx_module import HXFunctionalModule
 if TYPE_CHECKING:
+    from hxtorch.spiking.modules.hx_module import HXBaseModule
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
@@ -46,7 +47,6 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
             functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to
             `batch_dropout`.
-        :param execution_instance: Execution instance to place to.
         """
         super().__init__(experiment=experiment, func=func)
 

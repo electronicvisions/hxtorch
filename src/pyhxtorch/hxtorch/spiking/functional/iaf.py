@@ -3,21 +3,30 @@ Integrate and fire neurons
 """
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
-from typing import NamedTuple, Tuple, Optional
+from typing import NamedTuple, Tuple, Optional, Union
+import dataclasses
 import torch
 
-from hxtorch.spiking.functional.threshold import threshold
+from hxtorch.spiking.calibrated_params import CalibratedParams
+from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.refractory import refractory_update
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 
 class CUBAIAFParams(NamedTuple):
     """ Parameters for IAF integration and backward path """
-    tau_mem_inv: torch.Tensor
-    tau_syn_inv: torch.Tensor
-    tau_ref: torch.Tensor = torch.tensor(0.)
-    v_th: torch.Tensor = torch.tensor(1.)
-    v_reset: torch.Tensor = torch.tensor(0.)
+    tau_mem: torch.Tensor
+    tau_syn: torch.Tensor
+    refractory_time: torch.Tensor = torch.tensor(0.)
+    threshold: torch.Tensor = torch.tensor(1.)
+    reset: torch.Tensor = torch.tensor(0.)
+    alpha: float = 50.0
+    method: str = "superspike"
+
+
+@dataclasses.dataclass(unsafe_hash=True)
+class CalibratedCUBAIAFParams(CalibratedParams):
+    """ Parameters for CUBA LIF integration and backward path """
     alpha: float = 50.0
     method: str = "superspike"
 
@@ -42,21 +51,23 @@ def iaf_step(z: torch.Tensor, v: torch.Tensor, i: torch.Tensor,
     :returns: Returns a tuple (z, v, i) holding the tensors of time step t + 1.
     """
     # Membrane increment
-    dv = dt * params.tau_mem_inv * i
+    dv = dt / params.tau_mem * i
     v = Unterjubel.apply(dv + v, v_hw) if z_hw is not None else dv + v
     # Current
-    di = -dt * params.tau_syn_inv * i
+    di = -dt / params.tau_syn * i
     i = i + di + input
     # Spikes
-    spike = threshold(v - params.v_th, params.method, params.alpha)
+    spike = spiking_threshold(
+        v - params.threshold, params.method, params.alpha)
     z = Unterjubel.apply(spike, z_hw) if z_hw is not None else spike
     # Reset
     if z_hw is None:
-        v = (1 - z.detach()) * v + z.detach() * params.v_reset
+        v = (1 - z.detach()) * v + z.detach() * params.reset
     return z, v, i
 
 
-def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
+def cuba_iaf_integration(input: torch.Tensor,
+                         params: Union[CalibratedCUBAIAFParams, CUBAIAFParams],
                          hw_data: Optional[torch.Tensor] = None,
                          dt: float = 1e-6) \
         -> Tuple[torch.Tensor, torch.Tensor]:
@@ -66,9 +77,9 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
     Integrates according to:
         v^{t+1} = dt / \tau_{men} * (v_l - v^t + i^t) + v^t
         i^{t+1} = i^t * (1 - dt / \tau_{syn}) + x^t
-        z^{t+1} = 1 if v^{t+1} > params.v_th
+        z^{t+1} = 1 if v^{t+1} > params.threshold
         v^{t+1} = v_reset if z^{t+1} == 1
-    Assumes i^0, v^0 = 0., v_reset
+    Assumes i^0, v^0 = 0., params.reset
     :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
     :param params: LIFParams object holding neuron parameters.
@@ -78,7 +89,7 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
-        torch.empty(bs, ps).fill_(params.v_reset).to(dev)
+        torch.empty(bs, ps).fill_(params.reset).to(dev)
     z_hw, v_cadc, v_madc = None, None, None
 
     if hw_data is not None:
@@ -130,7 +141,7 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
-        torch.empty(bs, ps).fill_(params.v_reset).to(dev)
+        torch.empty(bs, ps).fill_(params.reset).to(dev)
     z_hw, v_cadc, v_madc = None, None, None
 
     if hw_data is not None:

@@ -22,7 +22,7 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration(self):
         """ Test CUBA LI integration """
         # Params
-        params = CUBALIParams(tau_mem_inv=1./6e-6, tau_syn_inv=1./6e-6)
+        params = CUBALIParams(tau_mem=6e-6, tau_syn=6e-6)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -61,7 +61,7 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration_hw_data(self):
         """ Test CUBA LI integration with hardware data """
         # Params
-        params = CUBALIParams(tau_mem_inv=1./6e-6, tau_syn_inv=1./6e-6)
+        params = CUBALIParams(tau_mem=6e-6, tau_syn=6e-6)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)

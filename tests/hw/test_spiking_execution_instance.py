@@ -3,10 +3,13 @@ import unittest
 import hxtorch
 import pylogging as logger
 import pygrenade_vx as grenade
+from copy import deepcopy
 
 from hxtorch.spiking.execution_instance import (
     ExecutionInstance, ExecutionInstances)
 from hxtorch.spiking.utils import calib_helper
+from hxtorch.spiking.calibrated_params import CalibratedParams
+import hxtorch.spiking as hxsnn
 
 logger.default_config(level=logger.LogLevel.INFO)
 logger = logger.get("hxtorch.test.hw.test_spiking_execution_instance")
@@ -45,7 +48,7 @@ class TestExecutionInstances(HXTestCase):
 
         # load chips
         for inst in instances:
-            inst.prepare_static_config()
+            inst.load_calib(calib_helper.nightly_calib_path())
         chips = instances.chips
         self.assertEqual(len(chips), 3)
         self.assertTrue(
@@ -90,8 +93,6 @@ class TestExecutionInstances(HXTestCase):
         inst2 = ExecutionInstance()
         inst3 = ExecutionInstance()
         instances = ExecutionInstances([inst1, inst2, inst3])
-        for inst in instances:
-            inst.prepare_static_config()
 
         hooks = instances.playback_hooks
         self.assertIsInstance(hooks, dict)
@@ -127,23 +128,77 @@ class TestExecutionInstance(HXTestCase):
         inst.load_calib(calib_path)
         self.assertIsNotNone(inst.chip)
 
-    def test_prepare_static_config(self):
+    def test_calibrate(self):
         """ Test prepare static config """
-        # Test calib
-        # Test chip is None
-        inst = ExecutionInstance()
-        self.assertIsNone(inst.chip)
-        inst.prepare_static_config()
-        self.assertIsNotNone(inst.chip)
+        # Calib path assigned
+        # Native calix path
+        # -> params should be loadable and no calibration executed
+        inst = ExecutionInstance(
+            calib_path=calib_helper.nightly_calix_native_path())
+        exp = hxsnn.Experiment()
+        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
+        params = CalibratedParams(leak=0)
+        old_params = deepcopy(params)
+        nrn = hxsnn.Neuron(
+            10, exp, execution_instance=inst, params=params)
+        # Ensure modules get placed
+        syn.register_hw_entity()
+        nrn.register_hw_entity()
+        inst.modules = [syn, nrn]
+        self.assertNotEqual(0, len(inst.modules))
+        inst.calibrate()
+        self.assertIsNotNone(inst.calib)
+        self.assertNotEqual(params.leak[0], old_params.leak)
 
-        # Test chip is not None -> No new chip
-        calib_path = calib_helper.nightly_calib_path()
-        inst = ExecutionInstance(calib_path=calib_path)
-        chip1 = inst.chip
+        # Non-native calix path
+        # -> params should not be loadable and no calibration executed
+        inst = ExecutionInstance(
+            calib_path=calib_helper.nightly_calib_path())
+        exp = hxsnn.Experiment()
+        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
+        params = CalibratedParams(leak=0)
+        old_params = deepcopy(params)
+        nrn = hxsnn.Neuron(
+            10, exp, execution_instance=inst, params=params)
+        # Ensure modules get placed
+        syn.register_hw_entity()
+        nrn.register_hw_entity()
+        inst.modules = [syn, nrn]
+        self.assertNotEqual(0, len(inst.modules))
+        inst.calibrate()
+        self.assertIsNone(inst.calib)
+        self.assertEqual(params, old_params)
+
+        # No calib path assigned
+        # -> try to load params from params objects if it has `to_calix_target`
+        # Does not have it -> load nightly at least
+        inst = ExecutionInstance()
+        exp = hxsnn.Experiment()
+        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
+        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
+        inst.modules = [syn, nrn]
+        self.assertNotEqual(0, len(inst.modules))
+
+        inst.calibrate()
         self.assertIsNotNone(inst.chip)
-        inst.prepare_static_config()
-        chip2 = inst.chip
-        self.assertEqual(chip1, chip2)
+        self.assertEqual(
+            inst.calib_path, calib_helper.nightly_calix_native_path())
+        
+        # Now we assign CalibratedParams which has `to_calix_target`
+        # Should calibrate
+        inst = ExecutionInstance()
+        exp = hxsnn.Experiment()
+        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
+        nrn = hxsnn.Neuron(
+            10, exp, execution_instance=inst, params=CalibratedParams())
+        # Ensure modules get placed
+        syn.register_hw_entity()
+        nrn.register_hw_entity()
+        inst.modules = [syn, nrn]
+        self.assertNotEqual(0, len(inst.modules))
+        inst.calibrate()
+        self.assertIsNotNone(inst.calib)
+        self.assertIsNotNone(inst.chip)
 
     def test_cadc_recordings(self):
         """ Test CADC recordings """

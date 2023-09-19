@@ -25,11 +25,11 @@ class TestIAFIntegration(unittest.TestCase):
         """ Test IAF integration """
         # Params
         params = CUBAIAFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            tau_ref=1e-6,
-            v_th=1.,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=1e-6,
+            threshold=1.,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -71,11 +71,11 @@ class TestIAFIntegration(unittest.TestCase):
         """ Test IAF integration with hardware data """
         # Params
         params = CUBAIAFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            tau_ref=0e-6,
-            v_th=1.,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=0e-6,
+            threshold=1.,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -136,11 +136,11 @@ class TestIAFIntegration(unittest.TestCase):
         """ Test refractory IAF integration """
         # Params
         params = CUBAIAFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            tau_ref=1e-6,
-            v_th=1.,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=1e-6,
+            threshold=1.,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -183,11 +183,11 @@ class TestIAFIntegration(unittest.TestCase):
         """ Test refractory IAF integration with hardware data """
         # Params
         params = CUBAIAFParams(
-            tau_mem_inv=1. / 6e-6,
-            tau_syn_inv=1. / 6e-6,
-            tau_ref=0e-6,
-            v_th=1.,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=0e-6,
+            threshold=1.,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)

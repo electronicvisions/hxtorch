@@ -57,17 +57,16 @@ class SNN(torch.nn.Module):
 
         # Neuron parameters
         lif_params = F.CUBALIFParams(
-            tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn, alpha=alpha)
-        li_params = F.CUBALIParams(
-            tau_mem_inv=1. / tau_mem, tau_syn_inv=1. / tau_syn)
+            tau_mem=tau_mem, tau_syn=tau_syn, alpha=alpha)
+        li_params = F.CUBALIParams(tau_mem=tau_mem, tau_syn=tau_syn)
 
         # Experiment instance to work on
         self.exp = hxsnn.Experiment(
             mock=mock, dt=dt)
         if not mock:
             self.exp.default_execution_instance.load_calib(
-                calib_path if calib_path else calib_helper.nightly_calib_path(
-                    "spiking2"))
+                calib_path if calib_path
+                else calib_helper.nightly_calix_native_path("spiking2"))
 
         # Repeat input
         self.input_repetitions = input_repetitions

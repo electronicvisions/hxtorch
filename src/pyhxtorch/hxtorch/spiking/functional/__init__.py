@@ -1,5 +1,7 @@
-from hxtorch.spiking.functional.lif import CUBALIFParams, cuba_lif_integration
-from hxtorch.spiking.functional.li import CUBALIParams, cuba_li_integration
+from hxtorch.spiking.functional.lif import (
+    CalibratedCUBALIFParams, CUBALIFParams, cuba_lif_integration)
+from hxtorch.spiking.functional.li import (
+    CalibratedCUBALIParams, CUBALIParams, cuba_li_integration)
 from hxtorch.spiking.functional.iaf import (
     CUBAIAFParams, cuba_iaf_integration, cuba_refractory_iaf_integration)
 from hxtorch.spiking.functional.linear import linear, linear_sparse

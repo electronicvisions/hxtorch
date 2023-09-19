@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from dlens_vx_v3 import lola, halco
 import hxtorch
 from hxtorch import spiking as hxsnn
+from hxtorch.spiking.utils import calib_helper
 from hxtorch.spiking.execution_instance import ExecutionInstance
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
@@ -407,7 +408,9 @@ class TestNeuron(HWTestCase):
         """
         # Enable bypass
         experiment = hxsnn.Experiment(dt=self.dt)
-        execution_instance = ExecutionInstance()
+        execution_instance = ExecutionInstance(
+            # Hack that chip will not be overwritten
+            calib_path=calib_helper.nightly_calib_path())
         execution_instance.chip = lola.Chip.default_neuron_bypass
         experiment.default_execution_instance = execution_instance
 
@@ -718,7 +721,9 @@ class TestIAFNeuron(HWTestCase):
         """
         # Enable bypass
         experiment = hxsnn.Experiment(dt=self.dt)
-        execution_instance = ExecutionInstance()
+        execution_instance = ExecutionInstance(
+            # Hack that chip will not be overwritten
+            calib_path=calib_helper.nightly_calib_path())
         execution_instance.chip = lola.Chip.default_neuron_bypass
         experiment.default_execution_instance = execution_instance
         # Modules

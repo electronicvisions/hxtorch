@@ -1,8 +1,11 @@
 """
 Leaky-integrate neurons
 """
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
+import dataclasses
 import torch
+
+from hxtorch.spiking.calibrated_params import CalibratedParams
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 
@@ -10,14 +13,20 @@ class CUBALIParams(NamedTuple):
 
     """ Parameters for CUBA LI integration and backward path """
 
-    tau_mem_inv: torch.Tensor
-    tau_syn_inv: torch.Tensor
-    v_leak: torch.Tensor = torch.tensor(0.)
+    tau_mem: torch.Tensor
+    tau_syn: torch.Tensor
+    leak: torch.Tensor = torch.tensor(0.)
+
+
+@dataclasses.dataclass(unsafe_hash=True)
+class CalibratedCUBALIParams(CalibratedParams):
+    """ Parameters for CUBA LI integration and backward path """
 
 
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
-def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
+def cuba_li_integration(input: torch.Tensor,
+                        params: Union[CalibratedCUBALIParams, CUBALIParams],
                         hw_data: Optional[torch.Tensor] = None,
                         dt: float = 1e-6) -> torch.Tensor:
     """
@@ -38,7 +47,7 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
     dev = input.device
     T, bs, ps = input.shape
     i, v = torch.tensor(0.).to(dev), \
-        torch.empty(bs, ps).fill_(params.v_leak).to(dev)
+        torch.empty(bs, ps).fill_(params.leak).to(dev)
     v_cadc, v_madc = None, None
 
     if hw_data is not None:
@@ -49,12 +58,12 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
 
     for ts in range(T):
         # Membrane
-        dv = dt * params.tau_mem_inv * (params.v_leak - v + i)
+        dv = dt / params.tau_mem * (params.leak - v + i)
         v = Unterjubel.apply(v + dv, v_cadc[ts]) \
             if v_cadc is not None else v + dv
 
         # Current
-        di = -dt * params.tau_syn_inv * i
+        di = -dt / params.tau_syn * i
         i = i + di + input[ts]
 
         # Save data

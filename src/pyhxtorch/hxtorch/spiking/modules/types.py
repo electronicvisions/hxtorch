@@ -2,10 +2,11 @@
 Define module types
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Optional, Callable
+from typing import TYPE_CHECKING, Callable, Union, Dict, Optional
 import torch
 from hxtorch.spiking.modules.hx_module import HXModule
 if TYPE_CHECKING:
+    from calix.spiking import SpikingCalibTarget
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
 
@@ -32,10 +33,55 @@ class Population(HXModule):
         """
         super().__init__(experiment, func, execution_instance)
         self.size = size
+        self.read_params_from_calibration = True
+        self.params = None
+        self._params_hash = None
 
     def extra_repr(self) -> str:
         """ Add additional information """
         return f"size={self.size}, {super().extra_repr()}"
+
+    def calib_changed_since_last_run(self) -> bool:
+        if not hasattr(self, "params"):
+            return False
+        new_params_hash = hash(self.params)
+        calibrate = self._params_hash != new_params_hash
+        self._params_hash = new_params_hash
+        return calibrate
+
+    def params_from_calibration(
+            self, spiking_calib_target: SpikingCalibTarget) -> None:
+        if hasattr(self, "params"):
+            # Create a hash in each case, otherwise
+            # calib_changed_since_last_run gets triggered
+            self._params_hash = hash(self.params)
+        if (not self.read_params_from_calibration
+                or not hasattr(self, "params")
+                or not hasattr(self.params, "from_calix_targets")):
+            return
+        # get populations HW neurons
+        neurons = self.execution_instance.neuron_placement.id2logicalneuron(
+            self.unit_ids)
+        self.params = self.params.from_calix_targets(
+            spiking_calib_target.neuron_target, neurons)
+        self._params_hash = hash(self.params)
+        # get params from calib target
+        self.extra_kwargs.update({"params": self.params})
+
+    def calibration_from_params(
+            self, spiking_calib_target: SpikingCalibTarget) -> Dict:
+        """
+        Add population specific calibration targets to the experiment-wide
+        calibration target, which holds information for all populations.
+
+        :param spiking_calib_target: Calibration target parameters of all
+            neuron populations registered in the self.experiment instance.
+        :returns: The chip_wide_calib_target with adjusted parameters.
+        """
+        neurons = self.execution_instance.neuron_placement.id2logicalneuron(
+            self.unit_ids)
+        return self.params.to_calix_targets(
+            spiking_calib_target.neuron_target, neurons)
 
 
 # c.f.: https://github.com/pytorch/pytorch/issues/42305

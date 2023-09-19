@@ -23,11 +23,11 @@ class TestLIFIntegration(unittest.TestCase):
         """ Test CUBA LIF integration """
         # Params
         params = CUBALIFParams(
-            tau_mem_inv=1./6e-6,
-            tau_syn_inv=1./6e-6,
-            tau_ref=1e-6,
-            v_th=0.7,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=1e-6,
+            threshold=0.7,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -70,11 +70,11 @@ class TestLIFIntegration(unittest.TestCase):
         """ Test CUBA LIF integration with hardware data """
         # Params
         params = CUBALIFParams(
-            tau_mem_inv=1./6e-6,
-            tau_syn_inv=1./6e-6,
-            tau_ref=0e-6,
-            v_th=1.,
-            v_reset=-0.1)
+            tau_mem=6e-6,
+            tau_syn=6e-6,
+            refractory_time=0e-6,
+            threshold=1.,
+            reset=-0.1)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
