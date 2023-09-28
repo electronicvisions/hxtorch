@@ -251,8 +251,7 @@ def main(args: argparse.Namespace) -> float:
             t_early=args.t_early,
             t_late=args.t_late,
             dt=args.dt,
-            t_bias=args.t_bias,
-            device=dev),
+            t_bias=args.t_bias),
         SNN(
             n_in=5,
             n_hidden=args.n_hidden,

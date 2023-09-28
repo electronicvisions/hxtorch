@@ -132,8 +132,7 @@ class CoordinatesToSpikes(torch.nn.Module):
     # Allow dt for naming of time step width
     # pylint: disable=invalid-name, too-many-arguments
     def __init__(self, seq_length: int, t_early: float, t_late: float,
-                 dt: float = 1.e-6, t_bias: Optional[float] = None,
-                 device: torch.device = torch.device("cpu")) -> None:
+                 dt: float = 1.e-6, t_bias: Optional[float] = None) -> None:
         """
         Construct a coordinates-to-spikes converter. This converter takes
         coordinate values in [0, 1] and maps them to spike times in
@@ -154,8 +153,6 @@ class CoordinatesToSpikes(torch.nn.Module):
         self._t_late = t_late
         self._t_bias = t_bias
         self._dt = dt
-        self._dev = device
-        self.to(device)
 
     def forward(self, coordinate_values: torch.Tensor) -> torch.Tensor:
         """
@@ -167,14 +164,15 @@ class CoordinatesToSpikes(torch.nn.Module):
         :returns: Returns a dense tensor of shape (batch_size, seq_length,
             num_channels)
         """
+        device = coordinate_values.device
         times = self._t_early + coordinate_values * (
             self._t_late - self._t_early)
         batch_size, num_channels = times.shape
         indices = torch.stack((
             (times.flatten() / self._dt).round(),
             torch.arange(times.shape[0]).repeat_interleave(
-                times.shape[1]).to(self._dev),
-            torch.arange(times.shape[1]).repeat(times.shape[0]).to(self._dev)
+                times.shape[1]).to(device),
+            torch.arange(times.shape[1]).repeat(times.shape[0]).to(device)
         )).type(torch.long)
 
         if not isinstance(times, torch.Tensor):
@@ -185,12 +183,14 @@ class CoordinatesToSpikes(torch.nn.Module):
 
         if self._t_bias is None:
             spikes = torch.sparse_coo_tensor(
-                indices, ones, (self._seq_length, batch_size, num_channels))
+                indices, ones, (self._seq_length, batch_size, num_channels),
+                device=device)
             spikes = spikes.to_dense()
         else:
             spikes = torch.sparse_coo_tensor(
                 indices, ones, (
-                    self._seq_length, batch_size, num_channels + 1))
+                    self._seq_length, batch_size, num_channels + 1),
+                device=device)
             spikes = spikes.to_dense()
             bias_idx = int(self._t_bias / self._dt)
             spikes[bias_idx, :, -1] = 1.
