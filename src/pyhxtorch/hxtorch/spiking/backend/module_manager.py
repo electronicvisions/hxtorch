@@ -414,7 +414,7 @@ class ModuleManager(BaseModuleManager):
                 for _, v, e in self.graph.out_edges(n_id, data=True):
                     if v not in ids:
                         self.graph.add_edge(w_id, v, **e)
-                    else:
+                    if e["handle"] not in targets:
                         targets.append(e["handle"])
             self.graph.remove_nodes_from(ids)
             self.graph.nodes[w_id]["sources"] = sources
