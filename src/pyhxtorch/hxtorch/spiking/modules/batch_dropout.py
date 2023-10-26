@@ -4,6 +4,7 @@ Implementing BatchDropout Module
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Type, Optional, Union
 import pylogging as logger
+import pygrenade_vx as grenade
 
 import torch
 
@@ -27,9 +28,12 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
 
     output_type: Type = NeuronHandle
 
+    # pylint: disable=too-many-arguments
     def __init__(self, size: int, dropout: float, experiment: Experiment,
                  func: Union[
-                     Callable, torch.autograd.Function] = F.batch_dropout) \
+                     Callable, torch.autograd.Function] = F.batch_dropout,
+                 execution_instance: grenade.common.ExecutionInstanceID
+                 = grenade.common.ExecutionInstanceID()) \
             -> None:
         """
         Initialize BatchDropout layer. This layer disables spiking neurons in
@@ -45,8 +49,10 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to
             `batch_dropout`.
+        :param execution_instance: Execution instance to place to.
         """
-        super().__init__(experiment=experiment, func=func)
+        super().__init__(experiment=experiment,
+                         execution_instance=execution_instance, func=func)
 
         self.size = size
         self._dropout = dropout

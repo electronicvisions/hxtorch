@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING, Callable, Dict, Type, Optional, List, NamedTuple, Union)
 import pylogging as logger
+import pygrenade_vx as grenade
 
 import torch
 
@@ -41,6 +42,8 @@ class IAFNeuron(Neuron):
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function]
                  = F.IAF,
+                 execution_instance: grenade.common.ExecutionInstanceID
+                 = grenade.common.ExecutionInstanceID(),
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
@@ -67,6 +70,7 @@ class IAFNeuron(Neuron):
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
+        :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
             object will get injected automatically.
@@ -122,7 +126,8 @@ class IAFNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, experiment, func, params, enable_spike_recording,
+            size, experiment, func, execution_instance,
+            params, enable_spike_recording,
             enable_cadc_recording, enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
             shift_cadc_to_first, interpolation_mode, neuron_structure)

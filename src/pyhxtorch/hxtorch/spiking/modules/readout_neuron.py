@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING, Callable, Dict, Tuple, Type, Optional, List, NamedTuple,
     Union)
 import pylogging as logger
+import pygrenade_vx as grenade
 
 import torch
 
@@ -33,9 +34,11 @@ class ReadoutNeuron(Neuron):
 
     output_type: Type = ReadoutNeuronHandle
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-locals
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.LI,
+                 execution_instance: grenade.common.ExecutionInstanceID
+                 = grenade.common.ExecutionInstanceID(),
                  params: Optional[NamedTuple] = None,
                  enable_cadc_recording: bool = True,
                  enable_madc_recording: bool = False,
@@ -59,6 +62,7 @@ class ReadoutNeuron(Neuron):
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LI`.
+        :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
             object will get injected automatically.
@@ -111,10 +115,10 @@ class ReadoutNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, experiment, func, params, False, enable_cadc_recording,
-            enable_madc_recording, record_neuron_id, placement_constraint,
-            trace_offset, trace_scale, cadc_time_shift, shift_cadc_to_first,
-            interpolation_mode, neuron_structure)
+            size, experiment, func, execution_instance, params, False,
+            enable_cadc_recording, enable_madc_recording, record_neuron_id,
+            placement_constraint, trace_offset, trace_scale, cadc_time_shift,
+            shift_cadc_to_first, interpolation_mode, neuron_structure)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,

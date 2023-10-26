@@ -11,123 +11,18 @@ import pylogging as logger
 import torch
 import numpy as np
 
-from dlens_vx_v3 import hal, halco, sta, lola
+from dlens_vx_v3 import hal, sta, lola
 import pygrenade_vx as grenade
 
 import _hxtorch_spiking  # pylint: disable=no-name-in-module
 from hxtorch.spiking import modules as spiking_modules
 from hxtorch.spiking import handle
 from hxtorch.spiking.utils import calib_helper
+from hxtorch.spiking.neuron_placement import NeuronPlacement
 from hxtorch.spiking.backend.module_manager import (
     BaseModuleManager, ModuleManager)
 
 log = logger.get("hxtorch.spiking.experiment")
-
-
-# TODO: Issue: 4007
-class NeuronPlacement:
-    # TODO: support multi compartment issue #3750
-    """
-    Tracks assignment of pyNN IDs of HXNeuron based populations to the
-    corresponding hardware entities, i.e. LogicalNeuronOnDLS.
-    """
-    _id_2_ln: Dict[int, halco.LogicalNeuronOnDLS]
-    _used_an: List[halco.AtomicNeuronOnDLS]
-
-    def __init__(self):
-        self._id_2_ln = {}
-        self._used_an = []
-
-    def register_id(
-            self,
-            neuron_id: Union[List[int], int],
-            shape: halco.LogicalNeuronCompartments,
-            placement_constraint: Optional[
-                Union[List[halco.LogicalNeuronOnDLS],
-                      halco.LogicalNeuronOnDLS]] = None):
-        """
-        Register a new ID to placement
-        :param neuron_id: pyNN neuron ID to be registered
-        :param shape: The shape of the neurons on hardware.
-        :param placement_constraint: A logical neuron or a list of logical
-            neurons, each coresponding to one ID in `neuron_id`.
-        """
-        if not (hasattr(neuron_id, "__iter__")
-                and hasattr(neuron_id, "__len__")):
-            neuron_id = [neuron_id]
-        if placement_constraint is not None:
-            self._register_with_logical_neurons(
-                neuron_id, placement_constraint)
-        else:
-            self._register(neuron_id, shape)
-
-    def _register_with_logical_neurons(
-            self,
-            neuron_id: Union[List[int], int],
-            placement_constraint: Union[
-                List[halco.LogicalNeuronOnDLS], halco.LogicalNeuronOnDLS]):
-        """
-        Register neurons with global IDs `neuron_id` with given logical neurons
-        `logical_neuron`.
-        :param neuron_id: An int or list of ints corresponding to the global
-            IDs of the neurons.
-        :param placement_constraint: A logical neuron or a list of logical
-            neurons, each coresponding to one ID in `neuron_id`.
-        """
-        if not isinstance(placement_constraint, list):
-            placement_constraint = [placement_constraint]
-        for idx, ln in zip(neuron_id, placement_constraint):
-            if set(self._used_an).intersection(set(ln.get_atomic_neurons())):
-                raise ValueError(
-                    f"Cannot register LogicalNeuron {ln} since at "
-                    + "least one of its compartments are already "
-                    + "allocated.")
-            self._used_an += ln.get_atomic_neurons()
-            assert idx not in self._id_2_ln
-            self._id_2_ln[idx] = ln
-
-    def _register(
-            self,
-            neuron_id: Union[List[int], int],
-            shape: halco.LogicalNeuronCompartments):
-        """
-        Register neurons with global IDs `neuron_id` with creating logical
-        neurons implicitly.
-        :param neuron_id: An int or list of ints corresponding to the global
-            IDs of the neurons.
-        :param shape: The shape of the neurons on hardware.
-        """
-        for idx in neuron_id:
-            placed = False
-            for anchor in halco.iter_all(halco.AtomicNeuronOnDLS):
-                if anchor in self._used_an:
-                    continue
-                ln = halco.LogicalNeuronOnDLS(shape, anchor)
-                fits = True
-                for compartment in ln.get_placed_compartments().values():
-                    if bool(set(self._used_an) & set(compartment)):
-                        fits = False
-                if fits:
-                    for compartment in ln.get_placed_compartments() \
-                            .values():
-                        for an in compartment:
-                            self._used_an.append(an)
-                    self._id_2_ln[idx] = ln
-                    placed = True
-                    break
-            if not placed:
-                raise ValueError(f"Cannot register ID {idx}")
-
-    def id2logicalneuron(self, neuron_id: Union[List[int], int]) \
-            -> Union[List[halco.LogicalNeuronOnDLS], halco.LogicalNeuronOnDLS]:
-        """
-        Get hardware coordinate from pyNN int
-        :param neuron_id: pyNN neuron int
-        """
-        try:
-            return [self._id_2_ln[idx] for idx in neuron_id]
-        except TypeError:
-            return self._id_2_ln[neuron_id]
 
 
 class BaseExperiment(ABC):
@@ -159,9 +54,7 @@ class Experiment(BaseExperiment):
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.routing.PortfolioRouter(),
-            execution_instance: grenade.common.ExecutionInstanceID
-            = grenade.common.ExecutionInstanceID()) \
+            hw_routing_func=grenade.network.routing.PortfolioRouter()) \
             -> None:
         """
         Instanziate a new experiment, represting an experiment on hardware
@@ -198,11 +91,12 @@ class Experiment(BaseExperiment):
         self._projections: List[spiking_modules.HXModule] = []
 
         self._batch_size = 0
-        self.id_counter = 0
+        self.id_counter: Dict[
+            grenade.common.ExecutionInstanceID, int] = {}
 
-        self.neuron_placement = NeuronPlacement()
+        self.neuron_placement: Dict[
+            grenade.common.ExecutionInstanceID, NeuronPlacement] = {}
         self.hw_routing_func = hw_routing_func
-        self.execution_instance = execution_instance
 
         # Last run results
         self._last_run_chip_configs = None
@@ -229,7 +123,7 @@ class Experiment(BaseExperiment):
         self._projections = []
 
         self._batch_size = 0
-        self.id_counter = 0
+        self.id_counter = {}
 
     def _prepare_static_config(self) -> None:
         """
@@ -315,9 +209,10 @@ class Experiment(BaseExperiment):
 
         # Add CADC recording
         if self.cadc_recording:
-            cadc_recording = grenade.network.CADCRecording()
-            cadc_recording.neurons = list(self.cadc_recording.values())
-            network_builder.add(cadc_recording, self.execution_instance)
+            for execution_instance, neurons in self.cadc_recording.items():
+                cadc_recording = grenade.network.CADCRecording()
+                cadc_recording.neurons = [v[0] for _, v in neurons.items()]
+                network_builder.add(cadc_recording, execution_instance)
 
         network = network_builder.done()
 
@@ -359,7 +254,9 @@ class Experiment(BaseExperiment):
                 continue
             log.TRACE(f"Configure population '{module}'.")
             for in_pop_id, unit_id in enumerate(module.unit_ids):
-                coord = self.neuron_placement.id2logicalneuron(unit_id)
+                coord = self.neuron_placement[
+                    module.execution_instance
+                ].id2logicalneuron(unit_id)
                 self._chip.neuron_block = module.configure_hw_entity(
                     in_pop_id, self._chip.neuron_block, coord)
                 log.TRACE(
@@ -372,12 +269,6 @@ class Experiment(BaseExperiment):
         Generate external input events from the routed network graph
         representation.
         """
-        assert network_graph.graph_translation.execution_instances[
-            self.execution_instance].event_input_vertex is not None
-        if network_graph.graph_translation.execution_instances[
-                self.execution_instance].event_input_vertex is None:
-            return grenade.signal_flow.IODataMap()
-
         # Make sure all batch sizes are equal
         sizes = [
             handle.observable_state.shape[1] for handle in
@@ -579,7 +470,8 @@ class Experiment(BaseExperiment):
         # generate external spike trains
         inputs = self._generate_inputs(network)
         inputs.runtime = [{
-            grenade.common.ExecutionInstanceID(): runtime_in_clocks
+            execution_instance: runtime_in_clocks for execution_instance
+            in network.network.topologically_sorted_execution_instance_ids
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 

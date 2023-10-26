@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from dlens_vx_v3 import lola, hal, halco
-import pygrenade_vx.network as grenade
+import pygrenade_vx as grenade
 
 from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
@@ -19,6 +19,7 @@ from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.hx_module import HXModule
 from hxtorch.spiking.modules.types import Population
+from hxtorch.spiking.neuron_placement import NeuronPlacement
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
@@ -45,6 +46,8 @@ class Neuron(Population):
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
+                 execution_instance: grenade.common.ExecutionInstanceID
+                 = grenade.common.ExecutionInstanceID(),
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
@@ -70,6 +73,7 @@ class Neuron(Population):
         :param func: Callable function implementing the module's forward
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
+        :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
             object will get injected automatically.
@@ -124,7 +128,8 @@ class Neuron(Population):
         :param neuron_structure: Structure of the neuron. If not supplied a
             single neuron circuit is used.
         """
-        super().__init__(experiment=experiment, func=func)
+        super().__init__(experiment=experiment,
+                         execution_instance=execution_instance, func=func)
 
         if placement_constraint is not None \
                 and len(placement_constraint) != size:
@@ -184,12 +189,18 @@ class Neuron(Population):
         """
         Infere neuron ids on hardware and register them.
         """
+        if self.execution_instance not in self.experiment.id_counter:
+            self.experiment.id_counter.update({self.execution_instance: 0})
         self.unit_ids = np.arange(
-            self.experiment.id_counter, self.experiment.id_counter + self.size)
-        self.experiment.neuron_placement.register_id(
+            self.experiment.id_counter[self.execution_instance],
+            self.experiment.id_counter[self.execution_instance] + self.size)
+        if self.execution_instance not in self.experiment.neuron_placement:
+            self.experiment.neuron_placement.update(
+                {self.execution_instance: NeuronPlacement()})
+        self.experiment.neuron_placement[self.execution_instance].register_id(
             self.unit_ids, self._neuron_structure.compartments,
             self._placement_constraint)
-        self.experiment.id_counter += self.size
+        self.experiment.id_counter[self.execution_instance] += self.size
         self.experiment.register_population(self)
 
         # Handle offset
@@ -197,8 +208,8 @@ class Neuron(Population):
             assert self.offset.shape[0] == self.size
         if isinstance(self.offset, dict):
             # Get populations HW neurons
-            coords = self.experiment.neuron_placement.id2logicalneuron(
-                self.unit_ids)
+            coords = self.experiment.neuron_placement[self.execution_instance]\
+                .id2logicalneuron(self.unit_ids)
             offset = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
                 offset[i] = self.offset[nrn]
@@ -209,8 +220,8 @@ class Neuron(Population):
             assert self.scale.shape[0] == self.size
         if isinstance(self.scale, dict):
             # Get populations HW neurons
-            coords = self.experiment.neuron_placement.id2logicalneuron(
-                self.unit_ids)
+            coords = self.experiment.neuron_placement[self.execution_instance]\
+                .id2logicalneuron(self.unit_ids)
             scale = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
                 scale[i] = self.scale[nrn]
@@ -284,8 +295,8 @@ class Neuron(Population):
         return neuron_block
 
     def add_to_network_graph(self,
-                             builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationOnNetwork:
+                             builder: grenade.network.NetworkBuilder) \
+            -> grenade.network.PopulationOnNetwork:
         """
         Add the layer's neurons to grenades network builder. If
         `enable_spike_recording` is enabled the neuron's spikes are recorded
@@ -316,24 +327,25 @@ class Neuron(Population):
 
         # get neuron coordinates
         coords: List[halco.LogicalNeuronOnDLS] = \
-            self.experiment.neuron_placement.id2logicalneuron(self.unit_ids)
+            self.experiment.neuron_placement[self.execution_instance]\
+                .id2logicalneuron(self.unit_ids)
 
         # create receptors
         receptors = set([
-            grenade.Receptor(
-                grenade.Receptor.ID(),
-                grenade.Receptor.Type.excitatory),
-            grenade.Receptor(
-                grenade.Receptor.ID(),
-                grenade.Receptor.Type.inhibitory),
+            grenade.network.Receptor(
+                grenade.network.Receptor.ID(),
+                grenade.network.Receptor.Type.excitatory),
+            grenade.network.Receptor(
+                grenade.network.Receptor.ID(),
+                grenade.network.Receptor.Type.inhibitory),
         ])
 
-        neurons: List[grenade.Population.Neuron] = [
-            grenade.Population.Neuron(
+        neurons: List[grenade.network.Population.Neuron] = [
+            grenade.network.Population.Neuron(
                 logical_neuron,
                 {halco.CompartmentOnLogicalNeuron():
-                 grenade.Population.Neuron.Compartment(
-                     grenade.Population
+                 grenade.network.Population.Neuron.Compartment(
+                     grenade.network.Population
                      .Neuron.Compartment.SpikeMaster(
                          0, enable_record_spikes[i]), [receptors] * len(
                          logical_neuron.get_atomic_neurons()))})
@@ -341,20 +353,31 @@ class Neuron(Population):
         ]
 
         # create grenade population
-        gpopulation = grenade.Population(neurons)
+        gpopulation = grenade.network.Population(neurons)
 
         # add to builder
         self.descriptor = builder.add(
-            gpopulation, self.experiment.execution_instance)
+            gpopulation, self.execution_instance)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
-                neuron = grenade.CADCRecording.Neuron()
+                neuron = grenade.network.CADCRecording.Neuron()
                 neuron.coordinate.population = self.descriptor
                 neuron.coordinate.neuron_on_population = in_pop_id
                 neuron.coordinate.compartment_on_neuron = 0
                 neuron.coordinate.atomic_neuron_on_compartment = 0
-                self.experiment.cadc_recording[unit_id] = neuron
+                if self.execution_instance not \
+                        in self.experiment.cadc_recording:
+                    self.experiment.cadc_recording.update({
+                        self.execution_instance: {}})
+                if unit_id not in self.experiment.cadc_recording[
+                        self.execution_instance]:
+                    self.experiment.cadc_recording[
+                        self.execution_instance].update({unit_id: []})
+                self.experiment.cadc_recording[
+                    self.execution_instance].update({
+                        unit_id: self.experiment.cadc_recording[
+                            self.execution_instance][unit_id] + [neuron]})
 
         # No recording registered -> return
         if not self._enable_madc_recording:
@@ -363,7 +386,7 @@ class Neuron(Population):
         # add MADC recording
         # NOTE: If two populations register MADC reordings grenade should
         #       throw in the following
-        madc_recording_neuron = grenade.MADCRecording.Neuron()
+        madc_recording_neuron = grenade.network.MADCRecording.Neuron()
         madc_recording_neuron.coordinate.population = self.descriptor
         madc_recording_neuron.source = self._madc_readout_source
         madc_recording_neuron.coordinate.neuron_on_population = int(
@@ -371,9 +394,9 @@ class Neuron(Population):
         madc_recording_neuron.coordinate.compartment_on_neuron = \
             halco.CompartmentOnLogicalNeuron()
         madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
-        madc_recording = grenade.MADCRecording()
+        madc_recording = grenade.network.MADCRecording()
         madc_recording.neurons = [madc_recording_neuron]
-        builder.add(madc_recording, self.experiment.execution_instance)
+        builder.add(madc_recording, self.execution_instance)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
         return self.descriptor
@@ -381,7 +404,7 @@ class Neuron(Population):
     @staticmethod
     def add_to_input_generator(
             module: HXModule,
-            builder: grenade.InputGenerator) -> None:
+            builder: grenade.network.InputGenerator) -> None:
         """
         Add the input to an input module to grenades input generator.
         :param module: The module to add the input for.

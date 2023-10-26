@@ -9,7 +9,7 @@ import pylogging as logger
 import torch
 from torch.nn.parameter import Parameter
 
-import pygrenade_vx.network as grenade
+import pygrenade_vx as grenade
 
 import _hxtorch_core
 import hxtorch.spiking.functional as F
@@ -37,6 +37,8 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.linear,
+                 execution_instance: grenade.common.ExecutionInstanceID
+                 = grenade.common.ExecutionInstanceID(),
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
@@ -52,8 +54,12 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             functionallity or a torch.autograd.Function implementing the
             module's forward and backward operation. Required function args:
                 [input (torch.Tensor), weight (torch.Tensor)]
+        :param execution_instance: Execution instance to place to.
         """
-        super().__init__(experiment=experiment, func=func)
+        super().__init__(
+            experiment=experiment,
+            execution_instance=execution_instance,
+            func=func)
 
         self.in_features = in_features
         self.out_features = out_features
@@ -112,10 +118,10 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
     def add_to_network_graph(
             self,
-            pre: grenade.PopulationOnNetwork,
-            post: grenade.PopulationOnNetwork,
-            builder: grenade.NetworkBuilder) -> Tuple[
-                grenade.ProjectionOnNetwork, ...]:
+            pre: grenade.network.PopulationOnNetwork,
+            post: grenade.network.PopulationOnNetwork,
+            builder: grenade.network.NetworkBuilder) -> Tuple[
+                grenade.network.ProjectionOnNetwork, ...]:
         """
         Adds the projection to a grenade network builder by providing the
         population descriptor of the corresponding pre and post population.
@@ -143,21 +149,21 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         connections_inh = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
             weight_inh.numpy())
 
-        projection_exc = grenade.Projection(
-            grenade.Receptor(
-                grenade.Receptor.ID(),
-                grenade.Receptor.Type.excitatory),
+        projection_exc = grenade.network.Projection(
+            grenade.network.Receptor(
+                grenade.network.Receptor.ID(),
+                grenade.network.Receptor.Type.excitatory),
             connections_exc, pre, post)
-        projection_inh = grenade.Projection(
-            grenade.Receptor(
-                grenade.Receptor.ID(),
-                grenade.Receptor.Type.inhibitory),
+        projection_inh = grenade.network.Projection(
+            grenade.network.Receptor(
+                grenade.network.Receptor.ID(),
+                grenade.network.Receptor.Type.inhibitory),
             connections_inh, pre, post)
 
         exc_descriptor = builder.add(
-            projection_exc, self.experiment.execution_instance)
+            projection_exc, self.execution_instance)
         inh_descriptor = builder.add(
-            projection_inh, self.experiment.execution_instance)
+            projection_inh, self.execution_instance)
         self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added projection '{self}' to grenade graph.")
 

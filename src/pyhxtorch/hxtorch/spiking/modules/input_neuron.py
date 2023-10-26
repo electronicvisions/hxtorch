@@ -7,26 +7,32 @@ import pylogging as logger
 
 import torch
 
-import pygrenade_vx.network as grenade
+import pygrenade_vx as grenade
 
 from _hxtorch_spiking import tensor_to_spike_times, DataHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.hx_module import HXModule
+from hxtorch.spiking.modules.entity_on_execution_instance import \
+    EntityOnExecutionInstance
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class InputNeuron(HXModule):
+class InputNeuron(HXModule, EntityOnExecutionInstance):
     """
     Spike source generating spikes at the times [ms] given in the spike_times
     array.
     """
     output_type: Type = NeuronHandle
 
-    def __init__(self, size: int, experiment: Experiment) -> None:
+    def __init__(
+            self, size: int,
+            experiment: Experiment,
+            execution_instance: grenade.common.ExecutionInstanceID
+            = grenade.common.ExecutionInstanceID()) -> None:
         """
         Instanziate a InputNeuron. This module serves as an External
         Population for input injection and is created within `experiment`
@@ -35,8 +41,10 @@ class InputNeuron(HXModule):
 
         :param size: Number of input neurons.
         :param experiment: Experiment to which this module is assigned.
+        :param execution_instance: Execution instance to place to.
         """
-        super().__init__(experiment, func=F.input_neuron)
+        HXModule.__init__(self, experiment, func=F.input_neuron)
+        EntityOnExecutionInstance.__init__(self, execution_instance)
         self.size = size
 
     def extra_repr(self) -> str:
@@ -50,8 +58,8 @@ class InputNeuron(HXModule):
         self.experiment.register_population(self)
 
     def add_to_network_graph(
-        self, builder: grenade.NetworkBuilder) \
-            -> grenade.PopulationOnNetwork:
+        self, builder: grenade.network.NetworkBuilder) \
+            -> grenade.network.PopulationOnNetwork:
         """
         Adds instance to grenade's network builder.
 
@@ -59,17 +67,17 @@ class InputNeuron(HXModule):
         :returns: External population descriptor.
         """
         # create grenade population
-        gpopulation = grenade.ExternalSourcePopulation(self.size)
+        gpopulation = grenade.network.ExternalSourcePopulation(self.size)
         # add to builder
         self.descriptor = builder.add(
-            gpopulation, self.experiment.execution_instance)
+            gpopulation, self.execution_instance)
         log.TRACE(f"Added Input Population: {self}")
 
         return self.descriptor
 
     def add_to_input_generator(
             self, input: NeuronHandle,  # pylint: disable=redefined-builtin
-            builder: grenade.InputGenerator) -> None:
+            builder: grenade.network.InputGenerator) -> None:
         """
         Add the neurons events represented by this instance to grenades input
         generator.

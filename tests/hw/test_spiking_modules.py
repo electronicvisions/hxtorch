@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dlens_vx_v3 import lola, halco
+from pygrenade_vx.common import ExecutionInstanceID
 import hxtorch
 from hxtorch import spiking as hxsnn
 from hxtorch.spiking.utils import calib_helper
@@ -466,7 +467,7 @@ class TestNeuron(HWTestCase):
         experiment = hxsnn.Experiment()
         neuron = hxsnn.Neuron(10, experiment)
         neuron.register_hw_entity()
-        self.assertEqual(experiment.id_counter, 10)
+        self.assertEqual(experiment.id_counter, {ExecutionInstanceID(): 10})
         self.assertEqual(len(experiment._populations), 1)
         self.assertEqual(experiment._populations[0], neuron)
 
