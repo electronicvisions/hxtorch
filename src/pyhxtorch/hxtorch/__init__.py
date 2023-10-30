@@ -15,6 +15,7 @@ for name, value in _sys.modules.items():
         _modules[name.replace("hxtorch.perceptron", "hxtorch.ann")] = value
 _sys.modules.update(_modules)
 
-logger.reset()
-logger.default_config(level=logger.LogLevel.WARN)
-logger.set_loglevel(logger.get("hxtorch"), logger.LogLevel.INFO)
+if logger.get_root().get_number_of_appenders() == 0:
+    logger.reset()
+    logger.default_config(level=logger.LogLevel.WARN)
+    logger.set_loglevel(logger.get("hxtorch"), logger.LogLevel.INFO)
