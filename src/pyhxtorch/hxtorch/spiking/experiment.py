@@ -191,6 +191,7 @@ class Experiment(BaseExperiment):
         self.injection_pre_realtime = None  # Unused
         self.injection_post_realtime = None  # Unused
         self.injection_inside_realtime_begin = None  # Unused
+        self.injection_inside_realtime = None  # Unused
         self.injection_inside_realtime_end = None  # Unused
 
         self._populations: List[spiking_modules.HXModule] = []
@@ -251,12 +252,14 @@ class Experiment(BaseExperiment):
         builder = sta.PlaybackProgramBuilder()
         pre_realtime = sta.PlaybackProgramBuilder()
         inside_realtime_begin = sta.PlaybackProgramBuilder()
+        inside_realtime = sta.AbsoluteTimePlaybackProgramBuilder()
         inside_realtime_end = sta.PlaybackProgramBuilder()
         post_realtime = sta.PlaybackProgramBuilder()
 
         self.injection_pre_static_config = builder
         self.injection_pre_realtime = pre_realtime
         self.injection_inside_realtime_begin = inside_realtime_begin
+        self.injection_inside_realtime = inside_realtime
         self.injection_inside_realtime_end = inside_realtime_end
         self.injection_post_realtime = post_realtime
 
@@ -397,21 +400,24 @@ class Experiment(BaseExperiment):
         assert self.injection_pre_static_config is not None
         assert self.injection_pre_realtime is not None
         assert self.injection_inside_realtime_begin is not None
+        assert self.injection_inside_realtime is not None
         assert self.injection_inside_realtime_end is not None
         assert self.injection_post_realtime is not None
         pre_static_config = sta.PlaybackProgramBuilder()
         pre_realtime = sta.PlaybackProgramBuilder()
         inside_realtime_begin = sta.PlaybackProgramBuilder()
+        inside_realtime = sta.AbsoluteTimePlaybackProgramBuilder()
         inside_realtime_end = sta.PlaybackProgramBuilder()
         post_realtime = sta.PlaybackProgramBuilder()
         pre_static_config.copy_back(self.injection_pre_static_config)
         pre_realtime.copy_back(self.injection_pre_realtime)
         inside_realtime_begin.copy_back(self.injection_inside_realtime_begin)
+        inside_realtime.copy(self.injection_inside_realtime)
         inside_realtime_end.copy_back(self.injection_inside_realtime_end)
         post_realtime.copy_back(self.injection_post_realtime)
         return grenade.signal_flow.ExecutionInstancePlaybackHooks(
             pre_static_config, pre_realtime, inside_realtime_begin,
-            inside_realtime_end, post_realtime)
+            inside_realtime, inside_realtime_end, post_realtime)
 
     def _get_population_observables(
             self, network_graph: grenade.network.NetworkGraph,
