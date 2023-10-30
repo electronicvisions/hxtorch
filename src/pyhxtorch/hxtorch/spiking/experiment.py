@@ -203,6 +203,9 @@ class Experiment(BaseExperiment):
         self.hw_routing_func = hw_routing_func
         self.execution_instance = execution_instance
 
+        # Last run results
+        self._last_run_chip_configs = None
+
     def clear(self) -> None:
         """
         Reset the experiments's state. Corresponds to creating a new Experiment
@@ -581,4 +584,10 @@ class Experiment(BaseExperiment):
 
         self.modules.reset_changed_since_last_run()
 
+        self._last_run_chip_configs = outputs.pre_execution_chips
+
         return hw_data, outputs.execution_time_info
+
+    @property
+    def last_run_chip_configs(self) -> grenade.signal_flow.IODataMap:
+        return self._last_run_chip_configs
