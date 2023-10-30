@@ -73,7 +73,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self.weight_transform = transform
 
         self.reset_parameters()
-        self.extra_args = (self.weight, None)  # No bias
+        self.extra_args = (self.weight,)
 
     def extra_repr(self) -> str:
         """ Add additional information """

@@ -1,7 +1,6 @@
 """
 Implement linear autograd function
 """
-from typing import Optional
 import torch
 
 
@@ -16,8 +15,8 @@ def linear(input: torch.Tensor, weight: torch.nn.parameter.Parameter,
 
 
 def linear_sparse(input: torch.Tensor, weight: torch.nn.parameter.Parameter,
-                  bias: Optional[torch.nn.parameter.Parameter] = None,
-                  connections: Optional[torch.Tensor] = None) -> torch.Tensor:
+                  connections: torch.Tensor = None,
+                  bias: torch.nn.parameter.Parameter = None) -> torch.Tensor:
     """
     Wrap `linear` to allow signature inspection. Disable inactive connections
     in weight tensor.

@@ -89,7 +89,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         self.weight_transform = transform
 
         self.reset_parameters()
-        self.extra_args = (self.weight, None, self.mask)
+        self.extra_args = (self.weight, self.mask)
 
     def extra_repr(self) -> str:
         """ Add additional information """

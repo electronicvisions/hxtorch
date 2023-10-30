@@ -45,7 +45,7 @@ class TestSNNRun(unittest.TestCase):
         # Experiment
         experiment = Experiment(mock=True)
 
-        def syn_func(x, w, b):
+        def syn_func(x, w):
             return x
 
         # Modules
