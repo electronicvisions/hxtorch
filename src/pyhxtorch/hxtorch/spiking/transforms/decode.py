@@ -8,7 +8,7 @@ class MaxOverTime(torch.nn.Module):
 
     """ Simple max-over-time decoding """
 
-    # pylint: disable=redefined-builtin, no-self-use
+    # pylint: disable=redefined-builtin
     # NOTE: - We redefine builtin as PyTorch does
     #       - We inherit for torch.nn.Module for consistency
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -29,7 +29,7 @@ class SumOverTime(torch.nn.Module):
 
     """ Simple sum-over-time decoding """
 
-    # pylint: disable=redefined-builtin, no-self-use
+    # pylint: disable=redefined-builtin
     # NOTE: - We redefine builtin as PyTorch does
     #       - We inherit for torch.nn.Module for consistency
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -50,7 +50,7 @@ class MeanOverTime(torch.nn.Module):
 
     """ Simple mean-over-time decoding """
 
-    # pylint: disable=redefined-builtin, no-self-use
+    # pylint: disable=redefined-builtin
     # NOTE: - We redefine builtin as PyTorch does
     #       - We inherit for torch.nn.Module for consistency
     def forward(self, input: torch.Tensor) -> torch.Tensor:
