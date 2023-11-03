@@ -116,6 +116,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         """
         self.experiment.register_projection(self)
 
+    # pylint: disable=too-many-locals
     def add_to_network_graph(
             self,
             pre: grenade.network.PopulationOnNetwork,
@@ -125,7 +126,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         """
         Adds the projection to a grenade network builder by providing the
         population descriptor of the corresponding pre and post population.
-        Note: This creates one inhibitory and one excitatory population on
+        Note: This creates one inhibitory and one excitatory projection on
         hardware in order to represent signed hardware weights.
 
         :param pre: Population descriptor of pre-population.
@@ -148,6 +149,23 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             weight_exc.numpy())
         connections_inh = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
             weight_inh.numpy())
+
+        # add inter-execution-instance projection and source if necessary
+        if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
+            pre_size = weight_transformed.shape[0]
+
+            iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
+                pre_size), self.execution_instance)
+
+            # [nrn on pop pre, compartment on nrn pre,
+            #  nrn on pop post, compartment on nrn post]
+            connections = np.array([[i, 0, i, 0] for i in range(pre_size)])
+            iei_projection = grenade.network.InterExecutionInstanceProjection()
+            iei_projection.from_numpy(connections, pre, iei_pre)
+
+            builder.add(iei_projection)
+
+            pre = iei_pre
 
         projection_exc = grenade.network.Projection(
             grenade.network.Receptor(
