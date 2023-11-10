@@ -121,13 +121,15 @@ class TestRun(unittest.TestCase):
             data = fd.read()
         dumper = sta.DumperDone()
         sta.from_portablebinary(dumper, data)
-        config = sta.convert_to_chip(dumper)
+        config = {grenade.common.ExecutionInstanceID():
+                  sta.convert_to_chip(dumper)}
 
         # Execute a couple times like you would when training a model
         for i in range(10):
             output = _hxtorch_spiking.run(
                 config, network, inputs,
-                grenade.signal_flow.ExecutionInstancePlaybackHooks())
+                {grenade.common.ExecutionInstanceID():
+                 grenade.signal_flow.ExecutionInstancePlaybackHooks()})
             print(output)
 
 

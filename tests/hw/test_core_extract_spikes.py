@@ -42,8 +42,10 @@ class TestExtractNSpikes(unittest.TestCase):
             coords.append(ln)
         # configure neurons
         for coord in coords:
-            morphology.implement_morphology(coord, config.neuron_block)
-            morphology.set_spike_recording(True, coord, config.neuron_block)
+            morphology.implement_morphology(coord, config[
+                grenade.common.ExecutionInstanceID()].neuron_block)
+            morphology.set_spike_recording(True, coord, config[
+                grenade.common.ExecutionInstanceID()].neuron_block)
         neurons = [
             Population.Neuron(
                 logical_neuron,
@@ -101,17 +103,19 @@ class TestExtractNSpikes(unittest.TestCase):
         return inputs
 
     def test_extract_n_spikes(self):
-        config = lola.Chip.default_neuron_bypass
+        config = {grenade.common.ExecutionInstanceID():
+                  lola.Chip.default_neuron_bypass}
         # Get graph
         network_graph, config = self.generate_network(config)
         # Get inputs
         inputs = self.generate_inputs(network_graph)
         # Get chip config
         data = _hxtorch_spiking.run(
-            config, network_graph, inputs,
-            grenade.signal_flow.ExecutionInstancePlaybackHooks())
+            config, network_graph, inputs, {
+                grenade.common.ExecutionInstanceID():
+                grenade.signal_flow.ExecutionInstancePlaybackHooks()})
         spikes = _hxtorch_core.extract_n_spikes(
-            data, network_graph, 
+            data, network_graph,
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100,
             {self.int_pop_descr: 2})
 

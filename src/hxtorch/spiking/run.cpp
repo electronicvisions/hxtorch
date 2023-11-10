@@ -6,10 +6,10 @@
 namespace hxtorch::spiking {
 
 grenade::vx::signal_flow::IODataMap run(
-    lola::vx::v3::Chip const& config,
+    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& config,
     grenade::vx::network::NetworkGraph const& network_graph,
     grenade::vx::signal_flow::IODataMap const& inputs,
-    grenade::vx::signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
+    grenade::vx::execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	if (!hxtorch::core::detail::getExecutor()) {
 		throw std::runtime_error("No connection present.");

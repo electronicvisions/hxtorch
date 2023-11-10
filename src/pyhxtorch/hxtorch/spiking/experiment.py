@@ -475,8 +475,15 @@ class Experiment(BaseExperiment):
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
 
+        chips = {execution_instance: self._chip
+                 for execution_instance in self.id_counter}
+
+        playback_hooks = {
+            execution_instance: self._generate_playback_hooks()
+            for execution_instance in self.id_counter}
+
         outputs = _hxtorch_spiking.run(
-            self._chip, network, inputs, self._generate_playback_hooks())
+            chips, network, inputs, playback_hooks)
 
         hw_data = self._get_population_observables(
             network, outputs, runtime_in_clocks)
