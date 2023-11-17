@@ -383,7 +383,7 @@ class Neuron(Population):
             return self.descriptor
 
         # add MADC recording
-        # NOTE: If two populations register MADC reordings grenade should
+        # NOTE: If two populations register MADC recordings grenade should
         #       throw in the following
         madc_recording_neuron = grenade.network.MADCRecording.Neuron()
         madc_recording_neuron.coordinate.population = self.descriptor
@@ -456,7 +456,6 @@ class Neuron(Population):
 
         # Get madc trace
         if self._enable_madc_recording:
-            raise NotImplementedError(
-                "MADCHandle to dense torch Tensor is not implemented yet.")
+            madc = hw_data.madc.to_raw()
 
         return spikes, cadc, madc

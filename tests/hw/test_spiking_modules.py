@@ -513,18 +513,33 @@ class TestNeuron(HWTestCase):
         """
         experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(
+        lif = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
-
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(hxsnn.NeuronHandle(spikes))
-        lif(i_handle)
+        s_handle = lif(i_handle)
 
-        # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
-        with self.assertRaises(NotImplementedError):
-            hxsnn.run(experiment, 110)
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.v_cadc is None)
+        self.assertTrue(s_handle.v_madc is None)
 
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.v_madc.shape),
+                torch.tensor([2, 3235, 10])))
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
@@ -630,11 +645,22 @@ class TestReadoutNeuron(HWTestCase):
 
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(hxsnn.NeuronHandle(spikes))
-        li(i_handle)
+        y_handle = li(i_handle)
 
-        # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
-        with self.assertRaises(NotImplementedError):
-            hxsnn.run(experiment, 110)
+        self.assertTrue(y_handle.v_cadc is None)
+        self.assertTrue(y_handle.v_madc is None)
+
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(y_handle.v_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(y_handle.v_madc.shape),
+                torch.tensor([2, 3235, 10])))
 
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
@@ -809,10 +835,28 @@ class TestIAFNeuron(HWTestCase):
             experiment=experiment)
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(hxsnn.NeuronHandle(spikes))
-        lif(i_handle)
-        # TODO: Adjust as soon `to_dense` for MADC samples is implemented.
-        with self.assertRaises(NotImplementedError):
-            hxsnn.run(experiment, 110)
+        s_handle = lif(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.v_cadc is None)
+        self.assertTrue(s_handle.v_madc is None)
+
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.v_madc.shape),
+                torch.tensor([2, 3235, 10])))
+
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)

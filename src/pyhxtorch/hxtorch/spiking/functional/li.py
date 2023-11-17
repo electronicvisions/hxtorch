@@ -39,17 +39,19 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
     T, bs, ps = input.shape
     i, v = torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.v_leak).to(dev)
+    v_cadc, v_madc = None, None
 
-    if hw_data:
-        v_hw = hw_data[0].to(dev)  # Use CADC values
-        T = min(v_hw.shape[0], T)
-        # Initialize with first measurement
+    if hw_data is not None:
+        v_cadc, v_madc = (
+            data.to(dev) if data is not None else None for data in hw_data)
+        T = min(v_cadc.shape[0], T)
     membrane, current = [], []
 
     for ts in range(T):
         # Membrane
         dv = dt * params.tau_mem_inv * (params.v_leak - v + i)
-        v = Unterjubel.apply(v + dv, v_hw[ts]) if hw_data else v + dv
+        v = Unterjubel.apply(v + dv, v_cadc[ts]) \
+            if v_cadc is not None else v + dv
 
         # Current
         di = -dt * params.tau_syn_inv * i
@@ -59,4 +61,4 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
         membrane.append(v)
         current.append(i)
 
-    return torch.stack(membrane), torch.stack(current)
+    return torch.stack(membrane), torch.stack(current), v_madc

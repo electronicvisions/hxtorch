@@ -13,6 +13,13 @@ torch::Tensor SpikeHandle::to_dense(float runtime, float dt)
 };
 
 
+// Specialization for CADCHandle returning raw data
+torch::Tensor MADCHandle::to_raw()
+{
+	return detail::sparse_madc_to_dense_raw(get_data(), batch_size());
+};
+
+
 // Specialization for CADCHandle
 torch::Tensor CADCHandle::to_dense(float runtime, float dt, std::string mode)
 {

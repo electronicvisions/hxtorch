@@ -54,17 +54,20 @@ def cuba_lif_integration(input: torch.Tensor,
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.v_leak).to(dev)
+    z_hw, v_cadc, v_madc = None, None, None
 
-    if hw_data:
-        z_hw = hw_data[0].to(dev)
-        v_hw = hw_data[1].to(dev)  # Use CADC values
-        T = min(v_hw.shape[0], T)
+    if hw_data is not None:
+        z_hw, v_cadc, v_madc = (
+            data.to(dev) if data is not None else None for data in hw_data)
+        T = min(T, *(
+            data.shape[0] for data in (z_hw, v_cadc) if data is not None))
     current, spikes, membrane = [], [], []
 
     for ts in range(T):
         # Membrane decay
         dv = dt * params.tau_mem_inv * ((params.v_leak - v) + i)
-        v = Unterjubel.apply(v + dv, v_hw[ts]) if hw_data else v + dv
+        v = Unterjubel.apply(v + dv, v_cadc[ts]) \
+            if v_cadc is not None else v + dv
 
         # Current
         di = -dt * params.tau_syn_inv * i
@@ -72,10 +75,10 @@ def cuba_lif_integration(input: torch.Tensor,
 
         # Spikes
         spike = threshold(v - params.v_th, params.method, params.alpha)
-        z = Unterjubel.apply(spike, z_hw[ts]) if hw_data else spike
+        z = Unterjubel.apply(spike, z_hw[ts]) if z_hw is not None else spike
 
         # Reset
-        if not hw_data:
+        if v_cadc is None:
             v = (1 - z.detach()) * v + z.detach() * params.v_reset
 
         # Save data
@@ -83,4 +86,6 @@ def cuba_lif_integration(input: torch.Tensor,
         spikes.append(z)
         membrane.append(v)
 
-    return torch.stack(spikes), torch.stack(membrane), torch.stack(current)
+    return (
+        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
+        v_madc)

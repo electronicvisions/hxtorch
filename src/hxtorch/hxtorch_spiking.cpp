@@ -72,7 +72,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	        "set_data",
 	        [](hxtorch::spiking::MADCHandle& handle, madc_type const& data, int batch_size,
 	           int population_size) { handle.set_data(data, batch_size, population_size); },
-	        pybind11::arg("data"), pybind11::arg("batch_size"), pybind11::arg("population_size"));
+	        pybind11::arg("data"), pybind11::arg("batch_size"), pybind11::arg("population_size"))
+	    .def("to_raw", &hxtorch::spiking::MADCHandle::to_raw);
 	m.def(
 	    "run", &hxtorch::spiking::run, pybind11::arg("config"), pybind11::arg("network_graph"),
 	    pybind11::arg("inputs"), pybind11::arg("hooks"));

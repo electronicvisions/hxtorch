@@ -36,6 +36,29 @@ torch::Tensor sparse_spike_to_dense(
 }
 
 
+torch::Tensor sparse_madc_to_dense_raw(
+    std::vector<std::tuple<int16_t, int64_t, int64_t, int64_t>> const& data, int batch_size)
+{
+	// time steps
+	int time_steps = data.size() / batch_size;
+
+	torch::Tensor samples =
+	    torch::empty({2, time_steps, batch_size}, torch::TensorOptions().dtype(torch::kFloat));
+	auto a_samples = samples.accessor<float, 3>();
+
+	std::vector<int> running_index(batch_size, 0);
+	for (auto const& [value, time, b, _] : data) {
+		if (running_index.at(b) < time_steps) {
+			a_samples[1][running_index.at(b)][b] = value;
+			a_samples[0][running_index.at(b)][b] = time;
+			running_index.at(b)++;
+		}
+	}
+
+	return samples;
+}
+
+
 torch::Tensor sparse_cadc_to_dense_linear(
     std::vector<std::tuple<int32_t, int64_t, int64_t, int64_t>> const& data,
     int batch_size,

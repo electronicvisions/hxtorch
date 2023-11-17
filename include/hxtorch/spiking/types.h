@@ -74,6 +74,11 @@ class MADCHandle : public DataHandle<std::vector<std::tuple<int16_t, int64_t, in
 {
 public:
 	using DataHandle::DataHandle;
+
+	/* Transform the sparse data into a dense tensor holding raw data
+	 * @returns Returns a tensor holding the MADC values at first dim and time stamps at second dim.
+	 */
+	torch::Tensor to_raw();
 };
 
 

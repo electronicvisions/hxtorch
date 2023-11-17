@@ -38,7 +38,7 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current = cuba_lif_integration(
+        spikes, membrane, current, v_madc = cuba_lif_integration(
             graded_spikes, params, dt=1e-6)
 
         # Shapes
@@ -51,6 +51,7 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
+        self.assertIsNone(v_madc)
 
         # No error
         loss = spikes.sum()
@@ -84,7 +85,7 @@ class TestLIFIntegration(unittest.TestCase):
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current = cuba_lif_integration(
+        spikes, membrane, current, v_madc = cuba_lif_integration(
             graded_spikes, params, dt=1e-6)
 
         # Add jitter
@@ -95,8 +96,9 @@ class TestLIFIntegration(unittest.TestCase):
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw, current = cuba_lif_integration(
-            graded_spikes, params, hw_data=(spikes, membrane), dt=1e-6)
+        spikes_hw, membrane_hw, current, v_madc = cuba_lif_integration(
+            graded_spikes, params, hw_data=(spikes, membrane, membrane),
+            dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -108,6 +110,9 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor([100, 10, 15]), torch.tensor(v_madc.shape)))
 
         # Check HW data is still the same
         self.assertTrue(torch.equal(membrane_hw, membrane))

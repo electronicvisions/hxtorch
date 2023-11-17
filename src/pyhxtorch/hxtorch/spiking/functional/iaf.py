@@ -79,19 +79,21 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.v_reset).to(dev)
+    z_hw, v_cadc, v_madc = None, None, None
 
-    if hw_data:
-        z_hw = hw_data[0].to(dev)
-        v_hw = hw_data[1].to(dev)  # Use CADC values
-        T = min(v_hw.shape[0], T)
+    if hw_data is not None:
+        z_hw, v_cadc, v_madc = (
+            data.to(dev) if data is not None else None for data in hw_data)
+        T = min(T, *(
+            data.shape[0] for data in (z_hw, v_cadc) if data is not None))
     spikes, membrane, current = [], [], []
 
     # Integrate
     for ts in range(T):
         z, v, i = iaf_step(
             z, v, i, input[ts],
-            z_hw[ts] if hw_data else None,
-            v_hw[ts] if hw_data else None,
+            z_hw[ts] if z_hw is not None else None,
+            v_cadc[ts] if v_cadc is not None else None,
             params, dt)
 
         # Save data
@@ -99,7 +101,9 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
         membrane.append(v)
         current.append(i)
 
-    return torch.stack(spikes), torch.stack(membrane), torch.stack(current)
+    return (
+        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
+        v_madc)
 
 
 def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
@@ -127,11 +131,12 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.v_reset).to(dev)
+    z_hw, v_cadc, v_madc = None, None, None
 
-    if hw_data:
-        z_hw = hw_data[0].to(dev)
-        v_hw = hw_data[1].to(dev)  # Use CADC values
-        T = min(v_hw.shape[0], T)
+    if hw_data is not None:
+        z_hw, v_cadc, v_madc = (
+            data.to(dev) if data is not None else None for data in hw_data)
+        T = min(v_cadc.shape[0], T)
     spikes, membrane, current = [], [], []
 
     # Counter for neurons in refractory period
@@ -140,8 +145,8 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
     for ts in range(T):
         z, v, i = iaf_step(
             z, v, i, input[ts],
-            z_hw[ts] if hw_data else None,
-            v_hw[ts] if hw_data else None,
+            z_hw[ts] if z_hw is not None else None,
+            v_cadc[ts] if v_cadc is not None else None,
             params, dt)
 
         # Refractory update
@@ -152,4 +157,6 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
         membrane.append(v)
         current.append(i)
 
-    return torch.stack(spikes), torch.stack(membrane), torch.stack(current)
+    return (
+        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
+        v_madc)
