@@ -6,8 +6,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
-using namespace grenade::vx::network;
-
 namespace hxtorch::core {
 
 std::map<
@@ -19,10 +17,13 @@ extract_n_spikes(
     int runtime,
     std::map<grenade::vx::network::PopulationOnNetwork, int> n_spikes)
 {
+	using grenade::vx::network::Population;
+	using grenade::vx::network::PopulationOnNetwork;
+
 	// return data
 	std::map<PopulationOnNetwork, std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>> ret;
 
-	// TODO: SNIP: copied from extra "extract_spikes"
+	// TODO: SNIP: modified from extra "extract_spikes"
 	auto const grenade_spikes = extract_neuron_spikes(data, network_graph);
 
 	// get indices of events.
