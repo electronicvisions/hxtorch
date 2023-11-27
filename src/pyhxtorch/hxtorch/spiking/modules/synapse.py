@@ -146,9 +146,9 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
         # TODO: Make sure this doesn't require rerouting
         connections_exc = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
-            weight_exc.numpy())
+            weight_exc.cpu().numpy())
         connections_inh = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
-            weight_inh.numpy())
+            weight_inh.cpu().numpy())
 
         # add inter-execution-instance projection and source if necessary
         if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
