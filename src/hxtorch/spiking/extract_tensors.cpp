@@ -1,7 +1,7 @@
 #include "hxtorch/spiking/extract_tensors.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network_graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include <vector>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -15,7 +15,7 @@ namespace py = pybind11;
 namespace hxtorch::spiking {
 
 std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
-    grenade::vx::signal_flow::IODataMap const& data,
+    grenade::vx::signal_flow::OutputData const& data,
     grenade::vx::network::NetworkGraph const& network_graph)
 {
 	using namespace grenade::vx;
@@ -79,7 +79,7 @@ std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
 
 
 std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
-    grenade::vx::signal_flow::IODataMap const& data,
+    grenade::vx::signal_flow::OutputData const& data,
     grenade::vx::network::NetworkGraph const& network_graph)
 {
 	using namespace grenade::vx;
@@ -132,7 +132,7 @@ std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
 
 
 std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
-    grenade::vx::signal_flow::IODataMap const& data,
+    grenade::vx::signal_flow::OutputData const& data,
     grenade::vx::network::NetworkGraph const& network_graph)
 {
 	using namespace grenade::vx;

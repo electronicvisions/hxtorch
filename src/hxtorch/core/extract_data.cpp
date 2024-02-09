@@ -1,7 +1,7 @@
 #include "hxtorch/core/extract_data.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network_graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -12,7 +12,7 @@ std::map<
     grenade::vx::network::PopulationOnNetwork,
     std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>>
 extract_n_spikes(
-    grenade::vx::signal_flow::IODataMap const& data,
+    grenade::vx::signal_flow::OutputData const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime,
     std::map<grenade::vx::network::PopulationOnNetwork, int> n_spikes)

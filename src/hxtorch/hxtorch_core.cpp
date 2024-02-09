@@ -8,6 +8,7 @@
 #include "hxtorch/core/weight_to_connection.h"
 #include <pybind11/pybind11.h>
 
+#include "grenade/vx/signal_flow/output_data.h"
 
 PYBIND11_MODULE(_hxtorch_core, m)
 {

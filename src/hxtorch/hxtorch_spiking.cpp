@@ -15,6 +15,8 @@
 #include "hxtorch/spiking/tensor_to_spike_times.h"
 #include "hxtorch/spiking/types.h"
 
+#include "grenade/vx/signal_flow/output_data.h"
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
 	typedef std::vector<std::tuple<int64_t, int64_t, int64_t>> spike_type;

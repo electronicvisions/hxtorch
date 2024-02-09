@@ -5,10 +5,10 @@
 
 namespace hxtorch::spiking {
 
-grenade::vx::signal_flow::IODataMap run(
+grenade::vx::signal_flow::OutputData run(
     grenade::vx::execution::JITGraphExecutor::ChipConfigs const& config,
     grenade::vx::network::NetworkGraph const& network_graph,
-    grenade::vx::signal_flow::IODataMap const& inputs,
+    grenade::vx::signal_flow::InputData const& inputs,
     grenade::vx::execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	if (!hxtorch::core::detail::getExecutor()) {

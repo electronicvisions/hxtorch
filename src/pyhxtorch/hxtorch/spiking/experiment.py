@@ -266,7 +266,7 @@ class Experiment(BaseExperiment):
 
     def _generate_inputs(
         self, network_graph: grenade.network.NetworkGraph) \
-            -> grenade.signal_flow.IODataMap:
+            -> grenade.signal_flow.InputData:
         """
         Generate external input events from the routed network graph
         representation.
@@ -315,7 +315,7 @@ class Experiment(BaseExperiment):
 
     def _get_population_observables(
             self, network_graph: grenade.network.NetworkGraph,
-            result_map: grenade.signal_flow.IODataMap, runtime) -> Dict[
+            result_map: grenade.signal_flow.OutputData, runtime) -> Dict[
                 grenade.network.PopulationOnNetwork,
                 np.ndarray]:
         """
@@ -505,5 +505,5 @@ class Experiment(BaseExperiment):
         return hw_data, outputs.execution_time_info
 
     @property
-    def last_run_chip_configs(self) -> grenade.signal_flow.IODataMap:
+    def last_run_chip_configs(self) -> grenade.signal_flow.OutputData:
         return self._last_run_chip_configs

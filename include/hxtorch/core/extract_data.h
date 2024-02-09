@@ -8,7 +8,7 @@
 namespace grenade::vx {
 
 namespace signal_flow {
-class IODataMap;
+class OutputData;
 } // namespace signal_flow
 
 } // namspace grenade::vx
@@ -16,11 +16,11 @@ class IODataMap;
 
 namespace hxtorch::core {
 
-/** Convert recorded spikes in IODataMap to population-specific tuples of NumPy arrays holding N
+/** Convert recorded spikes in OutputData to population-specific tuples of NumPy arrays holding N
  * spikes for each population in each batch entry. If less spikes are encountered their entry will
  * be np.inf
  *
- * @param data The IODataMap returned by grenade holding all recorded data.
+ * @param data The OutputData returned by grenade holding all recorded data.
  * @param network_graph The logical grenade graph representation of the network.
  * @param n_spikes The maximal numer of spikes per population.
  * @param runtime The runtime of the experiment given in FPGA clock cycles.
@@ -31,7 +31,7 @@ std::map<
     grenade::vx::network::PopulationOnNetwork,
     std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>>
 extract_n_spikes(
-    grenade::vx::signal_flow::IODataMap const& data,
+    grenade::vx::signal_flow::OutputData const& data,
     grenade::vx::network::NetworkGraph const& network_graph,
     int runtime,
     std::map<grenade::vx::network::PopulationOnNetwork, int> n_spikes) SYMBOL_VISIBLE;
