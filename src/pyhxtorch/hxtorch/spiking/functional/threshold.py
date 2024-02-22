@@ -9,7 +9,7 @@ import torch
 from hxtorch.spiking.functional.superspike import superspike_func
 
 
-# Allow redefining builtin for PyTorch consistancy
+# Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def threshold(input: torch.Tensor, method: str, alpha: float) -> torch.Tensor:
     """

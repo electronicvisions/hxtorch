@@ -44,9 +44,9 @@ class SuperSpike(torch.autograd.Function):
         """
         Implements surrogate gradient 'SuperSpike' for backward.
 
-        :param grad_output: Backpropagted gradient.
+        :param grad_output: Back-propagated gradient.
 
-        :returns: SuperSpike gradient multiplied to backpropagated gradient.
+        :returns: SuperSpike gradient multiplied to back-propagated gradient.
         """
         input, = ctx.saved_tensors
         grad = grad_output.clone()

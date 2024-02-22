@@ -13,12 +13,12 @@ class PixelsToSpikeTimes(torch.nn.Module):
         """
         Initialize a pixel to spike time transformation.
 
-        :param tau: Streching factor of pixel to spike-time transformation.
+        :param tau: Stretching factor of pixel to spike-time transformation.
             Lager values correspond to later spike times.
         :param threshold: The threshold under which a pixel is considered
             non-spiking (resp. spike at time t_max).
         :param t_max: Maximum spike time.
-        :param epsilon: Safty margin to prevent zero-division.
+        :param epsilon: Safety margin to prevent zero-division.
         """
         super().__init__()
 
@@ -75,7 +75,7 @@ class SpikeTimesToSparseTensor(torch.nn.Module):
 
         :param spikes: Spike times of shape '(color_channels, x0[, x1, ...])'.
 
-        :returns: Returns a dense matirx of shape
+        :returns: Returns a dense matrix of shape
             '(time_bins, color_channels, x0[, x1, ...])'.
         """
         dev = spikes.device
@@ -119,7 +119,7 @@ class SpikeTimesToDense(torch.nn.Module):
 
         :param spikes: Spike times of shape '(color_channels, x0[, x1, ...])'.
 
-        :returns: Returns a dense matirx of shape
+        :returns: Returns a dense matrix of shape
             '(time_bins, color_channels, x0[, x1, ...])'.
         """
         return self._to_sparse(spikes).to_dense()

@@ -31,7 +31,7 @@ class Neuron(Population):
     Neuron layer
 
     Caveat:
-    For execution on hardware, this module can only be used in conjuction with
+    For execution on hardware, this module can only be used in conjunction with
     a preceding Synapse module.
     """
 
@@ -65,13 +65,13 @@ class Neuron(Population):
         """
         Initialize a Neuron. This module creates a population of spiking
         neurons of size `size`. This module has a internal spiking mask, which
-        allows to disable the event ouput and spike recordings of specific
+        allows to disable the event output and spike recordings of specific
         neurons within the layer. This is particularly useful for dropout.
 
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
@@ -178,7 +178,7 @@ class Neuron(Population):
                 + f"record_neuron_id={self._record_neuron_id}, " \
                 + f"trace_scale={self.scale}, " \
                 + f"trace_offset={self.offset}, " \
-                + f"cadc_time_schift={self.cadc_time_shift}, " \
+                + f"cadc_time_shift={self.cadc_time_shift}, " \
                 + f"shift_cadc_to_first={self.shift_cadc_to_first}, " \
                 + f"interpolation_mode={self.interpolation_mode}, " \
                 + f"neuron_structure={self._neuron_structure}, "
@@ -187,7 +187,7 @@ class Neuron(Population):
 
     def register_hw_entity(self) -> None:
         """
-        Infere neuron ids on hardware and register them.
+        Infer neuron IDs on hardware and register them.
         """
         if self.execution_instance not in self.experiment.id_counter:
             self.experiment.id_counter.update({self.execution_instance: 0})

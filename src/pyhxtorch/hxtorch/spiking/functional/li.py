@@ -15,7 +15,7 @@ class CUBALIParams(NamedTuple):
     v_leak: torch.Tensor = torch.tensor(0.)
 
 
-# Allow redefining builtin for PyTorch consistancy
+# Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
                         hw_data: Optional[torch.Tensor] = None,

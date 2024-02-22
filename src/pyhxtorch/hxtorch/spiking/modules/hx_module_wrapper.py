@@ -23,13 +23,13 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
     def __init__(self, experiment: Experiment, modules: List[HXModule],
                  func: Optional[Callable]) -> None:
         """
-        A module which wrappes a number of HXModules defined in `modules` to
+        A module which wraps a number of HXModules defined in `modules` to
         which a single PyTorch-differential function `func` is defined. For
-        instance, this allows to wrap a Synapse and a Neuron to descripe
+        instance, this allows to wrap a Synapse and a Neuron to describe
         recurrence.
         :param experiment: The experiment to register this wrapper in.
         :param modules: A list of modules to be represented by this wrapper.
-        :param func: The function describing the unified functionallity of all
+        :param func: The function describing the unified functionality of all
             modules assigned to this wrapper. As for HXModules, this needs to
             be a PyTorch-differentiable function and can be either an
             autograd.Function or a function defined by PyTorch operation. The
@@ -37,8 +37,8 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
             1. All positional arguments of each function in `modules` appended
                in the order given in `modules`.
             2. All keywords arguments of each function in `modules`. If a
-               keyword is occurred multiple times it is post-fixed `_i`, where
-               i is an integered incremented with each occurrence.
+               keyword occurs multiple times, it is post-fixed `_i`, where
+               `i` is an integer incremented with each occurrence.
             3. A keyword argument `hw_data` if hardware data is expected, which
                is a tuple holding the data for each module for which data is
                expected. The order is defined by `modules`.
@@ -115,7 +115,7 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
         :param input: A tuple of the input handles where each handle
             corresponds to a certain module. The order is defined by `modules`.
             Note, a module can have multiple input handles.
-        :param output: A tuole of output handles, each correspnding to one
+        :param output: A tuple of output handles, each corresponding to one
             module. The order is defined by `modules`.
         :param hw_map: The hardware data map.
         """

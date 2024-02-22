@@ -1,6 +1,6 @@
 """
 Autograd function to 'unterjubel' (german for 'inject') hardware observables
-and allow correct gradient backpropagation.
+and allow correct gradient back-propagation.
 
 Basically taken from:
 https://gerrit.bioai.eu:9443/gitweb?p=model-hx-strobe.git;a=blob;f=src/py/strobe/unterjubel.py;h=4b13de159bd54b629a0b6278cb9c2f58f62883bf;hb=HEAD;js=1
@@ -15,13 +15,13 @@ class Unterjubel(torch.autograd.Function):
 
     """ Unterjubel hardware observables to allow correct gradient flow """
 
-    # Allow redefining builtin for PyTorch consistancy
+    # Allow redefining builtin for PyTorch consistency
     # pylint: disable=redefined-builtin, arguments-differ, unused-argument
     @staticmethod
     def forward(ctx, input: torch.Tensor, input_prime: torch.Tensor) \
             -> torch.Tensor:
         """
-        Returns `input_prime` insteat of `input` to inject `input_prime` but
+        Returns `input_prime` instead of `input` to inject `input_prime` but
         direct the gradient to `input`.
 
         :param input: Input tensor.
@@ -32,7 +32,7 @@ class Unterjubel(torch.autograd.Function):
         """
         return input_prime
 
-    # Allow redefining builtin for PyTorch consistancy
+    # Allow redefining builtin for PyTorch consistency
     # pylint: disable=redefined-builtin, arguments-differ
     @staticmethod
     def backward(ctx: torch.Tensor, grad_output: torch.Tensor) \
@@ -42,6 +42,7 @@ class Unterjubel(torch.autograd.Function):
 
         :param grad_output: The backwarded gradient.
 
-        :returns: Returns simply the backpropagated gradient at first position.
+        :returns: Returns simply the back-propagated gradient at first
+            position.
         """
         return grad_output, None, None

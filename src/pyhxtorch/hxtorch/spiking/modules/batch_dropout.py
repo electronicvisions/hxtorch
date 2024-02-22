@@ -46,7 +46,7 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
             disabled during training.
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to
             `batch_dropout`.
         :param execution_instance: Execution instance to place to.
@@ -69,7 +69,7 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
         the previous module.
         If `module.eval()` dropout will be disabled.
 
-        :returns: Returns a random boolen spike mask of size `self.size`.
+        :returns: Returns a random boolean spike mask of size `self.size`.
         """
         if self.training:
             self.mask = (torch.rand(self.size) > self._dropout)

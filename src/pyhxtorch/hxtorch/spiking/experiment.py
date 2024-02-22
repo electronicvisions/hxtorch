@@ -54,10 +54,9 @@ class Experiment(BaseExperiment):
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.routing.PortfolioRouter()) \
-            -> None:
+            hw_routing_func=grenade.network.routing.PortfolioRouter()) -> None:
         """
-        Instanziate a new experiment, represting an experiment on hardware
+        Instantiate a new experiment, representing an experiment on hardware
         and/or in software.
 
         :param mock: Indicating whether module is executed on hardware (False)
@@ -174,8 +173,7 @@ class Experiment(BaseExperiment):
         self._chip = calib_helper.chip_from_file(calib_path)
         return self._chip
 
-    def _generate_network_graphs(self) -> \
-            grenade.network.NetworkGraph:
+    def _generate_network_graphs(self) -> grenade.network.NetworkGraph:
         """
         Generate grenade network graph from the populations and projections in
         modules
@@ -288,7 +286,7 @@ class Experiment(BaseExperiment):
 
     def _generate_playback_hooks(self) \
             -> grenade.signal_flow.ExecutionInstancePlaybackHooks:
-        """ Handle injected config (not suppored yet) """
+        """ Handle injected config (not supported yet) """
         assert self.injection_pre_static_config is not None
         assert self.injection_pre_realtime is not None
         assert self.injection_inside_realtime_begin is not None
@@ -317,11 +315,11 @@ class Experiment(BaseExperiment):
                 grenade.network.PopulationOnNetwork,
                 np.ndarray]:
         """
-        Takes the greade network graph and the result map returned by grenade
+        Takes the grenade network graph and the result map returned by grenade
         after experiment execution and returns a data map where for each
         population descriptor of registered populations the population-specific
         hardware observables are represented as Optional[torch.Tensor]s.
-        Note: This function calles the modules `post_process` method.
+        Note: This function calls the modules `post_process` method.
         :param network_graph: The logical grenade network graph describing the
             logic of th experiment.
         :param result_map: The result map returned by grenade holding all
@@ -330,7 +328,7 @@ class Experiment(BaseExperiment):
             ms.
         :returns: Returns the data map as dict, where the keys are the
             population descriptors and values are tuples of values returned by
-            the correpsonding module's `post_process` method.
+            the corresponding module's `post_process` method.
         """
         # Get hw data
         hw_spike_times = _hxtorch_spiking.extract_spikes(
@@ -432,7 +430,7 @@ class Experiment(BaseExperiment):
 
         :returns: Returns the data map as dict, where the keys are the
             population descriptors and values are tuples of values returned by
-            the correpsonding module's `post_process` method.
+            the corresponding module's `post_process` method.
         """
         if not self.mock:
             self._prepare_static_config()

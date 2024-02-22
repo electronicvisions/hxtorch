@@ -4,7 +4,7 @@ Custom BatchDropout function
 import torch
 
 
-# Allow redefining builtin for PyTorch consistancy
+# Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin
 def batch_dropout(input: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """

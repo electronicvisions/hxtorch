@@ -1,7 +1,7 @@
 """
 Integrate and fire neurons
 """
-# Allow redefining builtin for PyTorch consistancy
+# Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 from typing import NamedTuple, Tuple, Optional
 import torch
@@ -28,7 +28,7 @@ def iaf_step(z: torch.Tensor, v: torch.Tensor, i: torch.Tensor,
              params: NamedTuple, dt: float) -> Tuple[torch.Tensor, ...]:
     """
     Integrate the membrane of a neurons one time step further according to the
-    integrate and fire dynamcis.
+    integrate and fire dynamics.
     :param z: The spike tensor at time step t.
     :param v: The membrane tensor at time step t.
     :param i: The current tensor at time step t.
@@ -71,7 +71,7 @@ def cuba_iaf_integration(input: torch.Tensor, params: NamedTuple,
     Assumes i^0, v^0 = 0., v_reset
     :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
-    :param params: LIFParams object holding neuron prameters.
+    :param params: LIFParams object holding neuron parameters.
     :return: Returns the spike trains in shape and membrane trace as a tuple.
         Both tensors are of shape (batch, time, neurons).
     """
@@ -119,7 +119,7 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
     Assumes i^0, v^0 = 0., v_reset
     :note: One `dt` synaptic delay between input and output
     :param input: Input spikes in shape (batch, time, neurons).
-    :param params: LIFParams object holding neuron prameters.
+    :param params: LIFParams object holding neuron parameters.
     :return: Returns the spike trains in shape and membrane trace as a tuple.
         Both tensors are of shape (batch, time, neurons).
     """

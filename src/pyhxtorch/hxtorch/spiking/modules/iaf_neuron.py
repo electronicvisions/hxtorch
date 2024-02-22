@@ -26,7 +26,7 @@ class IAFNeuron(Neuron):
     """
     Integrate-and-fire neuron
     Caveat:
-    For execution on hardware, this module can only be used in conjuction with
+    For execution on hardware, this module can only be used in conjunction with
     a preceding Synapse module.
     """
 
@@ -61,14 +61,14 @@ class IAFNeuron(Neuron):
         """
         Initialize an IAFNeuron. This module creates a population of a non-
         leaking spiking neurons of size `size`. This module has a internal
-        spiking mask, which allows to disable the event ouput and spike
+        spiking mask, which allows to disable the event output and spike
         recordings of specific neurons within the layer. This is particularly
         useful for dropout.
 
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LIF`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of

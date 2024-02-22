@@ -27,7 +27,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     Synapse layer
 
     Caveat:
-    For execution on hardware, this module can only be used in conjuction with
+    For execution on hardware, this module can only be used in conjunction with
     a subsequent Neuron module.
     """
 
@@ -51,7 +51,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param dtype: Data type of weight tensor.
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Required function args:
                 [input (torch.Tensor), weight (torch.Tensor)]
         :param execution_instance: Execution instance to place to.
@@ -100,7 +100,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
     def reset_parameters(self, mean: float, std: float) -> None:
         """
-        Resets the synapses weights by reinitalization using torch.nn.normal_
+        Resets the synapses weights by reinitialization using torch.nn.normal_
         with mean=`mean` and std=`std`.
 
         :param mean: The mean of the normal distribution used to initialize the
@@ -131,7 +131,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
         :param pre: Population descriptor of pre-population.
         :param post: Population descriptor of post-population.
-        :param builder: Greande netowrk builder to add projection to.
+        :param builder: Grenade network builder to add projection to.
 
         :returns: A tuple of grenade ProjectionOnNetworks holding the
             descriptors for the excitatory and inhibitory projection.

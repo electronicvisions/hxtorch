@@ -28,7 +28,7 @@ class ReadoutNeuron(Neuron):
     Readout neuron layer
 
     Caveat:
-    For execution on hardware, this module can only be used in conjuction with
+    For execution on hardware, this module can only be used in conjunction with
     a preceding Synapse module.
     """
 
@@ -58,9 +58,9 @@ class ReadoutNeuron(Neuron):
         spiking mask is disabled for all neurons.
 
         :param size: Size of the population.
-        :param experiment: Experiment to regsiter the module in.
+        :param experiment: Experiment to register the module in.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation. Defaults to `LI`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of

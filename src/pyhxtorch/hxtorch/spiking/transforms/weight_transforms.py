@@ -1,7 +1,5 @@
 """
 Define convenient software <-> hardware weight mappings
-
-TODO: Implement stochastic rounding?
 """
 import torch
 

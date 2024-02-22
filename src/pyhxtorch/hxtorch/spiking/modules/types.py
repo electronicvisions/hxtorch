@@ -25,7 +25,7 @@ class Population(HXModule, EntityOnExecutionInstance):
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation.
             TODO: Inform about func args
         """
@@ -50,7 +50,7 @@ class Projection(HXModule, EntityOnExecutionInstance):
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation.
             TODO: Inform about func args
         """

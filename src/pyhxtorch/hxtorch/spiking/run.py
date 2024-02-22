@@ -18,7 +18,7 @@ def run(experiment: Experiment, runtime: Optional[int])\
 
     :param experiment: The experiment representing the computational graph to
         be executed on hardware and/or in software.
-    :param runtime: Only relevant for hardware experiements. Indicates the
+    :param runtime: Only relevant for hardware experiments. Indicates the
         runtime resolved with experiment.dt.
     """
     if not isinstance(runtime, int) and not experiment.mock:

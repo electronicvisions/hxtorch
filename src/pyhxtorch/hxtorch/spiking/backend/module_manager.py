@@ -1,5 +1,5 @@
 """
-Define graph-based datastructure managing Nodes
+Define graph-based data structure managing Nodes
 """
 from typing import Any, Dict, Tuple, List, Union, Set, Optional
 from abc import ABC, abstractmethod
@@ -56,7 +56,7 @@ class BaseModuleManager(ABC):
     def add_node(self, module: Module, sources: Source, target: Target):
         """
         Adds a new module to the manager. This method adds a node to the
-        internal graph to reporesent the module. It assigned edges to this node
+        internal graph to represent the module. It assigned edges to this node
         holding the data in `sources`, resp. `target`.
         :param module: Module to represented in to the graph.
         :param sources: The sources to the node representing `module`.
@@ -69,7 +69,7 @@ class BaseModuleManager(ABC):
         """
         Adds a new wrapper to the manager. This must be called after all
         modules wrapped by this wrapper are represented in the graph.
-        internal graph to reporesent the module. It assigned edges to this node
+        internal graph to represent the module. It assigned edges to this node
         holding the data in `sources`, resp. `target`.
         :param module: Module to represented in to the graph.
         """
@@ -85,7 +85,7 @@ class BaseModuleManager(ABC):
         raise NotImplementedError
 
 
-# We allow u, v as variable names to be consitant with networkx
+# We allow u, v as variable names to be consistent with networkx
 # pylint: disable=invalid-name
 class ModuleManager(BaseModuleManager):
     """ Object representing all nodes in a graph-like data structure """
@@ -122,7 +122,7 @@ class ModuleManager(BaseModuleManager):
     def clear(self):
         """
         Override clear to also clear open sources and open targets. This method
-        resets the Manager without removing implictly created input modules
+        resets the Manager without removing implicitly created input modules
         such that they can be reused.
         """
         super().clear()
@@ -206,9 +206,9 @@ class ModuleManager(BaseModuleManager):
 
     def has_module(self, module: Module) -> bool:
         """
-        Checks whether the moudle `mdoule` is already registered within the
+        Checks whether the module `module` is already registered within the
         graph.
-        :param module: The module to check its existance for.
+        :param module: The module to check its existence for.
         :return: Returns a bool indicating whether the module exists or not.
         """
         return module in self.nodes
@@ -216,7 +216,7 @@ class ModuleManager(BaseModuleManager):
     def find_edges(self, handle: Any) -> List[int]:
         """
         Find all edges with data associated with `handle`.
-        :param handle: The edge data to match agains.
+        :param handle: The edge data to match against.
         :return: Returns a list of all edges in the graph which hold the same
             data `handle`.
         """
@@ -237,7 +237,7 @@ class ModuleManager(BaseModuleManager):
     def add_node(self, module: Module, sources: Source, target: Target):
         """
         Adds a new module to the manager. This method adds a node to the
-        internal graph to reporesent the module. It assigned edges to this node
+        internal graph to represent the module. It assigned edges to this node
         holding the data in `sources`, resp. `target`.
         :param module: Module to represented in to the graph.
         :param sources: The sources to the node representing `module`.
@@ -282,7 +282,7 @@ class ModuleManager(BaseModuleManager):
         """
         Adds a new wrapper to the manager. This must be called after all
         modules wrapped by this wrapper are represented in the graph.
-        internal graph to reporesent the module. It assigned edges to this node
+        internal graph to represent the module. It assigned edges to this node
         holding the data in `sources`, resp. `target`.
         :param module: Module to represented in to the graph.
         """

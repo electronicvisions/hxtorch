@@ -22,7 +22,7 @@ class CUBALIFParams(NamedTuple):
     method: str = "superspike"
 
 
-# Allow redefining builtin for PyTorch consistancy
+# Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def cuba_lif_integration(input: torch.Tensor,
                          params: CUBALIFParams,
@@ -44,7 +44,7 @@ def cuba_lif_integration(input: torch.Tensor,
     TODO: Issue 3992
 
     :param input: Input spikes in shape (batch, time, neurons).
-    :param params: LIFParams object holding neuron prameters.
+    :param params: LIFParams object holding neuron parameters.
     :param dt: Step width of integration.
 
     :return: Returns the spike trains in shape and membrane trace as a tuple.

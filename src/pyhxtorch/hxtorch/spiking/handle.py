@@ -36,7 +36,7 @@ class TensorHandle(metaclass=HandleMeta):
     indicated in the class member '_carries'. For all elements in this list a
     property is created implicitly.
 
-    The observable state of the tensor handle is definied in '_obsv_state' and
+    The observable state of the tensor handle is defined in '_obsv_state' and
     defines which tensor is passed to the subsequent layer as input.
     Member '_obsv_state' has to be in '_carries'.
     """
@@ -46,7 +46,7 @@ class TensorHandle(metaclass=HandleMeta):
 
     def __init__(self) -> None:
         """
-        Instanziate a new HX handle holding references to torch tensors.
+        Instantiate a new HX handle holding references to torch tensors.
         """
         self.data = OrderedDict()
 
@@ -55,7 +55,7 @@ class TensorHandle(metaclass=HandleMeta):
         """
         Getter for observable state.
 
-        :return: Returns the tensor assoicated with '_obsv_state'
+        :return: Returns the tensor associated with '_obsv_state'
         """
         return self.data[self._obsv_state]
 
@@ -142,7 +142,7 @@ class NeuronHandle(TensorHandle):
 
         :param spikes: Optional spike tensor.
         :param v_cadc: Optional membrane tensor, holding CADC recordings.
-        :param current: Optional current tensor, holding synpatic current.
+        :param current: Optional current tensor, holding synaptic current.
         :param v_madc: Optional membrane tensor, holding MADC recordings.
         """
         super().__init__()
@@ -168,7 +168,7 @@ class ReadoutNeuronHandle(TensorHandle):
         this can be changed by deriving this class.
 
         :param v_cadc: Optional membrane tensor, holding CADC recordings.
-        :param current: Optional current tensor, holding synpatic current.
+        :param current: Optional current tensor, holding synaptic current.
         :param v_madc: Optional membrane tensor, holding MADC recordings.
         """
         super().__init__()

@@ -32,7 +32,7 @@ class NeuronPlacement:
         :param neuron_id: pyNN neuron ID to be registered
         :param shape: The shape of the neurons on hardware.
         :param placement_constraint: A logical neuron or a list of logical
-            neurons, each coresponding to one ID in `neuron_id`.
+            neurons, each corresponding to one ID in `neuron_id`.
         """
         if not (hasattr(neuron_id, "__iter__")
                 and hasattr(neuron_id, "__len__")):
@@ -54,7 +54,7 @@ class NeuronPlacement:
         :param neuron_id: An int or list of ints corresponding to the global
             IDs of the neurons.
         :param placement_constraint: A logical neuron or a list of logical
-            neurons, each coresponding to one ID in `neuron_id`.
+            neurons, each corresponding to one ID in `neuron_id`.
         """
         if not isinstance(placement_constraint, list):
             placement_constraint = [placement_constraint]
@@ -103,7 +103,7 @@ class NeuronPlacement:
     def id2logicalneuron(self, neuron_id: Union[List[int], int]) \
             -> Union[List[halco.LogicalNeuronOnDLS], halco.LogicalNeuronOnDLS]:
         """
-        Get hardware coordinate from pyNN int
+        Get hardware coordinate from pyNN int.
         :param neuron_id: pyNN neuron int
         """
         try:

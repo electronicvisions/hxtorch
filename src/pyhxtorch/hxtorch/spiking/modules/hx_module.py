@@ -21,7 +21,7 @@ log = logger.get("hxtorch.spiking.modules")
 
 class HXModule(torch.nn.Module):
     """
-    PyTorch module supplying basic functionality for building SNNs on HX.
+    PyTorch module supplying basic functionality for building SNNs on HX
     """
 
     output_type: Type = TensorHandle
@@ -31,7 +31,7 @@ class HXModule(torch.nn.Module):
         """
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward
-            functionallity or a torch.autograd.Function implementing the
+            functionality or a torch.autograd.Function implementing the
             module's forward and backward operation.
             TODO: Inform about func args
         """
@@ -135,7 +135,7 @@ class HXModule(torch.nn.Module):
         functions used in `exec_forward` to `func(input, hw_data=...)`.
         :param function: The function to be used for building the PyTorch
             graph.
-        :returns: Returns the member 'func(input, *args, **kwrags,
+        :returns: Returns the member 'func(input, *args, **kwargs,
             hw_data=...)' stripped down to 'func(input, hw_data=...).
         """
         is_autograd_func = isinstance(
@@ -208,7 +208,7 @@ class HXModule(torch.nn.Module):
             as required.
 
         :returns: Returns a Reference to TensorHandle holding result data
-            asociated with this layer after 'hxtorch.run' is executed.
+            associated with this layer after 'hxtorch.run' is executed.
         """
         self.experiment.connect(self, input, self._output_handle)
         return self._output_handle

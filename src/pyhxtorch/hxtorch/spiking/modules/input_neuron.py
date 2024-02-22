@@ -35,10 +35,10 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
             execution_instance: grenade.common.ExecutionInstanceID
             = grenade.common.ExecutionInstanceID()) -> None:
         """
-        Instanziate a InputNeuron. This module serves as an External
+        Instantiate a InputNeuron. This module serves as an External
         Population for input injection and is created within `experiment`
-        if not present in the considerd model.
-        This module performes an identity mapping when `forward` is called.
+        if not present in the considered model.
+        This module performs an identity mapping when `forward` is called.
 
         :param size: Number of input neurons.
         :param experiment: Experiment to which this module is assigned.
@@ -64,7 +64,7 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
         """
         Adds instance to grenade's network builder.
 
-        :param builder: Grenade network builder to add extrenal population to.
+        :param builder: Grenade network builder to add external population to.
         :returns: External population descriptor.
         """
         # create grenade population
@@ -83,7 +83,7 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
         Add the neurons events represented by this instance to grenades input
         generator.
 
-        :param input: Dense spike tensor. These spikes are implictely converted
+        :param input: Dense spike tensor. These spikes are implicitly converted
             to spike times. TODO: Allow sparse tensors.
         :param builder: Grenade's input generator to append the events to.
         """

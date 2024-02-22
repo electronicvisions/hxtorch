@@ -2,9 +2,7 @@ import pygrenade_vx as grenade
 
 
 class EntityOnExecutionInstance:
-    """
-    Mixin of execution instance property for use in modules.
-    """
+    """ Mixin of execution instance property for use in modules """
 
     def __init__(
             self,

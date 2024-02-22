@@ -18,7 +18,7 @@ class YinYangDataset(Dataset):
                  size: int = 1000, seed: int = 42,
                  transform: Optional[torch.nn.Module] = None) -> None:
         """
-        Instantiate the YinYang dataset. This dataset provides datapoints on a
+        Instantiate the YinYang dataset. This dataset provides data points on a
         2-dimensional plane within a yin-yang sign. Each data point is assigned
         to one of three classes: The eyes, the yin or the yang.
         :param r_small: The radius of the eyes in the yin-yang sign.
@@ -70,8 +70,8 @@ class YinYangDataset(Dataset):
         Sample one data point from the yin-yang sign with goal class `goal`. If
         `goal` is None any sample of any class is returned.
         :param goal: The target class of the sample to return. If None is
-            given, any sample regardless of its class is retuned.
-        :returns: Returns a tuple (x coordiante, y coordinate, class), where
+            given, any sample regardless of its class is returned.
+        :returns: Returns a tuple (x coordinate, y coordinate, class), where
             the coordinates are on the xy-plane.
         """
         # sample until goal is satisfied
