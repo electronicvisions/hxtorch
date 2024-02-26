@@ -13,6 +13,8 @@ namespace hxtorch::perceptron::detail {
  * @param x Input (1D or 2D)
  * @param weights 2D weight matrix
  * @param num_sends How often to send the (same) input vector
+ * @param wait_between_events Wait time between two successive vector inputs, in FPGA clock cycles.
+ * Shorter wait time can lead to saturation of the synaptic input.
  * @param madc_recording_neuron_id Neuron ID to record via MADC
  * @param madc_recording_path Path to which to store MADC neuron membrane recordings. If file exists
  * new data is appended. By default recording is disabled.
