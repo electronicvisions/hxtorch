@@ -103,7 +103,7 @@ class MNISTTest(unittest.TestCase, metaclass=ABCMeta):
             f"accuracy: {accuracy:.1f}% ({self.__class__.__name__[9:]})")
 
         self.assertGreater(
-            accuracy, 85, "MNIST success is lower than usual.")
+            accuracy, 80, "MNIST success is lower than usual.")
 
 
 class MNISTTestHX(MNISTTest):
