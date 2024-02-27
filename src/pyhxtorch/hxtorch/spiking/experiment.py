@@ -2,24 +2,23 @@
 Defining basic types to create hw-executable instances
 """
 # pylint: disable=no-member, invalid-name
-from typing import Callable, Dict, List, Tuple, Union, Optional
+from typing import Callable, Dict, List, Tuple, Optional
 from abc import ABC, abstractmethod
-from pathlib import Path
 import itertools
 import pylogging as logger
 
 import torch
 import numpy as np
 
-from dlens_vx_v3 import hal, sta, lola
+from dlens_vx_v3 import hal
 import pygrenade_vx as grenade
 
 import _hxtorch_spiking  # pylint: disable=no-name-in-module
 from hxtorch.spiking.observables import HardwareObservablesExtractor
+from hxtorch.spiking.execution_instance import (
+    ExecutionInstances, ExecutionInstance)
 from hxtorch.spiking import modules as spiking_modules
 from hxtorch.spiking import handle
-from hxtorch.spiking.utils import calib_helper
-from hxtorch.spiking.neuron_placement import NeuronPlacement
 from hxtorch.spiking.backend.module_manager import (
     BaseModuleManager, ModuleManager)
 
@@ -54,9 +53,7 @@ class Experiment(BaseExperiment):
     # pylint: disable=too-many-arguments
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
-            calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.routing.PortfolioRouter(),
-            input_loopback: bool = False) -> None:
+            hw_routing_func=grenade.network.routing.PortfolioRouter()) -> None:
         """
         Instantiate a new experiment, representing an experiment on hardware
         and/or in software.
@@ -69,16 +66,9 @@ class Experiment(BaseExperiment):
         """
         super().__init__(ModuleManager(), mock=mock, dt=dt)
 
-        # Load chip object
-        self._chip = None
-        if calib_path is not None:
-            self._chip = self.load_calib(calib_path)
+        self._execution_instances = ExecutionInstances()
 
-        # Recording
-        self.cadc_recording = {}
-        self.cadc_recording_placement_in_dram = {}
-        self.has_madc_recording = False
-        self.input_loopback = input_loopback
+        self.hw_routing_func = hw_routing_func
 
         # Grenade stuff
         self.grenade_network = None
@@ -86,25 +76,13 @@ class Experiment(BaseExperiment):
 
         # Configs
         self._static_config_prepared = False
-        self.injection_pre_static_config = None
-        self.injection_pre_realtime = None  # Unused
-        self.injection_post_realtime = None  # Unused
-        self.injection_inside_realtime_begin = None  # Unused
-        self.injection_inside_realtime = None  # Unused
-        self.injection_inside_realtime_end = None  # Unused
+        self._default_execution_instance: Optional[ExecutionInstance] = None
 
         self._populations: List[spiking_modules.HXModule] = []
         self._projections: List[spiking_modules.HXModule] = []
 
-        self._batch_size = 0
-        self.id_counter: Dict[
-            grenade.common.ExecutionInstanceID, int] = {}
-
-        self.neuron_placement: Dict[
-            grenade.common.ExecutionInstanceID, NeuronPlacement] = {}
-        self.hw_routing_func = hw_routing_func
         self._hw_data_extractor = HardwareObservablesExtractor()
-
+        self._batch_size = 0
         self.inter_batch_entry_wait = None
 
         # Last run results
@@ -116,26 +94,46 @@ class Experiment(BaseExperiment):
         instance.
         """
         self.modules.clear()
-
-        self.cadc_recording = {}
-        self.cadc_recording_placement_in_dram = {}
-        self.has_madc_recording = False
+        self._execution_instances.clear()
 
         self.grenade_network = None
         self.grenade_network_graph = None
 
+        self.inter_batch_entry_wait = None
         self._static_config_prepared = False
-        self.injection_pre_static_config = None
-        self.injection_pre_realtime = None  # Unused
-        self.injection_post_realtime = None  # Unused
+        self._default_execution_instance = None
 
         self._populations = []
         self._projections = []
 
         self._batch_size = 0
-        self.id_counter = {}
 
-        self.inter_batch_entry_wait = None
+    @property
+    def default_execution_instance(self) -> ExecutionInstance:
+        """
+        Getter for the default ``ExecutionInstance`` object. All modules that
+        have the same ``Experiment`` instance assigned and do not hold an
+        explicit ``ExecutionInstance`` are assigned to this default execution
+        instance.
+
+        :return: The default execution instance
+        """
+        if self._default_execution_instance is None:
+            self._default_execution_instance = ExecutionInstance()
+        return self._default_execution_instance
+
+    @default_execution_instance.setter
+    def default_execution_instance(
+            self, execution_instance: Optional[ExecutionInstance]) -> None:
+        """
+        Setter for the default ``ExecutionInstance`` object. All modules that
+        have the same ``Experiment`` instance assigned and do not hold an
+        explicit ``ExecutionInstance`` are assigned to this default execution
+        instance.
+
+        :param: The default execution instance to be used
+        """
+        self._default_execution_instance = execution_instance
 
     def _prepare_static_config(self) -> None:
         """
@@ -146,35 +144,17 @@ class Experiment(BaseExperiment):
         """
         if self._static_config_prepared:  # Only do this once
             return
-
-        # If chip is still None we load default nightly calib
-        if self._chip is None:
-            log.INFO(
-                "No chip object present. Using chip object with default "
-                + "nightly calib.")
-            self._chip = self.load_calib(calib_helper.nightly_calib_path())
-
+        for execution_instance in self._execution_instances:
+            execution_instance.prepare_static_config()
         self._static_config_prepared = True
         log.TRACE("Preparation of static config done.")
-
-    def load_calib(self, calib_path: Optional[Union[Path, str]] = None) \
-            -> lola.Chip:
-        """
-        Load a calibration from path `calib_path` and apply to the experiment`s
-        chip object. If no path is specified a nightly calib is applied.
-        :param calib_path: The path to the calibration. It None, the nightly
-            calib is loaded.
-        :return: Returns the chip object for the given calibration.
-        """
-        # If no calib path is given we load spiking nightly calib
-        log.INFO(f"Loading calibration from {calib_path}")
-        self._chip = calib_helper.chip_from_file(calib_path)
-        return self._chip
 
     def _generate_network_graphs(self) -> grenade.network.NetworkGraph:
         """
         Generate grenade network graph from the populations and projections in
         modules
+
+        TODO: Make this more ExecutionInstance specific
 
         :return: Returns the grenade network graph.
         """
@@ -204,13 +184,9 @@ class Experiment(BaseExperiment):
                 network_builder)
 
         # Add CADC recording
-        if self.cadc_recording:
-            for execution_instance, neurons in self.cadc_recording.items():
-                cadc_recording = grenade.network.CADCRecording()
-                if self.cadc_recording_placement_in_dram[execution_instance]:
-                    cadc_recording.placement_on_dram = True
-                cadc_recording.neurons = [v[0] for _, v in neurons.items()]
-                network_builder.add(cadc_recording, execution_instance)
+        for execution_instance, cadc_recording in self._execution_instances \
+                .cadc_recordings.items():
+            network_builder.add(cadc_recording, execution_instance)
 
         network = network_builder.done()
 
@@ -226,13 +202,11 @@ class Experiment(BaseExperiment):
 
         # build or update network graph
         if routing_result is not None:
-            self.grenade_network_graph = grenade.network\
-                .build_network_graph(
-                    self.grenade_network, routing_result)
+            self.grenade_network_graph = grenade.network \
+                .build_network_graph(self.grenade_network, routing_result)
         else:
             grenade.network.update_network_graph(
-                self.grenade_network_graph,
-                self.grenade_network)
+                self.grenade_network_graph, self.grenade_network)
 
         return self.grenade_network_graph
 
@@ -240,25 +214,23 @@ class Experiment(BaseExperiment):
         """
         Configure the population on hardware.
         """
-        # Make sure experiment holds chip config
-        assert self._chip is not None
-
         pop_changed_since_last_run = any(
             m.changed_since_last_run for m in self._populations)
         if not pop_changed_since_last_run:
             return
+
         for module in self._populations:
             if not isinstance(module, spiking_modules.Neuron):
                 continue
             log.TRACE(f"Configure population '{module}'.")
             for in_pop_id, unit_id in enumerate(module.unit_ids):
-                coord = self.neuron_placement[
-                    module.execution_instance
-                ].id2logicalneuron(unit_id)
-                self._chip.neuron_block = module.configure_hw_entity(
-                    in_pop_id, self._chip.neuron_block, coord)
-                log.TRACE(
-                    f"Configured neuron at coord {coord}.")
+                coord = module.execution_instance.neuron_placement \
+                    .id2logicalneuron(unit_id)
+                module.execution_instance.chip.neuron_block = \
+                    module.configure_hw_entity(
+                        in_pop_id, module.execution_instance.chip.neuron_block,
+                        coord)
+                log.TRACE(f"Configured neuron at coord {coord}.")
 
     def _generate_inputs(
         self, network_graph: grenade.network.NetworkGraph) \
@@ -283,40 +255,6 @@ class Experiment(BaseExperiment):
             module.add_to_input_generator(in_handle, input_generator)
 
         return input_generator.done()
-
-    def _generate_hooks(self) \
-            -> grenade.signal_flow.ExecutionInstanceHooks:
-        """ Handle injected config """
-        pre_static_config = sta.PlaybackProgramBuilder()
-        pre_realtime = sta.PlaybackProgramBuilder()
-        inside_realtime_begin = sta.PlaybackProgramBuilder()
-        inside_realtime = sta.AbsoluteTimePlaybackProgramBuilder()
-        inside_realtime_end = sta.PlaybackProgramBuilder()
-        post_realtime = sta.PlaybackProgramBuilder()
-
-        if self.injection_pre_static_config is not None:
-            pre_static_config.copy_back(self.injection_pre_static_config)
-
-        if self.injection_pre_realtime is not None:
-            pre_realtime.copy_back(self.injection_pre_realtime)
-
-        if self.injection_inside_realtime_begin is not None:
-            inside_realtime_begin.copy_back(
-                self.injection_inside_realtime_begin
-            )
-
-        if self.injection_inside_realtime is not None:
-            inside_realtime.copy(self.injection_inside_realtime)
-
-        if self.injection_inside_realtime_end is not None:
-            inside_realtime_end.copy_back(self.injection_inside_realtime_end)
-
-        if self.injection_post_realtime is not None:
-            post_realtime.copy_back(self.injection_post_realtime)
-
-        return grenade.signal_flow.ExecutionInstanceHooks(
-            pre_static_config, pre_realtime, inside_realtime_begin,
-            inside_realtime, inside_realtime_end, post_realtime)
 
     def _get_observables(
             self, network_graph: grenade.network.NetworkGraph,
@@ -373,8 +311,7 @@ class Experiment(BaseExperiment):
         :param output_handle: The TensorHandle outputted by the module,
             serving as input to subsequent HXModules.
         """
-        return self.modules.add_node(
-            module, input_handles, output_handle)
+        return self.modules.add_node(module, input_handles, output_handle)
 
     def wrap_modules(self, modules: List[spiking_modules.HXModule],
                      func: Optional[Callable] = None):
@@ -438,6 +375,8 @@ class Experiment(BaseExperiment):
             the corresponding module's `post_process` method.
         """
         if not self.mock:
+            self._execution_instances.update([
+                module.execution_instance for module in self.modules.nodes])
             self._prepare_static_config()
 
         # Preprocess layer
@@ -450,8 +389,8 @@ class Experiment(BaseExperiment):
         # Register HW entity
         for module in self.modules.nodes:
             if hasattr(module, "register_hw_entity") and module \
-                    not in itertools.chain(self._projections,
-                                           self._populations):
+                    not in itertools.chain(
+                        self._projections, self._populations):
                 module.register_hw_entity()
 
         # Generate network graph
@@ -460,7 +399,7 @@ class Experiment(BaseExperiment):
         # configure populations
         self._configure_populations()
 
-        # handle runtim
+        # handle runtime
         runtime_in_clocks = int(
             runtime * self.dt * 1e6
             * int(hal.Timer.Value.fpga_clock_cycles_per_us))
@@ -486,15 +425,9 @@ class Experiment(BaseExperiment):
                 topologically_sorted_execution_instance_ids
             }
 
-        chips = {execution_instance: self._chip
-                 for execution_instance in self.id_counter}
-
-        hooks = {
-            execution_instance: self._generate_hooks()
-            for execution_instance in self.id_counter}
-
         outputs = _hxtorch_spiking.run(
-            chips, network, inputs, hooks)
+            self._execution_instances.chips, network, inputs,
+            self._execution_instances.playback_hooks)
 
         hw_data = self._get_observables(
             network, outputs, runtime_in_clocks)

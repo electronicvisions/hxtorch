@@ -12,6 +12,7 @@ def depends(dep):
     dep('haldls')
     dep('grenade')
     dep('hate')
+    dep('calix')
 
 
 def options(opt):
@@ -158,7 +159,7 @@ def build(bld):
     bld(
         target='hxtorch',
         features='py use',
-        use=['pylogging', '_hxtorch_core', '_hxtorch_spiking', '_hxtorch_perceptron', 'pygrenade_vx', 'dlens_vx_v3'],
+        use=['pylogging', '_hxtorch_core', '_hxtorch_spiking', '_hxtorch_perceptron', 'pygrenade_vx', 'dlens_vx_v3', 'calix_pylib'],
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         install_from='src/pyhxtorch',

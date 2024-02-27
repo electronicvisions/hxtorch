@@ -6,7 +6,6 @@ from typing import (
     TYPE_CHECKING, Callable, Dict, Tuple, Type, Optional, List, NamedTuple,
     Union)
 import pylogging as logger
-import pygrenade_vx as grenade
 
 import torch
 
@@ -19,6 +18,7 @@ from hxtorch.spiking.modules.neuron import Neuron
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -37,8 +37,7 @@ class ReadoutNeuron(Neuron):
     # pylint: disable=too-many-arguments,too-many-locals
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.LI,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID(),
+                 execution_instance: Optional[ExecutionInstance] = None,
                  params: Optional[NamedTuple] = None,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,

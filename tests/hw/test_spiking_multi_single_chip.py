@@ -6,9 +6,9 @@ import torch
 
 import hxtorch
 from hxtorch.spiking import Experiment, run
-from hxtorch.spiking.modules import InputNeuron, Neuron, Synapse
+from hxtorch.spiking.modules import Neuron, Synapse
 from hxtorch.spiking.handle import NeuronHandle
-from pygrenade_vx.common import ExecutionInstanceID
+from hxtorch.spiking.execution_instance import ExecutionInstance
 
 
 class TestMultiSingleChip(unittest.TestCase):
@@ -27,17 +27,17 @@ class TestMultiSingleChip(unittest.TestCase):
         experiment = Experiment(mock=False)
 
         # Modules
-        module1 = Synapse(10, 5, experiment,
-                          execution_instance=ExecutionInstanceID(0))
-        module2 = Neuron(5, experiment,
-                         execution_instance=ExecutionInstanceID(0),
-                         enable_cadc_recording=True)
+        instance1 = ExecutionInstance()
+        module1 = Synapse(10, 5, experiment, execution_instance=instance1)
+        module2 = Neuron(
+              5, experiment, execution_instance=instance1,
+              enable_cadc_recording=True)
         # switch execution instance
-        module3 = Synapse(5, 15, experiment,
-                          execution_instance=ExecutionInstanceID(1))
-        module4 = Neuron(15, experiment,
-                         execution_instance=ExecutionInstanceID(1),
-                         enable_cadc_recording=True)
+        instance2 = ExecutionInstance()
+        module3 = Synapse(5, 15, experiment, execution_instance=instance2)
+        module4 = Neuron(
+               15, experiment, execution_instance=instance2,
+               enable_cadc_recording=True)
 
         # Forward
         input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
@@ -53,14 +53,12 @@ class TestMultiSingleChip(unittest.TestCase):
         """ Test multi-single-chip experiment with multiple runs """
 
         experiment = Experiment(mock=False)
-        synapse1 = Synapse(10, 8, experiment,
-                           execution_instance=ExecutionInstanceID(0))
-        synapse2 = Synapse(10, 8, experiment,
-                           execution_instance=ExecutionInstanceID(1))
-        neuron1 = Neuron(8, experiment,
-                         execution_instance=ExecutionInstanceID(0))
-        neuron2 = Neuron(8, experiment,
-                         execution_instance=ExecutionInstanceID(1))
+        inst1 = ExecutionInstance()
+        inst2 = ExecutionInstance()
+        synapse1 = Synapse(10, 8, experiment, execution_instance=inst1)
+        synapse2 = Synapse(10, 8, experiment, execution_instance=inst2)
+        neuron1 = Neuron(8, experiment, execution_instance=inst1)
+        neuron2 = Neuron(8, experiment, execution_instance=inst2)
 
         # Forward 1
         inputs = torch.randn((10, 10, 10))
@@ -81,17 +79,15 @@ class TestMultiSingleChip(unittest.TestCase):
         multiple inputs.
         """
         experiment = Experiment(mock=False)
+        inst1 = ExecutionInstance()
+        inst2 = ExecutionInstance()
 
         # Modules
-        module1 = Synapse(10, 10, experiment,
-                          execution_instance=ExecutionInstanceID(0))
-        module2 = Neuron(10, experiment,
-                         execution_instance=ExecutionInstanceID(0))
+        module1 = Synapse(10, 10, experiment, execution_instance=inst1)
+        module2 = Neuron(10, experiment, execution_instance=inst1)
         # switch execution instance
-        module3 = Synapse(10, 10, experiment,
-                          execution_instance=ExecutionInstanceID(1))
-        module4 = Neuron(10, experiment,
-                         execution_instance=ExecutionInstanceID(1))
+        module3 = Synapse(10, 10, experiment, execution_instance=inst2)
+        module4 = Neuron(10, experiment, execution_instance=inst2)
 
         # Forward
         input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))

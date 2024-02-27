@@ -9,10 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dlens_vx_v3 import lola, halco
-from pygrenade_vx.common import ExecutionInstanceID
 import hxtorch
 from hxtorch import spiking as hxsnn
-from hxtorch.spiking.utils import calib_helper
+from hxtorch.spiking.execution_instance import ExecutionInstance
 
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
 logger = hxtorch.logger.get("hxtorch.test.hw.test_spiking_modules")
@@ -441,8 +440,7 @@ class TestNeuron(HWTestCase):
         """
         Test neuron returns the expected handle
         """
-        experiment = hxsnn.Experiment(
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment()
         neuron = hxsnn.Neuron(44, experiment)
         # Test output handle
         neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
@@ -467,7 +465,8 @@ class TestNeuron(HWTestCase):
         experiment = hxsnn.Experiment()
         neuron = hxsnn.Neuron(10, experiment)
         neuron.register_hw_entity()
-        self.assertEqual(experiment.id_counter, {ExecutionInstanceID(): 10})
+        self.assertEqual(
+            experiment.default_execution_instance.id_counter, 10)
         self.assertEqual(len(experiment._populations), 1)
         self.assertEqual(experiment._populations[0], neuron)
 
@@ -506,10 +505,10 @@ class TestNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
-        experiment._chip = lola.Chip.default_neuron_bypass
+        experiment = hxsnn.Experiment(dt=self.dt)
+        execution_instance = ExecutionInstance()
+        execution_instance.chip = lola.Chip.default_neuron_bypass
+        experiment.default_execution_instance = execution_instance
 
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
@@ -568,9 +567,7 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(10, experiment=experiment)
@@ -613,9 +610,7 @@ class TestNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -630,9 +625,7 @@ class TestNeuron(HWTestCase):
             hxsnn.run(experiment, 110)
 
         # Only one module can record
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif_1 = hxsnn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -693,9 +686,7 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         li = hxsnn.ReadoutNeuron(10, experiment=experiment)
 
@@ -730,9 +721,7 @@ class TestReadoutNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         li = hxsnn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -747,9 +736,7 @@ class TestReadoutNeuron(HWTestCase):
             hxsnn.run(experiment, 110)
 
         # Only one module can record
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         li_1 = hxsnn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -803,10 +790,10 @@ class TestIAFNeuron(HWTestCase):
         Test spike recording with bypass mode.
         """
         # Enable bypass
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
-        experiment._chip = lola.Chip.default_neuron_bypass
+        experiment = hxsnn.Experiment(dt=self.dt)
+        execution_instance = ExecutionInstance()
+        execution_instance.chip = lola.Chip.default_neuron_bypass
+        experiment.default_execution_instance = execution_instance
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.IAFNeuron(
@@ -862,9 +849,7 @@ class TestIAFNeuron(HWTestCase):
             - Ensure correct order.
         """
         for use_dram in [False, True]:
-            experiment = hxsnn.Experiment(
-                dt=self.dt,
-                calib_path=calib_helper.nightly_calib_path())
+            experiment = hxsnn.Experiment(dt=self.dt)
             # Modules
             linear = hxsnn.Synapse(10, 10, experiment=experiment)
             lif = hxsnn.IAFNeuron(
@@ -917,9 +902,7 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct neuron is recorded.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -931,9 +914,7 @@ class TestIAFNeuron(HWTestCase):
         with self.assertRaises(NotImplementedError):
             hxsnn.run(experiment, 110)
         # Only one module can record
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif_1 = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -1055,9 +1036,7 @@ class TestSparseSynapse(HWTestCase):
         Test synapse is represented on hardware as expected
         """
         connections = (torch.randn(30, 44) < 0.1).float()
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
+        experiment = hxsnn.Experiment(dt=self.dt)
         linear = hxsnn.SparseSynapse(
             connections.to_sparse(), experiment=experiment)
         lif = hxsnn.ReadoutNeuron(44, experiment=experiment)

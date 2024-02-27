@@ -2,12 +2,12 @@
 Define module types
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Union, Optional, Callable
 import torch
 from hxtorch.spiking.modules.hx_module import HXModule
 if TYPE_CHECKING:
-    import pygrenade_vx as grenade
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 
 # c.f.: https://github.com/pytorch/pytorch/issues/42305
@@ -19,7 +19,7 @@ class Population(HXModule):
 
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function],
-                 execution_instance: grenade.common.ExecutionInstanceID) \
+                 execution_instance: Optional[ExecutionInstance] = None) \
             -> None:
         """
         :param size: Number of input neurons.
@@ -30,7 +30,7 @@ class Population(HXModule):
             module's forward and backward operation.
             TODO: Inform about func args
         """
-        HXModule.__init__(self, experiment, func, execution_instance)
+        super().__init__(experiment, func, execution_instance)
         self.size = size
 
     def extra_repr(self) -> str:
@@ -51,8 +51,7 @@ class Projection(HXModule):
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function],
-                 execution_instance: grenade.common.ExecutionInstanceID) \
-            -> None:
+                 execution_instance: ExecutionInstance) -> None:
         """
         :param experiment: Experiment to append layer to.
         :param in_features: Size of input dimension.
@@ -64,7 +63,7 @@ class Projection(HXModule):
             TODO: Inform about func args
         :param execution_instance: Execution instance to place to.
         """
-        HXModule.__init__(self, experiment, func, execution_instance)
+        super().__init__(experiment, func, execution_instance)
         self.in_features = in_features
         self.out_features = out_features
 

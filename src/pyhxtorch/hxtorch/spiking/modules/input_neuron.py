@@ -16,6 +16,7 @@ from hxtorch.spiking.modules.types import Population
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -28,10 +29,8 @@ class InputNeuron(Population):
     output_type: Type = NeuronHandle
 
     def __init__(
-            self, size: int,
-            experiment: Experiment,
-            execution_instance: grenade.common.ExecutionInstanceID
-            = grenade.common.ExecutionInstanceID()) -> None:
+            self, size: int, experiment: Experiment,
+            execution_instance: Optional[ExecutionInstance] = None) -> None:
         """
         Instantiate a InputNeuron. This module serves as an External
         Population for input injection and is created within `experiment`
@@ -64,12 +63,9 @@ class InputNeuron(Population):
         # create grenade population
         gpopulation = grenade.network.ExternalSourcePopulation(
             [grenade.network.ExternalSourcePopulation.Neuron(
-                self.experiment.input_loopback
-            )]
-            * self.size)
+                self.execution_instance.input_loopback)] * self.size)
         # add to builder
-        self.descriptor = builder.add(
-            gpopulation, self.execution_instance)
+        self.descriptor = builder.add(gpopulation, self.execution_instance.ID)
         log.TRACE(f"Added Input Population: {self}")
 
         return self.descriptor
@@ -98,7 +94,7 @@ class InputNeuron(Population):
 
     def post_process(self, hw_data: HardwareObservables, runtime: float) \
             -> Tuple[Optional[torch.Tensor], ...]:
-        if self.experiment.input_loopback:
+        if self.execution_instance.input_loopback:
             return hw_data.spikes.to_dense(runtime, self.experiment.dt).float()
 
         return None

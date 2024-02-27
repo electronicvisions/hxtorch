@@ -17,10 +17,10 @@ import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.types import Population
-from hxtorch.spiking.neuron_placement import NeuronPlacement
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -45,8 +45,7 @@ class Neuron(Population):
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.LIF,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID(),
+                 execution_instance: Optional[ExecutionInstance] = None,
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
@@ -191,18 +190,13 @@ class Neuron(Population):
         """
         Infer neuron IDs on hardware and register them.
         """
-        if self.execution_instance not in self.experiment.id_counter:
-            self.experiment.id_counter.update({self.execution_instance: 0})
         self.unit_ids = np.arange(
-            self.experiment.id_counter[self.execution_instance],
-            self.experiment.id_counter[self.execution_instance] + self.size)
-        if self.execution_instance not in self.experiment.neuron_placement:
-            self.experiment.neuron_placement.update(
-                {self.execution_instance: NeuronPlacement()})
-        self.experiment.neuron_placement[self.execution_instance].register_id(
+            self.execution_instance.id_counter,
+            self.execution_instance.id_counter + self.size)
+        self.execution_instance.neuron_placement.register_id(
             self.unit_ids, self._neuron_structure.compartments,
             self._placement_constraint)
-        self.experiment.id_counter[self.execution_instance] += self.size
+        self.execution_instance.id_counter += self.size
         self.experiment.register_population(self)
 
         # Handle offset
@@ -210,7 +204,7 @@ class Neuron(Population):
             assert self.offset.shape[0] == self.size
         if isinstance(self.offset, dict):
             # Get populations HW neurons
-            coords = self.experiment.neuron_placement[self.execution_instance]\
+            coords = self.execution_instance.neuron_placement \
                 .id2logicalneuron(self.unit_ids)
             offset = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -222,7 +216,7 @@ class Neuron(Population):
             assert self.scale.shape[0] == self.size
         if isinstance(self.scale, dict):
             # Get populations HW neurons
-            coords = self.experiment.neuron_placement[self.execution_instance]\
+            coords = self.execution_instance.neuron_placement \
                 .id2logicalneuron(self.unit_ids)
             scale = torch.zeros(self.size)
             for i, nrn in enumerate(coords):
@@ -230,12 +224,13 @@ class Neuron(Population):
             self.scale = scale
 
         if self._enable_madc_recording:
-            if self.experiment.has_madc_recording:
+            if self.execution_instance.has_madc_recording:
                 raise RuntimeError(
                     "Another HXModule already registered MADC recording. "
                     + "MADC recording is only enabled for a "
-                    + "single neuron.")
-            self.experiment.has_madc_recording = True
+                    + "single neuron on one execution instance.")
+            self.execution_instance.has_madc_recording = True
+
         log.TRACE(f"Registered hardware  entity '{self}'.")
 
     @property
@@ -328,9 +323,8 @@ class Neuron(Population):
             enable_record_spikes = np.zeros_like(self.unit_ids, dtype=bool)
 
         # get neuron coordinates
-        coords: List[halco.LogicalNeuronOnDLS] = \
-            self.experiment.neuron_placement[self.execution_instance]\
-                .id2logicalneuron(self.unit_ids)
+        coords: List[halco.LogicalNeuronOnDLS] = self.execution_instance \
+            .neuron_placement.id2logicalneuron(self.unit_ids)
 
         # create receptors
         receptors = set([
@@ -359,7 +353,7 @@ class Neuron(Population):
 
         # add to builder
         self.descriptor = builder.add(
-            gpopulation, self.execution_instance)
+            gpopulation, self.execution_instance.ID)
 
         if self._enable_cadc_recording:
             for in_pop_id, unit_id in enumerate(self.unit_ids):
@@ -368,33 +362,18 @@ class Neuron(Population):
                 neuron.coordinate.neuron_on_population = in_pop_id
                 neuron.coordinate.compartment_on_neuron = 0
                 neuron.coordinate.atomic_neuron_on_compartment = 0
-                if self.execution_instance not \
-                        in self.experiment.cadc_recording:
-                    self.experiment.cadc_recording.update({
-                        self.execution_instance: {}})
-                if unit_id not in self.experiment.cadc_recording[
-                        self.execution_instance]:
-                    self.experiment.cadc_recording[
-                        self.execution_instance].update({unit_id: []})
-                self.experiment.cadc_recording[
-                    self.execution_instance].update({
-                        unit_id: self.experiment.cadc_recording[
-                            self.execution_instance][unit_id] + [neuron]})
-            if self.execution_instance not \
-                    in self.experiment.cadc_recording_placement_in_dram:
-                self.experiment.cadc_recording_placement_in_dram.update({
-                    self.execution_instance: None})
-            if self.experiment.cadc_recording_placement_in_dram[
-                    self.execution_instance]:
-                if self.experiment.cadc_recording_placement_in_dram[
-                        self.execution_instance] \
-                    is not None and not self.experiment\
-                        .cadc_recording_placement_in_dram[
-                            self.execution_instance]:
-                    raise RuntimeError("Requesting CADC DRAM and SRAM "
-                                       "recording simultaneously.")
-            self.experiment.cadc_recording_placement_in_dram[
-                self.execution_instance] = \
+                if unit_id not in self.execution_instance.cadc_neurons:
+                    self.execution_instance.cadc_neurons.update({unit_id: []})
+                self.execution_instance.cadc_neurons.update({
+                    unit_id:
+                    self.execution_instance.cadc_neurons[unit_id] + [neuron]})
+            if self.execution_instance.record_cadc_into_dram \
+                is not None and \
+                self.execution_instance.record_cadc_into_dram \
+                    != self._enable_cadc_rec_in_dram:
+                raise RuntimeError(
+                    "Requesting CADC DRAM and SRAM recording simultaneously.")
+            self.execution_instance.record_cadc_into_dram = \
                 self._enable_cadc_rec_in_dram
 
         # No recording registered -> return
@@ -414,7 +393,7 @@ class Neuron(Population):
         madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
         madc_recording = grenade.network.MADCRecording()
         madc_recording.neurons = [madc_recording_neuron]
-        builder.add(madc_recording, self.execution_instance)
+        builder.add(madc_recording, self.execution_instance.ID)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
         return self.descriptor

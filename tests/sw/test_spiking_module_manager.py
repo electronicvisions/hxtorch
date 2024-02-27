@@ -72,8 +72,9 @@ class TestModuleManager(unittest.TestCase):
     def test_add_wrapper(self):
         """ Test add wrapper module """
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        exp = snn.Experiment()
+        module1 = snn.HXModule(exp, None)
+        module2 = snn.HXModule(exp, None)
         wrapper = snn.HXModuleWrapper(None, [module1, module2], None)
         self.assertEqual(len(modules.wrappers), 0)
         modules.add_wrapper(wrapper)
@@ -135,8 +136,8 @@ class TestModuleManager(unittest.TestCase):
         """ Test handle_inputs """
         modules = ModuleManager()
         experiment = snn.Experiment(mock=True)
-        module1 = snn.Synapse(10, 11, None, None)
-        module2 = snn.Synapse(12, 13, None, None)
+        module1 = snn.Synapse(10, 11, experiment)
+        module2 = snn.Synapse(12, 13, experiment)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -181,8 +182,9 @@ class TestModuleManager(unittest.TestCase):
 
         # Test dropout not proceded by neuron
         modules = ModuleManager()
-        module1 = snn.Synapse(10, 10, None, None)
-        module2 = snn.BatchDropout(10, 0.5, None, None)
+        experiment = snn.Experiment()
+        module1 = snn.Synapse(10, 10, experiment)
+        module2 = snn.BatchDropout(10, 0.5, experiment)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -198,9 +200,10 @@ class TestModuleManager(unittest.TestCase):
     def test_handle_wrappers(self) -> None:
         """ Test wrappers are handles properly """
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
+        exp = snn.Experiment()
+        module1 = snn.HXModule(exp, None)
+        module2 = snn.HXModule(exp, None)
+        module3 = snn.HXModule(exp, None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -275,11 +278,12 @@ class TestModuleManager(unittest.TestCase):
 
         # Test with wrapper
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
-        module4 = snn.HXModule(None, None)
-        module5 = snn.HXModule(None, None)
+        exp = snn.Experiment()
+        module1 = snn.HXModule(exp, None)
+        module2 = snn.HXModule(exp, None)
+        module3 = snn.HXModule(exp, None)
+        module4 = snn.HXModule(exp, None)
+        module5 = snn.HXModule(exp, None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -317,16 +321,18 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle3,), handle4)
         self.assertTrue(modules.has_module(module1))
-        self.assertFalse(modules.has_module(snn.HXModule(None, None)))
+        self.assertFalse(
+            modules.has_module(snn.HXModule(snn.Experiment(), None)))
 
     def test_print(self):
         """ Test manager is printed properly """
         modules = ModuleManager()
-        module1 = snn.Synapse(10, 12, None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
-        module4 = snn.HXModule(None, None)
-        module5 = snn.HXModule(None, None)
+        exp = snn.Experiment()
+        module1 = snn.Synapse(10, 12, exp, None)
+        module2 = snn.HXModule(exp, None)
+        module3 = snn.HXModule(exp, None)
+        module4 = snn.HXModule(exp, None)
+        module5 = snn.HXModule(exp, None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()

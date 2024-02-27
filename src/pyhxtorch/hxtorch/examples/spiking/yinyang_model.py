@@ -65,7 +65,7 @@ class SNN(torch.nn.Module):
         self.exp = hxsnn.Experiment(
             mock=mock, dt=dt)
         if not mock:
-            self.exp.load_calib(
+            self.exp.default_execution_instance.load_calib(
                 calib_path if calib_path else calib_helper.nightly_calib_path(
                     "spiking2"))
 

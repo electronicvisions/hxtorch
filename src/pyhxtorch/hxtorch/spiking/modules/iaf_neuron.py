@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING, Callable, Dict, Type, Optional, List, NamedTuple, Union)
 import pylogging as logger
-import pygrenade_vx as grenade
 
 import torch
 
@@ -18,6 +17,7 @@ from hxtorch.spiking.morphology import Morphology
 from hxtorch.spiking.modules.neuron import Neuron
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -40,10 +40,8 @@ class IAFNeuron(Neuron):
 
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function]
-                 = F.IAF,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID(),
+                 func: Union[Callable, torch.autograd.Function] = F.IAF,
+                 execution_instance: Optional[ExecutionInstance] = None,
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,

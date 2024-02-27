@@ -15,6 +15,8 @@ from dlens_vx_v3 import lola, halco
 import pygrenade_vx.network as grenade
 from hxtorch.spiking.handle import TensorHandle, NeuronHandle
 if TYPE_CHECKING:
+    from hxtorch.spiking.execution_instance import ExecutionInstance
+    from hxtorch.spiking.observables import HardwareObservables
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
 
@@ -226,12 +228,15 @@ class HXTorchFunctionMixin:
 
 class HXHardwareEntityMixin:
 
-    def __init__(self, execution_instance: grenade.common.ExecutionInstanceID)\
+    def __init__(self, execution_instance: Optional[ExecutionInstance] = None)\
             -> None:
         """
         :param execution_instance: Execution instance to place to.
         """
         self._changed_since_last_run = True
+
+        if execution_instance is None and not self.experiment.mock:
+            execution_instance = self.experiment.default_execution_instance
         self.execution_instance = execution_instance
 
         # Grenade descriptor
@@ -315,8 +320,8 @@ class HXModule(
 
     def __init__(self, experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function],
-                 execution_instance: Optional[
-                     grenade.common.ExecutionInstanceID] = None) -> None:
+                 execution_instance: Optional[ExecutionInstance] = None) \
+            -> None:
         """
         :param experiment: Experiment to append layer to.
         :param func: Callable function implementing the module's forward

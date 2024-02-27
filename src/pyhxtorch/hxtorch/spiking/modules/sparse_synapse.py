@@ -2,7 +2,7 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Tuple, Type, Union
+from typing import TYPE_CHECKING, Callable, Tuple, Type, Union, Optional
 import math
 import numpy as np
 import pylogging as logger
@@ -19,6 +19,7 @@ from hxtorch.spiking.handle import SynapseHandle
 from hxtorch.spiking.modules.synapse import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -40,8 +41,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
                  experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function]
                  = F.linear_sparse,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID(),
+                 execution_instance: Optional[ExecutionInstance] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
@@ -186,9 +186,9 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
             connections_inh, pre, post)
 
         exc_descriptor = builder.add(
-            projection_exc, self.execution_instance)
+            projection_exc, self.execution_instance.ID)
         inh_descriptor = builder.add(
-            projection_inh, self.execution_instance)
+            projection_inh, self.execution_instance.ID)
         self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added sparse projection '{self}' to grenade graph.")
 

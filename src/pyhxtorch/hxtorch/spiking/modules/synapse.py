@@ -2,7 +2,7 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Tuple, Type, Union
+from typing import TYPE_CHECKING, Callable, Tuple, Type, Union, Optional
 import math
 import numpy as np
 import pylogging as logger
@@ -19,6 +19,7 @@ from hxtorch.spiking.handle import SynapseHandle
 from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.execution_instance import ExecutionInstance
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -38,8 +39,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  func: Union[Callable, torch.autograd.Function] = F.linear,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID(),
+                 execution_instance: Optional[ExecutionInstance] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
@@ -143,7 +143,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
                 [grenade.network.ExternalSourcePopulation.Neuron(False)]
                 * pre_size),
-                self.execution_instance)
+                self.execution_instance.ID)
 
             # [nrn on pop pre, compartment on nrn pre,
             #  nrn on pop post, compartment on nrn post, delay in clock cycles]
@@ -167,9 +167,9 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             connections_inh, pre, post)
 
         exc_descriptor = builder.add(
-            projection_exc, self.execution_instance)
+            projection_exc, self.execution_instance.ID)
         inh_descriptor = builder.add(
-            projection_inh, self.execution_instance)
+            projection_inh, self.execution_instance.ID)
         self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added projection '{self}' to grenade graph.")
 
