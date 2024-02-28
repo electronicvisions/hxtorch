@@ -288,8 +288,8 @@ class Experiment(BaseExperiment):
 
         return input_generator.done()
 
-    def _generate_playback_hooks(self) \
-            -> grenade.signal_flow.ExecutionInstancePlaybackHooks:
+    def _generate_hooks(self) \
+            -> grenade.signal_flow.ExecutionInstanceHooks:
         """ Handle injected config (not supported yet) """
         assert self.injection_pre_static_config is not None
         assert self.injection_pre_realtime is not None
@@ -309,7 +309,7 @@ class Experiment(BaseExperiment):
         inside_realtime.copy(self.injection_inside_realtime)
         inside_realtime_end.copy_back(self.injection_inside_realtime_end)
         post_realtime.copy_back(self.injection_post_realtime)
-        return grenade.signal_flow.ExecutionInstancePlaybackHooks(
+        return grenade.signal_flow.ExecutionInstanceHooks(
             pre_static_config, pre_realtime, inside_realtime_begin,
             inside_realtime, inside_realtime_end, post_realtime)
 
@@ -488,12 +488,12 @@ class Experiment(BaseExperiment):
         chips = {execution_instance: self._chip
                  for execution_instance in self.id_counter}
 
-        playback_hooks = {
-            execution_instance: self._generate_playback_hooks()
+        hooks = {
+            execution_instance: self._generate_hooks()
             for execution_instance in self.id_counter}
 
         outputs = _hxtorch_spiking.run(
-            chips, network, inputs, playback_hooks)
+            chips, network, inputs, hooks)
 
         hw_data = self._get_population_observables(
             network, outputs, runtime_in_clocks)

@@ -69,7 +69,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	        pybind11::arg("data"), pybind11::arg("batch_size"), pybind11::arg("population_size"));
 	m.def(
 	    "run", &hxtorch::spiking::run, pybind11::arg("config"), pybind11::arg("network_graph"),
-	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
+	    pybind11::arg("inputs"), pybind11::arg("hooks"));
 	m.def(
 	    "tensor_to_spike_times", &hxtorch::spiking::tensor_to_spike_times, pybind11::arg("times"),
 	    pybind11::arg("dt"));

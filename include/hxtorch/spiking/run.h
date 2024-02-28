@@ -15,5 +15,5 @@ grenade::vx::signal_flow::OutputData run(
     grenade::vx::execution::JITGraphExecutor::ChipConfigs const& config,
     grenade::vx::network::NetworkGraph const& network_graph,
     grenade::vx::signal_flow::InputData const& inputs,
-    grenade::vx::execution::JITGraphExecutor::PlaybackHooks& playback_hooks);
+    grenade::vx::execution::JITGraphExecutor::Hooks& hooks);
 } // namespace hxtorch::spiking
