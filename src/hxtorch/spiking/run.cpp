@@ -16,7 +16,7 @@ grenade::vx::signal_flow::OutputData run(
 	}
 
 	return grenade::vx::network::run(
-	    *hxtorch::core::detail::getExecutor(), network_graph, config, inputs, playback_hooks);
+	    *hxtorch::core::detail::getExecutor(), network_graph, config, inputs, std::move(playback_hooks));
 }
 
 }
