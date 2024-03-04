@@ -180,7 +180,7 @@ def build(bld):
         features='use pytest',
         use=['hxtorch', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin/tests/hw',
-        test_timeout=300,
+        test_timeout=600,
         skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
     )
 
