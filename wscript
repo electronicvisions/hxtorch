@@ -171,7 +171,8 @@ def build(bld):
         relative_trick=True,
         source=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         pylint_config=os.path.join(get_toplevel_path(), "code-format", "pylintrc"),
-        pycodestyle_config=os.path.join(get_toplevel_path(), "code-format", "pycodestyle")
+        pycodestyle_config=os.path.join(get_toplevel_path(), "code-format", "pycodestyle"),
+        timeout=60
     )
 
     bld(
