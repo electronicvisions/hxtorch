@@ -12,13 +12,13 @@ import torch
 
 from dlens_vx_v3 import lola, halco
 
-from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import ReadoutNeuronHandle
 from hxtorch.spiking.morphology import Morphology
 from hxtorch.spiking.modules.neuron import Neuron
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -146,10 +146,8 @@ class ReadoutNeuron(Neuron):
 
         return neuron_block
 
-    def post_process(self, hw_spikes: Optional[SpikeHandle],
-                     hw_cadc: Optional[CADCHandle],
-                     hw_madc: Optional[MADCHandle],
-                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
+    def post_process(self, hw_data: HardwareObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -160,13 +158,8 @@ class ReadoutNeuron(Neuron):
               like (cadc or madc,). This should match the
               ReadoutTensorHandle signature.
 
-        :param hw_spikes: A SpikeHandle holding the population's spikes
-            recorded by grenade as a sparse tensor. This data can be ignored
-            for this readout neuron.
-        :param hw_cadc: The CADCHandle holding the CADC membrane readout
-            events in a sparse tensor.
-        :param hw_madc: The MADCHandle holding the MADC membrane readout
-            events in a sparse tensor.
+        :param hw_data: A ``HardwareObservables`` instance holding the
+            population's recorded hardware observables.
         :param runtime: The requested runtime of the experiment on hardware in
             s.
 
@@ -175,7 +168,6 @@ class ReadoutNeuron(Neuron):
         """
         # No spikes here
         assert not self._enable_spike_recording
-        _, cadc, madc = super().post_process(
-            hw_spikes, hw_cadc, hw_madc, runtime)
+        _, cadc, madc = super().post_process(hw_data, runtime)
 
         return cadc, madc

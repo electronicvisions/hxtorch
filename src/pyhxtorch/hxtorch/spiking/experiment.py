@@ -15,6 +15,7 @@ from dlens_vx_v3 import hal, sta, lola
 import pygrenade_vx as grenade
 
 import _hxtorch_spiking  # pylint: disable=no-name-in-module
+from hxtorch.spiking.observables import HardwareObservablesExtractor
 from hxtorch.spiking import modules as spiking_modules
 from hxtorch.spiking import handle
 from hxtorch.spiking.utils import calib_helper
@@ -96,6 +97,7 @@ class Experiment(BaseExperiment):
         self.neuron_placement: Dict[
             grenade.common.ExecutionInstanceID, NeuronPlacement] = {}
         self.hw_routing_func = hw_routing_func
+        self._hw_data_extractor = HardwareObservablesExtractor()
 
         self.inter_batch_entry_wait = None
 
@@ -335,26 +337,19 @@ class Experiment(BaseExperiment):
             the corresponding module's `post_process` method.
         """
         # Get hw data
-        hw_spike_times = _hxtorch_spiking.extract_spikes(
-            result_map, network_graph)
-        hw_cadc_samples = _hxtorch_spiking.extract_cadc(
-            result_map, network_graph)
-        hw_madc_samples = _hxtorch_spiking.extract_madc(
-            result_map, network_graph)
+        self._hw_data_extractor.set_data(network_graph, result_map)
 
         # Data maps
         data_map: Dict[
             grenade.network.PopulationsDescriptor,
-            Tuple[torch.Tensor]] = {}  # pylint: disable=c-extension-no-member
+            Tuple[torch.Tensor, ...]] = {}  # pylint: disable=c-extension-no-member
 
         # Map populations to data
         for module in self._populations:
             if isinstance(module, spiking_modules.InputNeuron):
                 continue
             data_map[module.descriptor] = module.post_process(
-                hw_spike_times.get(module.descriptor),
-                hw_cadc_samples.get(module.descriptor),
-                hw_madc_samples.get(module.descriptor),
+                self._hw_data_extractor.get(module.descriptor),
                 runtime / int(hal.Timer.Value.fpga_clock_cycles_per_us) / 1e6)
 
         return data_map

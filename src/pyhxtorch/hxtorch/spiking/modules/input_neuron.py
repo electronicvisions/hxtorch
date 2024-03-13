@@ -9,8 +9,7 @@ import torch
 
 import pygrenade_vx as grenade
 
-from _hxtorch_spiking import (
-    tensor_to_spike_times, SpikeHandle, CADCHandle, MADCHandle)  # pylint: disable=import-error
+from _hxtorch_spiking import tensor_to_spike_times  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.hx_module import HXModule
@@ -18,6 +17,7 @@ from hxtorch.spiking.modules.entity_on_execution_instance import \
     EntityOnExecutionInstance
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -100,8 +100,6 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
             input.spikes.cpu(), dt=self.experiment.dt / 1e-3)
         builder.add(spike_times, self.descriptor)
 
-    def post_process(self, hw_spikes: Optional[SpikeHandle],
-                     hw_cadc: Optional[CADCHandle],
-                     hw_madc: Optional[MADCHandle],
-                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
+    def post_process(self, hw_data: HardwareObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
         pass

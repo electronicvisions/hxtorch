@@ -13,7 +13,6 @@ import torch
 from dlens_vx_v3 import lola, hal, halco
 import pygrenade_vx as grenade
 
-from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle
@@ -22,6 +21,7 @@ from hxtorch.spiking.modules.types import Population
 from hxtorch.spiking.neuron_placement import NeuronPlacement
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -411,10 +411,8 @@ class Neuron(Population):
         :param builder: Grenade's logical network builder.
         """
 
-    def post_process(self, hw_spikes: Optional[SpikeHandle],
-                     hw_cadc: Optional[CADCHandle],
-                     hw_madc: Optional[MADCHandle],
-                     runtime: float) -> Tuple[Optional[torch.Tensor], ...]:
+    def post_process(self, hw_data: HardwareObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -425,25 +423,20 @@ class Neuron(Population):
               like (cadc or madc,). This should match the
               ReadoutTensorHandle signature.
 
-        :param hw_spikes: A SpikeHandle holding the population's spikes
-            recorded by grenade as a sparse tensor. This data can be ignored
-            for this readout neuron.
-        :param hw_cadc: The CADCHandle holding the CADC membrane readout
-            events in a sparse tensor.
-        :param hw_madc: The MADCHandle holding the MADC membrane readout
-            events in a sparse tensor.
+        :param hw_data: A ``HardwareObservables`` instance holding the
+            population's recorded hardware observables.
         :param runtime: The requested runtime of the experiment on hardware in
             s.
 
-        :returns: Returns a tuple of optional torch.Tensors holding the
-            hardware data (madc or cadc,)
+        :return: Returns a tuple of optional torch.Tensors holding the hardware
+            data (madc or cadc,)
         """
         spikes, cadc, madc = None, None, None
 
         # Get cadc samples
         if self._enable_cadc_recording:
             # Get dense representation
-            cadc = hw_cadc.to_dense(
+            cadc = hw_data.cadc.to_dense(
                 runtime, self.experiment.dt, mode=self.interpolation_mode)
 
             # Shift CADC samples in time
@@ -469,7 +462,8 @@ class Neuron(Population):
 
         # Get spikes
         if self._enable_spike_recording:
-            spikes = hw_spikes.to_dense(runtime, self.experiment.dt).float()
+            spikes = hw_data.spikes.to_dense(
+                runtime, self.experiment.dt).float()
 
         # Get madc trace
         if self._enable_madc_recording:
