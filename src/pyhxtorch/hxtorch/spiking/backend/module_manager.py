@@ -356,7 +356,7 @@ class ModuleManager(BaseModuleManager):
             in_module = self._inputs.get(module)
             if not in_module:
                 in_module = self.input_type(
-                    module.in_features, instance)
+                    module.in_features, instance, module.execution_instance)
                 self._inputs.update({module: in_module})
             in_id = self.get_node_id()
             self.nodes.update({in_module: in_id})

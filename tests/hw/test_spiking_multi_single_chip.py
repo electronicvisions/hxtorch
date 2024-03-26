@@ -47,6 +47,35 @@ class TestMultiSingleChip(unittest.TestCase):
         # Only test that execution works
         run(experiment, 10)
 
+    def test_feedforward_multiple_inputs(self):
+        """
+        Test inter-execution-instance connections are created correctly with
+        multiple inputs.
+        """
+        experiment = Experiment(mock=False)
+
+        # Modules
+        module1 = Synapse(10, 10, experiment,
+                          execution_instance=ExecutionInstanceID(0))
+        module2 = Neuron(10, experiment,
+                         execution_instance=ExecutionInstanceID(0))
+        # switch execution instance
+        module3 = Synapse(10, 10, experiment,
+                          execution_instance=ExecutionInstanceID(1))
+        module4 = Neuron(10, experiment,
+                         execution_instance=ExecutionInstanceID(1))
+
+        # Forward
+        input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
+        input_handle2 = NeuronHandle(spikes=torch.randn((20, 10, 10)))
+        handle1 = module1(input_handle)
+        module2(handle1)
+        handle3 = module3(input_handle2)
+        module4(handle3)
+
+        # Only test that execution works
+        run(experiment, 10)
+
 
 if __name__ == "__main__":
     unittest.main()
