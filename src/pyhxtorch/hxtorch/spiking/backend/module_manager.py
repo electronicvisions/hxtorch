@@ -358,12 +358,12 @@ class ModuleManager(BaseModuleManager):
                 in_module = self.input_type(
                     module.in_features, instance, module.execution_instance)
                 self._inputs.update({module: in_module})
-            in_id = self.get_node_id()
-            self.nodes.update({in_module: in_id})
+                self.nodes.update({in_module: self.get_node_id()})
 
-            # Update graph
+            # Update graph, i.e. forward input module handles
             source = self.graph.get_edge_data(u, v)["handle"]
             target = in_module.output_type()
+            in_id = self.nodes[in_module]
             self.graph.add_edge(u, in_id, handle=source)
             self.graph.add_edge(in_id, v, handle=target)
             self.graph.remove_edge(u, v)

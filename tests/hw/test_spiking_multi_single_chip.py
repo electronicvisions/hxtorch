@@ -47,6 +47,32 @@ class TestMultiSingleChip(unittest.TestCase):
         # Only test that execution works
         run(experiment, 10)
 
+    def test_feedforward_multiple_executions(self):
+        """ Test multi-single-chip experiment with multiple runs """
+
+        experiment = Experiment(mock=False)
+        synapse1 = Synapse(10, 8, experiment,
+                           execution_instance=ExecutionInstanceID(0))
+        synapse2 = Synapse(10, 8, experiment,
+                           execution_instance=ExecutionInstanceID(1))
+        neuron1 = Neuron(8, experiment,
+                         execution_instance=ExecutionInstanceID(0))
+        neuron2 = Neuron(8, experiment,
+                         execution_instance=ExecutionInstanceID(1))
+
+        # Forward 1
+        inputs = torch.randn((10, 10, 10))
+        neuron1(synapse1(NeuronHandle(inputs)))
+        neuron2(synapse2(NeuronHandle(inputs)))
+        run(experiment, 10)
+
+        # Forward 2
+        inputs = torch.randn((10, 10, 10))
+        neuron1(synapse1(NeuronHandle(inputs)))
+        neuron2(synapse2(NeuronHandle(inputs)))
+        run(experiment, 10)
+
+
     def test_feedforward_multiple_inputs(self):
         """
         Test inter-execution-instance connections are created correctly with
