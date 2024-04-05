@@ -97,6 +97,8 @@ class Experiment(BaseExperiment):
             grenade.common.ExecutionInstanceID, NeuronPlacement] = {}
         self.hw_routing_func = hw_routing_func
 
+        self.inter_batch_entry_wait = None
+
         # Last run results
         self._last_run_chip_configs = None
 
@@ -123,6 +125,8 @@ class Experiment(BaseExperiment):
 
         self._batch_size = 0
         self.id_counter = {}
+
+        self.inter_batch_entry_wait = None
 
     def _prepare_static_config(self) -> None:
         """
@@ -473,6 +477,13 @@ class Experiment(BaseExperiment):
             in network.network.topologically_sorted_execution_instance_ids
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.runtime}")
+
+        if self.inter_batch_entry_wait is not None:
+            inputs.inter_batch_entry_wait = {
+                execution_instance: self.inter_batch_entry_wait
+                for execution_instance in network.network.
+                topologically_sorted_execution_instance_ids
+            }
 
         chips = {execution_instance: self._chip
                  for execution_instance in self.id_counter}
