@@ -32,6 +32,12 @@ class Population(HXModule, EntityOnExecutionInstance):
         HXModule.__init__(self, experiment, func)
         EntityOnExecutionInstance.__init__(self, execution_instance)
 
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        reprs = f"execution_instance={self.execution_instance}, "
+        reprs += f"{super().extra_repr()}"
+        return reprs
+
 
 # c.f.: https://github.com/pytorch/pytorch/issues/42305
 # pylint: disable=abstract-method
@@ -56,3 +62,9 @@ class Projection(HXModule, EntityOnExecutionInstance):
         """
         HXModule.__init__(self, experiment, func)
         EntityOnExecutionInstance.__init__(self, execution_instance)
+
+    def extra_repr(self) -> str:
+        """ Add additional information """
+        reprs = f"execution_instance={self.execution_instance}, "
+        reprs += f"{super().extra_repr()}"
+        return reprs

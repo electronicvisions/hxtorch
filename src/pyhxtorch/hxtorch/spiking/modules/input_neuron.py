@@ -50,7 +50,9 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
 
     def extra_repr(self) -> str:
         """ Add additional information """
-        return f"size={self.size}, {super().extra_repr()}"
+        reprs = f"execution_instance={self.execution_instance}, "
+        reprs += f"size={self.size}, {super().extra_repr()}"
+        return reprs
 
     def register_hw_entity(self) -> None:
         """
