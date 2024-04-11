@@ -91,10 +91,9 @@ class ModuleManager(BaseModuleManager):
     """ Object representing all nodes in a graph-like data structure """
 
     # Types that are recognized as populations on hardware
-    input_type = spiking_module.InputNeuron
+    _default_input_type = spiking_module.InputNeuron
     # Types that are recognized as populations on hardware
-    population_types = (spiking_module.InputNeuron, spiking_module.Neuron,
-                        spiking_module.ReadoutNeuron)
+    _population_types = (spiking_module.Population,)
 
     def __init__(self):
         """
@@ -314,7 +313,7 @@ class ModuleManager(BaseModuleManager):
                 return pops
             node_id = stack.pop()
             module = id_module[node_id]
-            if isinstance(module, self.population_types):
+            if isinstance(module, self._population_types):
                 pops.append(module)
                 continue
             stack += list(method(node_id))
@@ -355,7 +354,7 @@ class ModuleManager(BaseModuleManager):
 
             in_module = self._inputs.get(module)
             if not in_module:
-                in_module = self.input_type(
+                in_module = self._default_input_type(
                     module.in_features, instance, module.execution_instance)
                 self._inputs.update({module: in_module})
                 self.nodes.update({in_module: self.get_node_id()})

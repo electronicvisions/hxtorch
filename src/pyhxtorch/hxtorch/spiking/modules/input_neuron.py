@@ -2,22 +2,25 @@
 Implementing input neuron module
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, Tuple, Optional
 import pylogging as logger
+
+import torch
 
 import pygrenade_vx as grenade
 
 from _hxtorch_spiking import tensor_to_spike_times  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
-from hxtorch.spiking.modules.hx_module import HXModule
+from hxtorch.spiking.modules.types import Population
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class InputNeuron(HXModule):
+class InputNeuron(Population):
     """
     Spike source generating spikes at the times [ms] given in the spike_times
     array.
@@ -39,16 +42,9 @@ class InputNeuron(HXModule):
         :param experiment: Experiment to which this module is assigned.
         :param execution_instance: Execution instance to place to.
         """
-        HXModule.__init__(
-            self, experiment, func=F.input_neuron,
+        super().__init__(
+            size, experiment, func=F.input_neuron,
             execution_instance=execution_instance)
-        self.size = size
-
-    def extra_repr(self) -> str:
-        """ Add additional information """
-        reprs = f"execution_instance={self.execution_instance}, "
-        reprs += f"size={self.size}, {super().extra_repr()}"
-        return reprs
 
     def register_hw_entity(self) -> None:
         """
@@ -95,3 +91,7 @@ class InputNeuron(HXModule):
         spike_times = tensor_to_spike_times(  # pylint: disable=no-member
             input.spikes.cpu(), dt=self.experiment.dt / 1e-3)
         builder.add(spike_times, self.descriptor)
+
+    def post_process(self, hw_data: HardwareObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
+        """ Placeholder for future looped-back data postprocessing """
