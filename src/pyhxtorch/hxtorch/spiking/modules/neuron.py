@@ -16,7 +16,6 @@ import pygrenade_vx as grenade
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle
-from hxtorch.spiking.modules.hx_module import HXModule
 from hxtorch.spiking.modules.types import Population
 from hxtorch.spiking.neuron_placement import NeuronPlacement
 if TYPE_CHECKING:
@@ -398,16 +397,6 @@ class Neuron(Population):
         log.TRACE(f"Added population '{self}' to grenade graph.")
 
         return self.descriptor
-
-    @staticmethod
-    def add_to_input_generator(
-            module: HXModule,
-            builder: grenade.network.InputGenerator) -> None:
-        """
-        Add the input to an input module to grenades input generator.
-        :param module: The module to add the input for.
-        :param builder: Grenade's logical network builder.
-        """
 
     def post_process(self, hw_data: HardwareObservables, runtime: float) \
             -> Tuple[Optional[torch.Tensor], ...]:

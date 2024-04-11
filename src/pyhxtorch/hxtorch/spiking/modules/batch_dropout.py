@@ -4,20 +4,19 @@ Implementing BatchDropout Module
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Type, Optional, Union
 import pylogging as logger
-import pygrenade_vx as grenade
 
 import torch
 
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
-from hxtorch.spiking.modules.types import Population
+from hxtorch.spiking.modules.hx_module import HXFunctionalModule
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class BatchDropout(Population):  # pylint: disable=abstract-method
+class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
     """
     Batch dropout layer
 
@@ -31,9 +30,7 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, dropout: float, experiment: Experiment,
                  func: Union[
-                     Callable, torch.autograd.Function] = F.batch_dropout,
-                 execution_instance: grenade.common.ExecutionInstanceID
-                 = grenade.common.ExecutionInstanceID()) \
+                     Callable, torch.autograd.Function] = F.batch_dropout) \
             -> None:
         """
         Initialize BatchDropout layer. This layer disables spiking neurons in
@@ -51,10 +48,9 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
             `batch_dropout`.
         :param execution_instance: Execution instance to place to.
         """
-        super().__init__(
-            size, experiment=experiment, func=func,
-            execution_instance=execution_instance)
+        super().__init__(experiment=experiment, func=func)
 
+        self.size = size
         self._dropout = dropout
         self._mask: Optional[torch.Tensor] = None
 

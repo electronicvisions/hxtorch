@@ -9,7 +9,7 @@ import hxtorch.spiking.modules as spiking_module
 
 Source = Tuple[Any]
 Target = Any
-Module = Union[spiking_module.HXModule, Any]
+Module = Union[spiking_module.HXBaseExperimentModule, Any]
 Wrapper = Union[spiking_module.HXModuleWrapper, Any]
 
 

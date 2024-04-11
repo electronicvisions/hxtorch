@@ -15,8 +15,8 @@ class TestModuleManager(unittest.TestCase):
         """ Test add module """
         # Test add two connected nodes
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -34,8 +34,8 @@ class TestModuleManager(unittest.TestCase):
 
         # Test two sources
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -53,9 +53,9 @@ class TestModuleManager(unittest.TestCase):
 
         # Test recurrence
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
+        module3 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -83,8 +83,8 @@ class TestModuleManager(unittest.TestCase):
     def test_get_module_by_id(self):
         """ Test get_module_by_id returns the module """
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -100,8 +100,8 @@ class TestModuleManager(unittest.TestCase):
     def test_get_id_by_module(self):
         """ Test get_id_by_module returns the correct id """
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -118,8 +118,8 @@ class TestModuleManager(unittest.TestCase):
         """ Test clear removes nodes """
         modules = ModuleManager()
         self.assertEqual(len(modules.nodes), 0)
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         in_handle1 = snn.NeuronHandle()
         out_handle1 = snn.NeuronHandle()
         in_handle2 = snn.NeuronHandle()
@@ -225,9 +225,9 @@ class TestModuleManager(unittest.TestCase):
         """ Test ordering of modules """
         # Test raises if cycle is present
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
+        module3 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -242,9 +242,9 @@ class TestModuleManager(unittest.TestCase):
 
         # Test without wrapper
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
-        module3 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
+        module3 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()
@@ -307,8 +307,8 @@ class TestModuleManager(unittest.TestCase):
     def test_has_module(self):
         """ Test if manager has module """
         modules = ModuleManager()
-        module1 = snn.HXModule(None, None)
-        module2 = snn.HXModule(None, None)
+        module1 = snn.HXBaseExperimentModule(None)
+        module2 = snn.HXBaseExperimentModule(None)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
         handle3 = snn.NeuronHandle()

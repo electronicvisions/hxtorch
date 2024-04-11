@@ -10,14 +10,14 @@ import torch
 import pygrenade_vx.network as grenade
 
 from hxtorch.spiking.handle import TensorHandle
-from hxtorch.spiking.modules.hx_module import HXModule
+from hxtorch.spiking.modules.hx_module import HXFunctionalModule, HXModule
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
+class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
     """ Class to wrap HXModules """
 
     def __init__(self, experiment: Experiment, modules: List[HXModule],
@@ -106,8 +106,9 @@ class HXModuleWrapper(HXModule):  # pylint: disable=abstract-method
     # pylint: disable=redefined-builtin
     def exec_forward(self, input: Tuple[TensorHandle],
                      output: Tuple[TensorHandle],
-                     hw_map: Dict[grenade.PopulationOnNetwork,
-                                  Tuple[torch.Tensor]]) -> None:
+                     hw_map: Dict[
+                         grenade.PopulationOnNetwork, Tuple[torch.Tensor]]) \
+            -> None:
         """
         Execute the the forward function of the wrapper. This method assigns
         each output handle in `output` their corresponding PyTorch tensors and

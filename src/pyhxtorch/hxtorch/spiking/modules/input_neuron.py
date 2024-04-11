@@ -2,10 +2,8 @@
 Implementing input neuron module
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Tuple, Type, Optional
+from typing import TYPE_CHECKING, Type
 import pylogging as logger
-
-import torch
 
 import pygrenade_vx as grenade
 
@@ -13,16 +11,13 @@ from _hxtorch_spiking import tensor_to_spike_times  # pylint: disable=import-err
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
 from hxtorch.spiking.modules.hx_module import HXModule
-from hxtorch.spiking.modules.entity_on_execution_instance import \
-    EntityOnExecutionInstance
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
-    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
 
-class InputNeuron(HXModule, EntityOnExecutionInstance):
+class InputNeuron(HXModule):
     """
     Spike source generating spikes at the times [ms] given in the spike_times
     array.
@@ -44,8 +39,9 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
         :param experiment: Experiment to which this module is assigned.
         :param execution_instance: Execution instance to place to.
         """
-        HXModule.__init__(self, experiment, func=F.input_neuron)
-        EntityOnExecutionInstance.__init__(self, execution_instance)
+        HXModule.__init__(
+            self, experiment, func=F.input_neuron,
+            execution_instance=execution_instance)
         self.size = size
 
     def extra_repr(self) -> str:
@@ -99,7 +95,3 @@ class InputNeuron(HXModule, EntityOnExecutionInstance):
         spike_times = tensor_to_spike_times(  # pylint: disable=no-member
             input.spikes.cpu(), dt=self.experiment.dt / 1e-3)
         builder.add(spike_times, self.descriptor)
-
-    def post_process(self, hw_data: HardwareObservables, runtime: float) \
-            -> Tuple[Optional[torch.Tensor], ...]:
-        pass
