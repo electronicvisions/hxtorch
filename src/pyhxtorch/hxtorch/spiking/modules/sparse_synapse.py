@@ -64,11 +64,6 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         """
         # TODO: Backend needs to know about projection. Find solution so mark
         # projections modules properly
-        super().__init__(
-            experiment=experiment,
-            execution_instance=execution_instance,
-            func=func)
-
         connections = connections.transpose(1, 0)
         if not connections.is_sparse:
             connections = connections.to_sparse()
@@ -77,9 +72,9 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         self.connections = connections.indices().tolist()
         self.mask = connections.bool().to_dense().to(device)
 
-        self.in_features = self.mask.shape[1]
-        self.out_features = self.mask.shape[0]
-        self.size = self.out_features
+        super().__init__(
+            self.mask.shape[1], self.mask.shape[0], experiment=experiment,
+            execution_instance=execution_instance, func=func)
 
         self.weight = Parameter(
             torch.empty(
@@ -93,9 +88,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
 
     def extra_repr(self) -> str:
         """ Add additional information """
-        return f"input_features={self.in_features}, " \
-            + f"output_features={self.out_features}, " \
-            + f"number connections={len(self.connections[0])}, " \
+        return f"number connections={len(self.connections[0])}, " \
             + f"{super().extra_repr()}"
 
     @property

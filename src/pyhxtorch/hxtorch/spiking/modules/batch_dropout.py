@@ -51,10 +51,10 @@ class BatchDropout(Population):  # pylint: disable=abstract-method
             `batch_dropout`.
         :param execution_instance: Execution instance to place to.
         """
-        super().__init__(experiment=experiment,
-                         execution_instance=execution_instance, func=func)
+        super().__init__(
+            size, experiment=experiment, func=func,
+            execution_instance=execution_instance)
 
-        self.size = size
         self._dropout = dropout
         self._mask: Optional[torch.Tensor] = None
 

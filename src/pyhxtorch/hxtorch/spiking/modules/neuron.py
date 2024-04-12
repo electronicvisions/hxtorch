@@ -128,7 +128,7 @@ class Neuron(Population):
         :param neuron_structure: Structure of the neuron. If not supplied a
             single neuron circuit is used.
         """
-        super().__init__(experiment=experiment,
+        super().__init__(size, experiment=experiment,
                          execution_instance=execution_instance, func=func)
 
         if placement_constraint is not None \
@@ -138,7 +138,6 @@ class Neuron(Population):
                 + "`hardware_constraints` does not equal the `size` of the "
                 + "module.")
 
-        self.size = size
         self.params = params
         self.extra_kwargs.update({"params": params, "dt": experiment.dt})
 
@@ -169,8 +168,7 @@ class Neuron(Population):
 
     def extra_repr(self) -> str:
         """ Add additional information """
-        reprs = f"size={self.size}, " \
-            + f"params={self.params}, "
+        reprs = f"params={self.params}, "
         if not self.experiment.mock:
             reprs += f"spike_recording={self._enable_spike_recording}, " \
                 + f"cadc_recording={self._enable_cadc_recording}, " \

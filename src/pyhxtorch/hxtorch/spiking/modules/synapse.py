@@ -58,13 +58,8 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param execution_instance: Execution instance to place to.
         """
         super().__init__(
-            experiment=experiment,
-            execution_instance=execution_instance,
-            func=func)
-
-        self.in_features = in_features
-        self.out_features = out_features
-        self.size = out_features
+            in_features, out_features, experiment=experiment,
+            execution_instance=execution_instance, func=func)
 
         self.weight = Parameter(
             torch.empty(
@@ -74,11 +69,6 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
         self.reset_parameters()
         self.extra_args = (self.weight,)
-
-    def extra_repr(self) -> str:
-        """ Add additional information """
-        return f"input_features={self.in_features}, " \
-            + f"output_features={self.out_features}, {super().extra_repr()}"
 
     @property
     def changed_since_last_run(self) -> bool:
