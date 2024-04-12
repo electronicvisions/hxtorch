@@ -16,6 +16,7 @@ import pygrenade_vx.network as grenade
 from hxtorch.spiking.handle import TensorHandle, NeuronHandle
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
+    from hxtorch.spiking.observables import HardwareObservables
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -267,6 +268,23 @@ class HXHardwareEntityMixin:
 
         :param module: The module to add the input for.
         :param builder: Grenade's logical network builder.
+        """
+
+    def post_process(self, hw_data: HardwareObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
+        """
+        This methods needs to be overridden for every derived module that
+        demands hardware observables and is intended to translated hardware-
+        affine datatypes returned by grenade into PyTorch tensors.
+
+        :param hw_data: A ``HardwareObservables`` instance holding the hardware
+            data assigned to this module.
+        :param runtime: The requested runtime of the experiment on hardware in
+            s.
+        :param dt: The expected temporal resolution in hxtorch.
+
+        :return: Hardware data represented as torch.Tensors. Note that
+            torch.Tensors are required here to enable gradient flow.
         """
 
     def register_hw_entity(self) -> None:

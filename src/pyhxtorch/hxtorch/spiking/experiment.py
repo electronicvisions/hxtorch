@@ -315,7 +315,7 @@ class Experiment(BaseExperiment):
             pre_static_config, pre_realtime, inside_realtime_begin,
             inside_realtime, inside_realtime_end, post_realtime)
 
-    def _get_population_observables(
+    def _get_observables(
             self, network_graph: grenade.network.NetworkGraph,
             result_map: grenade.signal_flow.OutputData, runtime) -> Dict[
                 grenade.network.PopulationOnNetwork,
@@ -323,9 +323,11 @@ class Experiment(BaseExperiment):
         """
         Takes the grenade network graph and the result map returned by grenade
         after experiment execution and returns a data map where for each
-        population descriptor of registered populations the population-specific
-        hardware observables are represented as Optional[torch.Tensor]s.
-        Note: This function calls the modules `post_process` method.
+        module descriptor of a registered module the specific hardware
+        observables are represented as Optional[torch.Tensor]s.
+
+        ..note: This function calls the modules `post_process` method.
+
         :param network_graph: The logical grenade network graph describing the
             logic of th experiment.
         :param result_map: The result map returned by grenade holding all
@@ -345,8 +347,9 @@ class Experiment(BaseExperiment):
             Tuple[torch.Tensor, ...]] = {}  # pylint: disable=c-extension-no-member
 
         # Map populations to data
-        for module in self._populations:
-            if isinstance(module, spiking_modules.InputNeuron):
+        for module in self.modules.nodes:
+            # Consider only hardware module
+            if not isinstance(module, spiking_modules.HXModule):
                 continue
             data_map[module.descriptor] = module.post_process(
                 self._hw_data_extractor.get(module.descriptor),
@@ -490,7 +493,7 @@ class Experiment(BaseExperiment):
         outputs = _hxtorch_spiking.run(
             chips, network, inputs, hooks)
 
-        hw_data = self._get_population_observables(
+        hw_data = self._get_observables(
             network, outputs, runtime_in_clocks)
 
         self.modules.reset_changed_since_last_run()

@@ -2,13 +2,12 @@
 Define module types
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Union, Tuple, Optional
+from typing import TYPE_CHECKING, Callable, Union
 import torch
 from hxtorch.spiking.modules.hx_module import HXModule
 if TYPE_CHECKING:
     import pygrenade_vx as grenade
     from hxtorch.spiking.experiment import Experiment
-    from hxtorch.spiking.observables import HardwareObservables
 
 
 # c.f.: https://github.com/pytorch/pytorch/issues/42305
@@ -37,24 +36,6 @@ class Population(HXModule):
     def extra_repr(self) -> str:
         """ Add additional information """
         return f"size={self.size}, {super().extra_repr()}"
-
-    def post_process(self, hw_data: HardwareObservables, runtime: float) \
-            -> Tuple[Optional[torch.Tensor], ...]:
-        """
-        This methods needs to be overridden for every derived module that
-        demands hardware observables and is intended to translate hardware-
-        affine datatypes returned by grenade into PyTorch tensors.
-
-        :param hw_data: A ``HardwareObservables`` instance holding the hardware
-            data assigned to this module.
-        :param runtime: The requested runtime of the experiment on hardware in
-            s.
-        :param dt: The expected temporal resolution in hxtorch.
-
-        :return: Hardware data represented as torch.Tensors. Note that
-            torch.Tensors are required here to enable gradient flow.
-        """
-        raise NotImplementedError()
 
 
 # c.f.: https://github.com/pytorch/pytorch/issues/42305
