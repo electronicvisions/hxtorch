@@ -93,7 +93,7 @@ def configure(cfg):
 
 
 def build(bld):
-    bld.env.DLSvx_HARDWARE_AVAILABLE = "SLURM_HWDB_YAML" in os.environ
+    bld.env.BBS_HARDWARE_AVAILABLE = "SLURM_HWDB_YAML" in os.environ
 
     bld(
         target          = 'hxtorch_inc',
@@ -182,7 +182,7 @@ def build(bld):
         use=['hxtorch', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin/tests/hw',
         test_timeout=1200,
-        skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
+        skip_run=not bld.env.BBS_HARDWARE_AVAILABLE
     )
 
     bld(
