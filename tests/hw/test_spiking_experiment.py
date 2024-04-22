@@ -8,6 +8,7 @@ import hxtorch
 from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import HXModule, InputNeuron, Neuron, Synapse
 from hxtorch.spiking.handle import NeuronHandle
+from dlens_vx_v3.halco import DLSGlobal
 
 
 class TestExperiment(unittest.TestCase):
@@ -145,6 +146,20 @@ class TestExperiment(unittest.TestCase):
                 continue
             self.assertIsNotNone(results.get(pop.descriptor))
 
+    def test_inter_batch_entry_wait(self):
+        experiment = Experiment(mock=False)
+        module1 = Synapse(10, 10, experiment, lambda x: x)
+        module2 = Neuron(10, experiment, lambda x: x)
+        input_handle = NeuronHandle(spikes=torch.randn((2, 10, 10)))
+        handle1 = module1(input_handle)
+        module2(handle1)
+
+        inter_batch_entry_wait = int(250e6)
+        experiment.inter_batch_entry_wait = inter_batch_entry_wait
+
+        _, times = experiment.get_hw_results(10)
+
+        self.assertLess(int(inter_batch_entry_wait / 125), int(times.execution_duration_per_hardware[DLSGlobal()].total_seconds()*1e6))
 
 if __name__ == "__main__":
     unittest.main()
