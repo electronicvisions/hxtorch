@@ -62,7 +62,9 @@ class InputNeuron(Population):
         :returns: External population descriptor.
         """
         # create grenade population
-        gpopulation = grenade.network.ExternalSourcePopulation(self.size)
+        gpopulation = grenade.network.ExternalSourcePopulation(
+            [grenade.network.ExternalSourcePopulation.Neuron(False)]
+            * self.size)
         # add to builder
         self.descriptor = builder.add(
             gpopulation, self.execution_instance)

@@ -159,7 +159,9 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         # TODO: Move this to `Experiment`.`
         if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
-                self.in_features), self.execution_instance)
+                [grenade.network.ExternalSourcePopulation.Neuron(False)]
+                * self.in_features),
+                self.execution_instance)
 
             # [nrn on pop pre, compartment on nrn pre,
             #  nrn on pop post, compartment on nrn post]

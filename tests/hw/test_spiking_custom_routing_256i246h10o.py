@@ -155,9 +155,9 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
         # linearly assign input event label to synapse driver
         external_spike_labels = []
-        input_size = network.execution_instances[
+        input_size = len(network.execution_instances[
             grenade_common.ExecutionInstanceID()].populations[
-            grenade.PopulationOnExecutionInstance(2)].size
+            grenade.PopulationOnExecutionInstance(2)].neurons)
         for i in range(input_size):
             label = halco.SpikeLabel(
                 ((i < input_size // 2) << 13)  # top/bottom hemisphere

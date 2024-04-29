@@ -57,7 +57,8 @@ class TestExtractNSpikes(unittest.TestCase):
                     * len(logical_neuron.get_atomic_neurons()))})
             for i, logical_neuron in enumerate(coords)]
         int_pop = Population(neurons)
-        ext_pop = ExternalSourcePopulation(self.ext_pop_size)
+        ext_pop = ExternalSourcePopulation(
+            [ExternalSourcePopulation.Neuron(False)] * self.ext_pop_size)
         self.int_pop_descr = network_builder.add(int_pop)
         self.ext_pop_descr = network_builder.add(ext_pop)
         # Some connections

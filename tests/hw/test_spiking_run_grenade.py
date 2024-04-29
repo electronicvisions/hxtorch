@@ -42,7 +42,8 @@ class TestRun(unittest.TestCase):
                 :self.int_pop_size]
         int_pop = grenade.network.Population(neurons)
         ext_pop = grenade.network.ExternalSourcePopulation(
-            self.ext_pop_size)
+            [grenade.network.ExternalSourcePopulation.Neuron(False)]
+            * self.ext_pop_size)
         int_pop_descr = network_builder.add(int_pop)
         self.ext_pop_descr = network_builder.add(ext_pop)
 

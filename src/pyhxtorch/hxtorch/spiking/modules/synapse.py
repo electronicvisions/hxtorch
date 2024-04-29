@@ -141,7 +141,9 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             pre_size = weight_transformed.shape[1]
 
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
-                pre_size), self.execution_instance)
+                [grenade.network.ExternalSourcePopulation.Neuron(False)]
+                * pre_size),
+                self.execution_instance)
 
             # [nrn on pop pre, compartment on nrn pre,
             #  nrn on pop post, compartment on nrn post, delay in clock cycles]

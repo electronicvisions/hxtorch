@@ -2,6 +2,7 @@
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/signal_flow/output_data.h"
+#include "hate/variant.h"
 #include <vector>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -67,11 +68,11 @@ std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
 	for (auto const& [descriptor, index] : indices) {
 		ret[descriptor] = SpikeHandle(
 		    std::move(index), static_cast<int>(data.batch_size()),
-		    static_cast<int>(std::get<Population>(
-		                         network_graph.get_network()
-		                             ->execution_instances.at(descriptor.toExecutionInstanceID())
-		                             .populations.at(descriptor.toPopulationOnExecutionInstance()))
-		                         .neurons.size()));
+		    static_cast<int>(std::visit(
+		        [](auto const& pop) { return pop.neurons.size(); },
+		        network_graph.get_network()
+		            ->execution_instances.at(descriptor.toExecutionInstanceID())
+		            .populations.at(descriptor.toPopulationOnExecutionInstance()))));
 	}
 
 	return ret;
