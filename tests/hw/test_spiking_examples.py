@@ -18,7 +18,7 @@ class YinYangExampleTest(unittest.TestCase):
             "--alpha=150",
             "--batch-size=75",
             "--dt=2.0e-06",
-            "--epochs=4",
+            "--epochs=10",
             "--gamma=0.9",
             "--lr=0.002",
             "--n-hidden=120",
