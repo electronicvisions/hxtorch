@@ -2,7 +2,6 @@
 #include "grenade/vx/common/time.h"
 #include "hxtorch/spiking/detail/to_dense.h"
 #include <ATen/Functions.h>
-#include <ATen/SparseTensorUtils.h>
 #include <log4cxx/logger.h>
 
 namespace hxtorch::spiking {
