@@ -25,7 +25,7 @@ class HardwareObservablesExtractor:
 
     def set_data(
             self, network_graph: grenade.network.NetworkGraph,
-            result_map: grenade.signal_flow.IODataMap) -> None:
+            result_map: grenade.signal_flow.OutputData) -> None:
         """
         Set the data to be extracted. This method also evokes data extraction.
 
