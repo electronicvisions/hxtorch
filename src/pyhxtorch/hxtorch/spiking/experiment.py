@@ -15,6 +15,7 @@ import pygrenade_vx as grenade
 
 import _hxtorch_spiking  # pylint: disable=no-name-in-module
 from hxtorch.spiking.observables import HardwareObservablesExtractor
+from hxtorch.spiking.execution_info import ExecutionInfo
 from hxtorch.spiking.execution_instance import (
     ExecutionInstances, ExecutionInstance)
 from hxtorch.spiking import modules as spiking_modules
@@ -438,7 +439,9 @@ class Experiment(BaseExperiment):
 
         self._last_run_chip_configs = outputs.pre_execution_chips
 
-        return hw_data, outputs.execution_time_info
+        return hw_data, ExecutionInfo(
+            outputs.execution_time_info,
+            outputs.execution_health_info)
 
     @property
     def last_run_chip_configs(self) -> grenade.signal_flow.OutputData:

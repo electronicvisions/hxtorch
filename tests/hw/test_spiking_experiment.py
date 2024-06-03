@@ -167,9 +167,9 @@ class TestExperiment(unittest.TestCase):
         inter_batch_entry_wait = int(250e6)
         experiment.inter_batch_entry_wait = inter_batch_entry_wait
 
-        _, times = experiment.get_hw_results(10)
+        _, execution_info = experiment.get_hw_results(10)
 
-        self.assertLess(int(inter_batch_entry_wait / 125), int(times.execution_duration_per_hardware[DLSGlobal()].total_seconds()*1e6))
+        self.assertLess(int(inter_batch_entry_wait / 125), int(execution_info.time.execution_duration_per_hardware[DLSGlobal()].total_seconds()*1e6))
 
 if __name__ == "__main__":
     unittest.main()
