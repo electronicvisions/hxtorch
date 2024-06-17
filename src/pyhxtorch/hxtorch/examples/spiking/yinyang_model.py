@@ -147,7 +147,7 @@ class SNN(torch.nn.Module):
         # Execute on hardware
         hxsnn.run(self.exp, spikes.shape[0])
 
-        return y_o.v_cadc
+        return y_o.membrane_cadc
 
 
 class Model(torch.nn.Module):

@@ -104,49 +104,53 @@ class NeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["spikes", "v_cadc", "current", "v_madc"]
+    _carries = ["spikes", "membrane_cadc", "current", "membrane_madc"]
 
     def __init__(self, spikes: Optional[torch.Tensor] = None,
-                 v_cadc: Optional[torch.Tensor] = None,
+                 membrane_cadc: Optional[torch.Tensor] = None,
                  current: Optional[torch.Tensor] = None,
-                 v_madc: Optional[torch.Tensor] = None) -> None:
+                 membrane_madc: Optional[torch.Tensor] = None) -> None:
         """
         Instantiate a neuron handle able to hold spike and membrane tensors.
 
         :param spikes: Optional spike tensor.
-        :param v_cadc: Optional membrane tensor, holding CADC recordings.
+        :param membrane_cadc: Optional membrane tensor, holding CADC
+            recordings.
         :param current: Optional current tensor, holding synaptic current.
-        :param v_madc: Optional membrane tensor, holding MADC recordings.
+        :param membrane_madc: Optional membrane tensor, holding MADC
+            recordings.
         """
         super().__init__()
         self.spikes = spikes
-        self.v_cadc = v_cadc
+        self.membrane_cadc = membrane_cadc
         self.current = current
-        self.v_madc = v_madc
+        self.membrane_madc = membrane_madc
 
 
 class ReadoutNeuronHandle(TensorHandle):
 
     """ Specialization for HX neuron observables """
 
-    _carries = ["v_cadc", "current", "v_madc"]
+    _carries = ["membrane_cadc", "current", "membrane_madc"]
 
-    def __init__(self, v_cadc: Optional[torch.Tensor] = None,
+    def __init__(self, membrane_cadc: Optional[torch.Tensor] = None,
                  current: Optional[torch.Tensor] = None,
-                 v_madc: Optional[torch.Tensor] = None) -> None:
+                 membrane_madc: Optional[torch.Tensor] = None) -> None:
         """
         Instantiate a readout neuron handle able to hold MADC, current, and
         CADC data. This handle defines the CADC values as the observable state,
         this can be changed by deriving this class.
 
-        :param v_cadc: Optional membrane tensor, holding CADC recordings.
+        :param membrane_cadc: Optional membrane tensor, holding CADC
+            recordings.
         :param current: Optional current tensor, holding synaptic current.
-        :param v_madc: Optional membrane tensor, holding MADC recordings.
+        :param membrane_madc: Optional membrane tensor, holding MADC
+            recordings.
         """
         super().__init__()
-        self.v_cadc = v_cadc
+        self.membrane_cadc = membrane_cadc
         self.current = current
-        self.v_madc = v_madc
+        self.membrane_madc = membrane_madc
 
 
 class SynapseHandle(TensorHandle):

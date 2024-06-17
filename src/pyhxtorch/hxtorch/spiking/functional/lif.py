@@ -111,21 +111,21 @@ def cuba_lif_integration(
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.leak).to(dev)
-    z_hw, v_cadc, v_madc = None, None, None
+    spikes_hw, membrane_cadc, membrane_madc = None, None, None
 
     if hw_data is not None:
-        z_hw, v_cadc, v_madc = (
+        spikes_hw, membrane_cadc, membrane_madc = (
             data.to(dev) if data is not None else None for data in hw_data)
-        T = min(T, *(
-            data.shape[0] for data in (z_hw, v_cadc) if data is not None))
+        T = min(T, *(data.shape[0] for data in (
+                spikes_hw, membrane_cadc) if data is not None))
     current, spikes, membrane = [], [], []
 
     # Integrate
     for ts in range(T):
         z, v, i = cuba_lif_step(
             z, v, i, input[ts],
-            z_hw[ts] if z_hw is not None else None,
-            v_cadc[ts] if v_cadc is not None else None,
+            spikes_hw[ts] if spikes_hw is not None else None,
+            membrane_cadc[ts] if membrane_cadc is not None else None,
             params, dt)
 
         # Save data
@@ -134,8 +134,8 @@ def cuba_lif_integration(
         membrane.append(v)
 
     return NeuronHandle(
-        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
-        current=torch.stack(current), v_madc=v_madc)
+        spikes=torch.stack(spikes), membrane_cadc=torch.stack(membrane),
+        current=torch.stack(current), membrane_madc=membrane_madc)
 
 
 # Allow redefining builtin for PyTorch consistency
@@ -171,13 +171,14 @@ def cuba_refractory_lif_integration(
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.leak).to(dev)
-    z_hw, v_cadc, v_madc = None, None, None
+    spikes_hw, membrane_cadc, membrane_madc = None, None, None
 
     if hw_data:
-        z_hw, v_cadc, v_madc = (
+        spikes_hw, membrane_cadc, membrane_madc = (
             data.to(dev) if data is not None else None for data in hw_data)
         T = min(T, *(
-            data.shape[0] for data in (z_hw, v_cadc) if data is not None))
+            data.shape[0] for data in (
+                spikes_hw, membrane_cadc) if data is not None))
     current, spikes, membrane = [], [], []
 
     # Counter for neurons in refractory period
@@ -187,14 +188,15 @@ def cuba_refractory_lif_integration(
         # Membrane decay
         z, v, i = cuba_lif_step(
             z, v, i, input[ts],
-            z_hw[ts] if hw_data else None,
-            v_cadc[ts] if hw_data else None,
+            spikes_hw[ts] if spikes_hw is not None else None,
+            membrane_cadc[ts] if membrane_cadc is not None else None,
             params, dt)
 
         # Refractory update
         z, v, ref_state = refractory_update(
-            z, v, z_hw[ts] if hw_data else None,
-            v_cadc[ts] if hw_data else None, ref_state, params)
+            z, v, spikes_hw[ts] if spikes_hw is not None else None,
+            membrane_cadc[ts] if membrane_cadc is not None else None,
+            ref_state, params)
 
         # Save data
         current.append(i)
@@ -202,5 +204,5 @@ def cuba_refractory_lif_integration(
         membrane.append(v)
 
     return NeuronHandle(
-        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
-        current=torch.stack(current), v_madc=v_madc)
+        spikes=torch.stack(spikes), membrane_cadc=torch.stack(membrane),
+        current=torch.stack(current), membrane_madc=membrane_madc)

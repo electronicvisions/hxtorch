@@ -40,21 +40,22 @@ class TestLIIntegration(unittest.TestCase):
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(h_out.v_cadc.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]), torch.tensor(h_out.current.shape)))
-        self.assertIsNone(h_out.v_madc)
+        self.assertIsNone(h_out.membrane_madc)
 
         # No error
-        loss = h_out.v_cadc.sum()
+        loss = h_out.membrane_cadc.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out.v_cadc[:, 0].detach().numpy())
+            h_out.membrane_cadc[:, 0].detach().numpy())
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
             h_out.current[:, 0].detach().numpy())
@@ -79,20 +80,20 @@ class TestLIIntegration(unittest.TestCase):
         h_out = cuba_li_integration(graded_spikes, params, dt=1e-6)
 
         # Add jitter
-        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
+        h_out.membrane_cadc += torch.rand(h_out.membrane_cadc.shape) * 0.05
 
         # Inject
         graded_spikes = hxsnn.SynapseHandle(
             torch.nn.functional.linear(inputs, weight))
         h_out_hw = cuba_li_integration(
-            graded_spikes, params, hw_data=(h_out.v_cadc, h_out.v_cadc),
-            dt=1e-6)
+            graded_spikes, params,
+            hw_data=(h_out.membrane_cadc, h_out.membrane_cadc))
 
         # Shapes
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_cadc.shape)))
+                torch.tensor(h_out_hw.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
@@ -100,20 +101,21 @@ class TestLIIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_madc.shape)))
+                torch.tensor(h_out_hw.membrane_madc.shape)))
 
         # Check HW data is still the same
-        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
+        self.assertTrue(
+            torch.equal(h_out_hw.membrane_cadc, h_out.membrane_cadc))
 
         # No error
-        loss = h_out_hw.v_cadc.sum()
+        loss = h_out_hw.membrane_cadc.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out_hw.v_cadc[:, 0].detach().numpy())
+            h_out_hw.membrane_cadc[:, 0].detach().numpy())
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
             h_out_hw.current[:, 0].detach().numpy())

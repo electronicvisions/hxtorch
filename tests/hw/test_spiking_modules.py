@@ -262,7 +262,7 @@ class TestHXModuleWrapper(unittest.TestCase):
 
         self.assertEqual(syn1.graded_spikes, "syn1")
         self.assertEqual(nrn1.spikes, "z1")
-        self.assertEqual(nrn1.v_cadc, "v1")
+        self.assertEqual(nrn1.membrane_cadc, "v1")
         self.assertEqual(syn2.graded_spikes, "syn2")
         self.assertEqual(nrn2.spikes, "nrn2")
 
@@ -319,7 +319,7 @@ class TestHXModuleWrapper(unittest.TestCase):
 
         self.assertEqual(syn1.graded_spikes, "syn1")
         self.assertEqual(nrn1.spikes, "z1")
-        self.assertEqual(nrn1.v_cadc, "v1")
+        self.assertEqual(nrn1.membrane_cadc, "v1")
         self.assertEqual(syn2.graded_spikes, "syn2")
         self.assertEqual(nrn2.spikes, "nrn2")
 
@@ -352,8 +352,8 @@ class TestNeuron(HWTestCase):
         neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, hxsnn.NeuronHandle))
         self.assertIsNone(neuron_handle.spikes)
-        self.assertIsNone(neuron_handle.v_cadc)
-        self.assertIsNone(neuron_handle.v_madc)
+        self.assertIsNone(neuron_handle.membrane_cadc)
+        self.assertIsNone(neuron_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """
@@ -438,8 +438,8 @@ class TestNeuron(HWTestCase):
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         # Execute
         hxsnn.run(experiment, 110)
@@ -450,8 +450,8 @@ class TestNeuron(HWTestCase):
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(s_handle.v_cadc is not None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is not None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         # Assert data
         spike_times = torch.nonzero(s_handle.spikes)
@@ -493,8 +493,8 @@ class TestNeuron(HWTestCase):
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         # Execute
         hxsnn.run(experiment, 110)
@@ -507,9 +507,9 @@ class TestNeuron(HWTestCase):
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
     def test_record_madc(self):
         """
@@ -528,8 +528,8 @@ class TestNeuron(HWTestCase):
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         hxsnn.run(experiment, 110)
 
@@ -541,11 +541,11 @@ class TestNeuron(HWTestCase):
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.v_madc.shape),
+                torch.tensor(s_handle.membrane_madc.shape),
                 torch.tensor([2, 3235, 10])))
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
@@ -593,8 +593,8 @@ class TestReadoutNeuron(HWTestCase):
         # Test output handle
         neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, hxsnn.ReadoutNeuronHandle))
-        self.assertIsNone(neuron_handle.v_cadc)
-        self.assertIsNone(neuron_handle.v_madc)
+        self.assertIsNone(neuron_handle.membrane_cadc)
+        self.assertIsNone(neuron_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """
@@ -624,18 +624,18 @@ class TestReadoutNeuron(HWTestCase):
         i_handle = linear(hxsnn.NeuronHandle(spikes))
         v_handle = li(i_handle)
 
-        self.assertTrue(v_handle.v_cadc is None)
-        self.assertTrue(v_handle.v_madc is None)
+        self.assertTrue(v_handle.membrane_cadc is None)
+        self.assertTrue(v_handle.membrane_madc is None)
 
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
-        self.assertIsInstance(v_handle.v_cadc, torch.Tensor)
+        self.assertIsInstance(v_handle.membrane_cadc, torch.Tensor)
         self.assertTrue(
             torch.equal(
-                torch.tensor(v_handle.v_cadc.shape),
+                torch.tensor(v_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(v_handle.v_madc is None)
+        self.assertTrue(v_handle.membrane_madc is None)
 
     def test_record_madc(self):
         """
@@ -654,19 +654,19 @@ class TestReadoutNeuron(HWTestCase):
         i_handle = linear(hxsnn.NeuronHandle(spikes))
         y_handle = li(i_handle)
 
-        self.assertTrue(y_handle.v_cadc is None)
-        self.assertTrue(y_handle.v_madc is None)
+        self.assertTrue(y_handle.membrane_cadc is None)
+        self.assertTrue(y_handle.membrane_madc is None)
 
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor(y_handle.v_cadc.shape),
+                torch.tensor(y_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(y_handle.v_madc.shape),
+                torch.tensor(y_handle.membrane_madc.shape),
                 torch.tensor([2, 3235, 10])))
 
         # Only one module can record
@@ -710,8 +710,8 @@ class TestIAFNeuron(HWTestCase):
         neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, hxsnn.NeuronHandle))
         self.assertIsNone(neuron_handle.spikes)
-        self.assertIsNone(neuron_handle.v_cadc)
-        self.assertIsNone(neuron_handle.v_madc)
+        self.assertIsNone(neuron_handle.membrane_cadc)
+        self.assertIsNone(neuron_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """
@@ -747,8 +747,8 @@ class TestIAFNeuron(HWTestCase):
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         # Execute
         hxsnn.run(experiment, 110)
@@ -759,8 +759,8 @@ class TestIAFNeuron(HWTestCase):
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(s_handle.v_cadc is not None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is not None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         # Assert data
         spike_times = torch.nonzero(s_handle.spikes)
@@ -804,8 +804,8 @@ class TestIAFNeuron(HWTestCase):
             s_handle = lif(i_handle)
 
             self.assertTrue(s_handle.spikes is None)
-            self.assertTrue(s_handle.v_cadc is None)
-            self.assertTrue(s_handle.v_madc is None)
+            self.assertTrue(s_handle.membrane_cadc is None)
+            self.assertTrue(s_handle.membrane_madc is None)
 
             # Execute
             hxsnn.run(experiment, 110)
@@ -817,13 +817,13 @@ class TestIAFNeuron(HWTestCase):
                     torch.tensor([110, 10, 10])))
             self.assertTrue(
                 torch.equal(
-                    torch.tensor(s_handle.v_cadc.shape),
+                    torch.tensor(s_handle.membrane_cadc.shape),
                     torch.tensor([110, 10, 10])))
-            self.assertTrue(s_handle.v_madc is None)
+            self.assertTrue(s_handle.membrane_madc is None)
 
             # plot
             self.plot_path.mkdir(exist_ok=True)
-            trace = s_handle.v_cadc[:, 0].detach().numpy()
+            trace = s_handle.membrane_cadc[:, 0].detach().numpy()
             fig, ax = plt.subplots()
             ax.plot(
                 np.arange(0., trace.shape[0]), trace)
@@ -847,8 +847,8 @@ class TestIAFNeuron(HWTestCase):
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
 
         hxsnn.run(experiment, 110)
 
@@ -859,11 +859,11 @@ class TestIAFNeuron(HWTestCase):
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.v_cadc.shape),
+                torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.v_madc.shape),
+                torch.tensor(s_handle.membrane_madc.shape),
                 torch.tensor([2, 3235, 10])))
 
         # Only one module can record
@@ -1011,8 +1011,8 @@ class TestBatchDropout(HWTestCase):
         self.assertTrue(isinstance(dropout_handle, hxsnn.NeuronHandle))
         self.assertIsNone(dropout_handle.spikes)
         self.assertIsNone(dropout_handle.current)
-        self.assertIsNone(dropout_handle.v_cadc)
-        self.assertIsNone(dropout_handle.v_madc)
+        self.assertIsNone(dropout_handle.membrane_cadc)
+        self.assertIsNone(dropout_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """

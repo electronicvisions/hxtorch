@@ -266,7 +266,7 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         hxsnn.run(experiment, 10)
 
         # Assert spikes exist
-        self.assertIsInstance(neuron_o_handle.v_cadc, torch.Tensor)
+        self.assertIsInstance(neuron_o_handle.membrane_cadc, torch.Tensor)
 
 
 if __name__ == "__main__":

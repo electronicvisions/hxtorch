@@ -51,19 +51,19 @@ def cuba_li_integration(input: SynapseHandle,
     T, bs, ps = input.shape
     i, v = torch.tensor(0.).to(dev), \
         torch.empty(bs, ps).fill_(params.leak).to(dev)
-    v_cadc, v_madc = None, None
+    membrane_cadc, membrane_madc = None, None
 
     if hw_data is not None:
-        v_cadc, v_madc = (
+        membrane_cadc, membrane_madc = (
             data.to(dev) if data is not None else None for data in hw_data)
-        T = min(v_cadc.shape[0], T)
+        T = min(membrane_cadc.shape[0], T)
     membrane, current = [], []
 
     for ts in range(T):
         # Membrane
         dv = dt / params.tau_mem * (params.leak - v + i)
-        v = Unterjubel.apply(v + dv, v_cadc[ts]) \
-            if v_cadc is not None else v + dv
+        v = Unterjubel.apply(v + dv, membrane_cadc[ts]) \
+            if membrane_cadc is not None else v + dv
 
         # Current
         di = -dt / params.tau_syn * i
@@ -74,5 +74,5 @@ def cuba_li_integration(input: SynapseHandle,
         current.append(i)
 
     return ReadoutNeuronHandle(
-        v_cadc=torch.stack(membrane), current=torch.stack(current),
-        v_madc=v_madc)
+        membrane_cadc=torch.stack(membrane), current=torch.stack(current),
+        membrane_madc=membrane_madc)

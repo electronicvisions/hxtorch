@@ -51,12 +51,12 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out.v_cadc.shape)))
+                torch.tensor(h_out.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
                 torch.tensor(h_out.current.shape)))
-        self.assertIsNone(h_out.v_madc)
+        self.assertIsNone(h_out.membrane_madc)
 
         # No error
         loss = h_out.spikes.sum()
@@ -66,7 +66,7 @@ class TestLIFIntegration(unittest.TestCase):
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out.v_cadc[:, 0].detach().numpy())
+            h_out.membrane_cadc[:, 0].detach().numpy())
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
             h_out.current[:, 0].detach().numpy())
@@ -94,9 +94,10 @@ class TestLIFIntegration(unittest.TestCase):
         graded_spikes = hxsnn.SynapseHandle(
             torch.nn.functional.linear(inputs, weight))
         h_out = cuba_lif_integration(graded_spikes, params, dt=1e-6)
+        self.assertIsNone(h_out.membrane_madc)
 
         # Add jitter
-        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
+        h_out.membrane_cadc += torch.rand(h_out.membrane_cadc.shape) * 0.05
         h_out.spikes[
             torch.randint(100, (1,)), torch.randint(10, (1,)),
             torch.randint(15, (1,))] = 1
@@ -106,7 +107,8 @@ class TestLIFIntegration(unittest.TestCase):
             torch.nn.functional.linear(inputs, weight))
         h_out_hw = cuba_lif_integration(
             graded_spikes, params,
-            hw_data=(h_out.spikes, h_out.v_cadc, h_out.v_cadc), dt=1e-6)
+            hw_data=(h_out.spikes, h_out.membrane_cadc, h_out.membrane_cadc),
+            dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -116,7 +118,7 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_cadc.shape)))
+                torch.tensor(h_out_hw.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
@@ -124,10 +126,11 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_madc.shape)))
+                torch.tensor(h_out_hw.membrane_madc.shape)))
 
         # Check HW data is still the same
-        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
+        self.assertTrue(
+            torch.equal(h_out_hw.membrane_cadc, h_out.membrane_cadc))
         self.assertTrue(torch.equal(h_out_hw.spikes, h_out.spikes))
 
         # No error
@@ -138,7 +141,7 @@ class TestLIFIntegration(unittest.TestCase):
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out_hw.v_cadc[:, 0].detach().numpy())
+            h_out_hw.membrane_cadc[:, 0].detach().numpy())
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
             h_out_hw.current[:, 0].detach().numpy())
@@ -169,14 +172,17 @@ class TestLIFIntegration(unittest.TestCase):
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(h_out.spikes.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out.spikes.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(h_out.v_cadc.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(h_out.current.shape)))
-        self.assertIsNone(h_out.v_madc)
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out.current.shape)))
+        self.assertIsNone(h_out.membrane_madc)
 
         # No error
         loss = h_out.spikes.sum()
@@ -186,7 +192,7 @@ class TestLIFIntegration(unittest.TestCase):
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out.v_cadc[:, 0].detach().numpy())
+            h_out.membrane_cadc[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_lif_dynamic.png"))
 
@@ -214,7 +220,7 @@ class TestLIFIntegration(unittest.TestCase):
         h_out = cuba_refractory_lif_integration(graded_spikes, params)
 
         # Add jitter
-        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
+        h_out.membrane_cadc += torch.rand(h_out.membrane_cadc.shape) * 0.05
         h_out.spikes[
             torch.randint(100, (1,)), torch.randint(10, (1,)),
             torch.randint(15, (1,))] = 1
@@ -225,7 +231,8 @@ class TestLIFIntegration(unittest.TestCase):
         h_out_hw = \
             cuba_refractory_lif_integration(
                 graded_spikes, params,
-                hw_data=(h_out.spikes, h_out.v_cadc, h_out.v_cadc))
+                hw_data=(
+                    h_out.spikes, h_out.membrane_cadc, h_out.membrane_cadc))
 
         # Shapes
         self.assertTrue(
@@ -235,7 +242,7 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_cadc.shape)))
+                torch.tensor(h_out_hw.membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
@@ -243,12 +250,14 @@ class TestLIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([100, 10, 15]),
-                torch.tensor(h_out_hw.v_madc.shape)))
+                torch.tensor(h_out_hw.membrane_madc.shape)))
 
         # Check HW data is still the same
         self.assertTrue(torch.equal(h_out_hw.spikes, h_out.spikes))
-        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
-        self.assertTrue(torch.equal(h_out_hw.v_madc, h_out.v_cadc))
+        self.assertTrue(
+            torch.equal(h_out_hw.membrane_cadc, h_out.membrane_cadc))
+        self.assertTrue(
+            torch.equal(h_out_hw.membrane_madc, h_out.membrane_cadc))
         self.assertTrue(torch.equal(h_out_hw.current, h_out.current))
 
         # No error
@@ -259,7 +268,7 @@ class TestLIFIntegration(unittest.TestCase):
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., 1e-6 * 100, 1e-6),
-            h_out_hw.v_cadc[:, 0].detach().numpy())
+            h_out_hw.membrane_cadc[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_lif_dynamic_hw.png"))
 

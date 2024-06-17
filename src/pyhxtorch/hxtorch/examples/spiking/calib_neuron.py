@@ -68,7 +68,7 @@ def main():
     hxtorch.release_hardware()
 
     # Return observables
-    return output.spikes, output.v_cadc
+    return output.spikes, output.membrane_cadc
 
 
 if __name__ == "__main__":
