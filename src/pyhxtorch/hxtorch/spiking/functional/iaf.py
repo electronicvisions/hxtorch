@@ -153,20 +153,3 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
         current.append(i)
 
     return torch.stack(spikes), torch.stack(membrane), torch.stack(current)
-
-
-class IAF(torch.autograd.Function):
-
-    """ IAF forward mock and backward """
-
-    # Allow redefining builtin for PyTorch consistency
-    # pylint: disable=redefined-builtin, arguments-differ
-    @staticmethod
-    def forward(ctx, input: torch.Tensor):
-        """ Gets overridden """
-
-    # pylint: disable=arguments-differ
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        """ Implements LIF backward """
-        raise NotImplementedError()

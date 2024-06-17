@@ -40,9 +40,11 @@ class IAFNeuron(Neuron):
 
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function] = F.IAF,
+                 func: Union[Callable, torch.autograd.Function]
+                 = F.cuba_iaf_integration,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 params: Optional[NamedTuple] = None,
+                 params: Union[NamedTuple, F.CUBAIAFParams]
+                 = F.CUBAIAFParams(1. / 10e-6, 1. / 10e-6),
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,

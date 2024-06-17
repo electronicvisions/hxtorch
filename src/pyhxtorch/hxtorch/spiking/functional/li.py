@@ -60,20 +60,3 @@ def cuba_li_integration(input: torch.Tensor, params: CUBALIParams,
         current.append(i)
 
     return torch.stack(membrane), torch.stack(current)
-
-
-class LI(torch.autograd.Function):
-
-    """ LI forward mock and backward """
-
-    # Allow redefining builtin for PyTorch consistency
-    # pylint: disable=redefined-builtin, arguments-differ
-    @staticmethod
-    def forward(ctx, input: torch.Tensor):
-        """ Gets overridden """
-
-    # pylint: disable=arguments-differ
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        """ Implements LIF backward """
-        raise NotImplementedError()

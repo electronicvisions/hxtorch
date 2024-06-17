@@ -168,49 +168,6 @@ class HXTorchFunctionMixin:
         :returns: Returns the member 'func(input, *args, **kwargs,
             hw_data=...)' stripped down to 'func(input, hw_data=...).
         """
-        is_autograd_func = isinstance(
-            function, torch.autograd.function.FunctionMeta)
-
-        # In case of HW execution and func is autograd func we override forward
-        if is_autograd_func and not self.experiment.mock:
-            def func(inputs, hw_data):
-                if hw_data is None:
-                    return function.apply(*inputs, *self.extra_args)
-
-                class LocalAutograd(function):
-                    @staticmethod
-                    def forward(  # pylint: disable=dangerous-default-value
-                            ctx, *data, extra_kwargs=self.extra_kwargs):
-                        ctx.extra_kwargs = extra_kwargs
-                        ctx.save_for_backward(*data, *hw_data)
-                        return hw_data
-                return LocalAutograd.apply(*inputs, *self.extra_args)
-
-            return func
-
-        # In case of SW execution and func is autograd func we use forward
-        if is_autograd_func and self.experiment.mock:
-            # Make new autograd to not change the original one
-            class LocalAutograd(function):
-                pass
-            LocalAutograd.forward, signature = self._wrap_func(
-                LocalAutograd.forward)
-
-            # Wrap HW data on demand
-            if "hw_data" in signature.parameters:
-                def func(inputs, hw_data=None):
-                    # TODO: Is repeatitively calling 'partial' an issue?
-                    # We need to wrap keyword argument here in order for apply
-                    # to work
-                    LocalAutograd.forward = partial(
-                        LocalAutograd.forward, hw_data=hw_data)
-                    return LocalAutograd.apply(*inputs, *self.extra_args)
-            else:
-                def func(inputs, hw_data=None):
-                    return LocalAutograd.apply(*inputs, *self.extra_args)
-
-            return func
-
         # In case of HW or SW execution but no autograd func we inject hw data
         # as keyword argument
         local_func, signature = self._wrap_func(function)

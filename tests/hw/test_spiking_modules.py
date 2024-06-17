@@ -92,54 +92,6 @@ class TestHXModules(unittest.TestCase):
         self.assertEqual(result_ret, "hw_result")
         self.assertIsNone(output)
 
-        # Test with autograd function
-        class Func(torch.autograd.Function):
-            def forward(ctx, input, params=None, hw_data=None):
-                return input, params, hw_data
-
-            def backward(ctx, grad):
-                return grad
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, Func)
-        module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.func
-        output, params, result_ret = new_func((None,), "hw_result")
-        self.assertEqual(params, "new_params")
-        self.assertEqual(result_ret, "hw_result")
-        self.assertIsNone(output)
-
-        # Test with autograd function, params and no hw_data
-        class Func(torch.autograd.Function):
-            def forward(ctx, input, params=None):
-                return input, params
-
-            def backward(ctx, grad):
-                return grad
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, Func)
-        module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.func
-        output, params = new_func((None,), "hw_result")
-        self.assertEqual(params, "new_params")
-        self.assertIsNone(output)
-
-        # Test with autograd function, no params and hw_data
-        class Func(torch.autograd.Function):
-            def forward(ctx, input, hw_data=None):
-                return input, hw_data
-
-            def backward(ctx, grad):
-                return grad
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, Func)
-        new_func = module.func
-        output, hw_result = new_func((None,), "hw_result")
-        self.assertEqual(hw_result, "hw_result")
-        self.assertIsNone(output)
-
     def test_exec_forward(self):
         """
         Test execute_forward work as expected.
@@ -184,57 +136,6 @@ class TestHXModules(unittest.TestCase):
         module.exec_forward(
             input_handle, output_handle, {module.descriptor: "hw_result"})
         self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
-
-        # Autograd function
-        class Func(torch.autograd.Function):
-            def forward(ctx, input, one, two, params=None, hw_data=None):
-                self.assertEqual(params, "new_params")
-                self.assertEqual(hw_data, "hw_result")
-                self.assertEqual((one, two), (1, 2))
-                return input
-
-            def backward(ctx, grad):
-                return grad
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, Func)
-        module.extra_kwargs.update({"params": "new_params"})
-        module.extra_args = (1, 2)
-
-        # Input and output handles
-        input_handle = hxsnn.NeuronHandle(torch.zeros(10, 5))
-        output_handle = hxsnn.NeuronHandle()
-
-        # Execute
-        module.exec_forward(
-            input_handle, output_handle, {module.descriptor: "hw_result"})
-        self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
-
-        # Autograd function no mock
-        class Func(torch.autograd.Function):
-            def forward(ctx, input, one, two, params=None, hw_data=None):
-                self.assertEqual(params, "new_params")
-                self.assertEqual(hw_data, "hw_result")
-                self.assertEqual((one, two), (1, 2))
-                return input
-
-            def backward(ctx, grad):
-                return grad
-
-        experiment = hxsnn.Experiment(mock=False)
-        module = hxsnn.HXModule(experiment, Func)
-        module.extra_kwargs.update({"params": "new_params"})
-        module.extra_args = (1, 2)
-
-        # Input and output handles
-        input_handle = hxsnn.NeuronHandle(torch.zeros(10, 5))
-        output_handle = hxsnn.NeuronHandle()
-
-        # Execute
-        module.exec_forward(
-            input_handle, output_handle, {module.descriptor: "hw_result"})
-        # Hw result should be assigned here
-        self.assertTrue(output_handle.spikes, "hw_result")
 
 
 class TestHXModuleWrapper(unittest.TestCase):
@@ -513,7 +414,7 @@ class TestNeuron(HWTestCase):
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(
-            10, enable_cadc_recording=False,  experiment=experiment)
+            10, enable_cadc_recording=True,  experiment=experiment)
 
         # Weights
         linear.weight.data.fill_(0.)
@@ -541,8 +442,8 @@ class TestNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110 + 1, 10, 10])))
-        self.assertTrue(s_handle.v_cadc is None)
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(s_handle.v_cadc is not None)
         self.assertTrue(s_handle.v_madc is None)
 
         # Assert data
@@ -596,11 +497,11 @@ class TestNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110 + 1, 10, 10])))
+                torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.v_cadc.shape),
-                torch.tensor([110 + 1, 10, 10])))
+                torch.tensor([110, 10, 10])))
         self.assertTrue(s_handle.v_madc is None)
 
     def test_record_madc(self):
@@ -711,7 +612,7 @@ class TestReadoutNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(v_handle.v_cadc.shape),
-                torch.tensor([110 + 1, 10, 10])))
+                torch.tensor([110, 10, 10])))
         self.assertTrue(v_handle.v_madc is None)
 
     def test_record_madc(self):
@@ -797,8 +698,7 @@ class TestIAFNeuron(HWTestCase):
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.IAFNeuron(
-            10, params=hxsnn.functional.CUBAIAFParams(0./10e-6, 0./10e-6),
-            enable_cadc_recording=False, experiment=experiment)
+            10, enable_cadc_recording=True, experiment=experiment)
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -823,8 +723,8 @@ class TestIAFNeuron(HWTestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110 + 1, 10, 10])))
-        self.assertTrue(s_handle.v_cadc is None)
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(s_handle.v_cadc is not None)
         self.assertTrue(s_handle.v_madc is None)
 
         # Assert data
@@ -879,11 +779,11 @@ class TestIAFNeuron(HWTestCase):
             self.assertTrue(
                 torch.equal(
                     torch.tensor(s_handle.spikes.shape),
-                    torch.tensor([110 + 1, 10, 10])))
+                    torch.tensor([110, 10, 10])))
             self.assertTrue(
                 torch.equal(
                     torch.tensor(s_handle.v_cadc.shape),
-                    torch.tensor([110 + 1, 10, 10])))
+                    torch.tensor([110, 10, 10])))
             self.assertTrue(s_handle.v_madc is None)
 
             # plot

@@ -31,24 +31,3 @@ def linear_sparse(input: torch.Tensor, weight: torch.nn.parameter.Parameter,
     if connections is not None:
         weight.data[~connections] = 0.  # pylint: disable=invalid-unary-operand-type
     return torch.nn.functional.linear(input, weight, bias)
-
-
-class Linear(torch.autograd.Function):
-
-    """ Linear autograd example """
-
-    # Allow redefining builtin for PyTorch consistancy
-    # pylint: disable=arguments-differ, disable=redefined-builtin
-    @staticmethod
-    def forward(ctx, input: torch.Tensor, weight: torch.Tensor):
-        """ Gets overriden """
-
-    # pylint: disable=arguments-differ
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor):
-        """
-        Implement linear backward
-
-        :param grad_output: The backpropagted gradient tensor.
-        """
-        raise NotImplementedError()

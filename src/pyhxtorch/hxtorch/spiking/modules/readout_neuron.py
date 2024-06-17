@@ -36,9 +36,11 @@ class ReadoutNeuron(Neuron):
 
     # pylint: disable=too-many-arguments,too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function] = F.LI,
+                 func: Union[Callable, torch.autograd.Function]
+                 = F.cuba_li_integration,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 params: Optional[NamedTuple] = None,
+                 params: Union[NamedTuple, F.CUBALIParams]
+                 = F.CUBALIParams(1. / 10e-6, 1. / 10e-6),
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,
                  enable_madc_recording: bool = False,
