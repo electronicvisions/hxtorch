@@ -88,17 +88,12 @@ class HXBaseExperimentModule(torch.nn.Module):
         Inject hardware observables into TensorHandles or execute forward in
         mock-mode.
         """
-        hw_data = hw_map.get(self.descriptor)
         # Need tuple to allow for multiple input
         if not isinstance(input, tuple):
             input = (input,)
-        input = tuple(handle.observable_state for handle in input)
-        # Forwards function
-        out = self.func(input, hw_data=hw_data)
-        # We need to unpack into `Handle.put` otherwise we get Tuple[Tuple]
-        # in `put`, however, func should not be limited to return type 'tuple'
-        out = (out,) if not isinstance(out, tuple) else out
-        output.put(*out)
+        hw_data = hw_map.get(self.descriptor)
+        returned_handle = self.func(input, hw_data=hw_data)
+        output.clone(returned_handle)
 
 
 class HXTorchFunctionMixin:

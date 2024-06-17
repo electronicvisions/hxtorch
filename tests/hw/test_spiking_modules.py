@@ -218,11 +218,13 @@ class TestHXModuleWrapper(unittest.TestCase):
         in_tensor = torch.zeros(10, 5, 10)
 
         def func(input, arg1, arg2, arg3):
-            self.assertTrue(torch.equal(input, in_tensor))
+            self.assertTrue(torch.equal(input.spikes, in_tensor))
             self.assertEqual(arg1, "w1")
             self.assertEqual(arg2, "b1")
             self.assertEqual(arg3, "w2")
-            return "syn1", ("z1", "v1"), "syn2", "nrn2"
+            return (
+                hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
+                hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()
@@ -266,13 +268,15 @@ class TestHXModuleWrapper(unittest.TestCase):
 
         # Test with HW data
         def func(input, arg1, arg2, arg3, hw_data):
-            self.assertTrue(torch.equal(input, in_tensor))
+            self.assertTrue(torch.equal(input.spikes, in_tensor))
             self.assertEqual(arg1, "w1")
             self.assertEqual(arg2, "b1")
             self.assertEqual(arg3, "w2")
             self.assertEqual(
                 hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
-            return "syn1", ("z1", "v1"), "syn2", "nrn2"
+            return (
+                hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
+                hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()

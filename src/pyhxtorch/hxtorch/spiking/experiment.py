@@ -245,7 +245,7 @@ class Experiment(BaseExperiment):
         """
         # Make sure all batch sizes are equal
         sizes = [
-            handle.observable_state.shape[1] for handle in
+            handle.spikes.shape[1] for handle in
             self.modules.input_data()]
         assert all(sizes)
         self._batch_size = sizes[0]

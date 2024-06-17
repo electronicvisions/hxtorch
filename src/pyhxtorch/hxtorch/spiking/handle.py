@@ -35,51 +35,15 @@ class TensorHandle(metaclass=HandleMeta):
     from this class. The name of tensors the tensor handle 'carries' has to be
     indicated in the class member '_carries'. For all elements in this list a
     property is created implicitly.
-
-    The observable state of the tensor handle is defined in '_obsv_state' and
-    defines which tensor is passed to the subsequent layer as input.
-    Member '_obsv_state' has to be in '_carries'.
     """
 
     _carries: List[str] = []
-    _obsv_state: str = None
 
     def __init__(self) -> None:
         """
         Instantiate a new HX handle holding references to torch tensors.
         """
         self.data = OrderedDict()
-
-    @property
-    def observable_state(self) -> torch.Tensor:
-        """
-        Getter for observable state.
-
-        :return: Returns the tensor associated with '_obsv_state'
-        """
-        return self.data[self._obsv_state]
-
-    @property
-    def observable_state_identifier(self) -> str:
-        """
-        Getter for observable state identifier.
-
-        :return: Returns the identifier string associated with the observable
-            state of the handle.
-        """
-        return self._obsv_state
-
-    @observable_state_identifier.setter
-    def observable_state_identifier(self, identifier: str) -> None:
-        """
-        Setter for observable state identifier. This identifier has to be in
-        `_carries`.
-        """
-        if identifier not in self._carries:
-            raise ValueError(
-                f"Requested observable state identifier '{identifier}' is "
-                + "not part of the handle.")
-        self._obsv_state = identifier
 
     def holds(self, name: str) -> bool:
         """
@@ -118,6 +82,16 @@ class TensorHandle(metaclass=HandleMeta):
             assert key in keys, "Encountered unknown key."
             self.data[key] = value
 
+    def clone(self, handle: "TensorHandle") -> None:
+        """
+        Copy contents for `handle` to `this` handle. `This` handle must contain
+        a data field for eacht data field in `handle`.
+
+        :param handle: The handle to clone.
+        """
+        for key, value in handle.data.items():
+            self.data[key] = value
+
     def clear(self) -> None:
         """
         Set all data in handle to 'None'.
@@ -131,7 +105,6 @@ class NeuronHandle(TensorHandle):
     """ Specialization for HX neuron observables """
 
     _carries = ["spikes", "v_cadc", "current", "v_madc"]
-    _obsv_state = "spikes"
 
     def __init__(self, spikes: Optional[torch.Tensor] = None,
                  v_cadc: Optional[torch.Tensor] = None,
@@ -157,7 +130,6 @@ class ReadoutNeuronHandle(TensorHandle):
     """ Specialization for HX neuron observables """
 
     _carries = ["v_cadc", "current", "v_madc"]
-    _obsv_state = "v_cadc"
 
     def __init__(self, v_cadc: Optional[torch.Tensor] = None,
                  current: Optional[torch.Tensor] = None,
@@ -182,7 +154,6 @@ class SynapseHandle(TensorHandle):
     """ Specialization for HX synapses """
 
     _carries = ["graded_spikes"]
-    _obsv_state = "graded_spikes"
 
     def __init__(self, graded_spikes: Optional[torch.Tensor] = None) -> None:
         """

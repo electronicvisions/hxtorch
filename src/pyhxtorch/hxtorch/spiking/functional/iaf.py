@@ -9,6 +9,7 @@ import torch
 
 from hxtorch.spiking.calibrated_params import CalibratedParams
 from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
+from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
 from hxtorch.spiking.functional.refractory import refractory_update
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 
@@ -66,7 +67,7 @@ def iaf_step(z: torch.Tensor, v: torch.Tensor, i: torch.Tensor,
     return z, v, i
 
 
-def cuba_iaf_integration(input: torch.Tensor,
+def cuba_iaf_integration(input: SynapseHandle,
                          params: Union[CalibratedCUBAIAFParams, CUBAIAFParams],
                          hw_data: Optional[torch.Tensor] = None,
                          dt: float = 1e-6) \
@@ -81,11 +82,15 @@ def cuba_iaf_integration(input: torch.Tensor,
         v^{t+1} = v_reset if z^{t+1} == 1
     Assumes i^0, v^0 = 0., params.reset
     :note: One `dt` synaptic delay between input and output
-    :param input: Input spikes in shape (batch, time, neurons).
+
+    :param input: SynapseHandle holding `graded_spikes` in shape (batch, time,
+        neurons).
     :param params: LIFParams object holding neuron parameters.
-    :return: Returns the spike trains in shape and membrane trace as a tuple.
-        Both tensors are of shape (batch, time, neurons).
+
+    :return: Returns NeuronHandle holding tensors with membrane traces, spikes
+        and synaptic current. Tensors are of shape (batch, time, neurons).
     """
+    input = input.graded_spikes
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
@@ -112,12 +117,12 @@ def cuba_iaf_integration(input: torch.Tensor,
         membrane.append(v)
         current.append(i)
 
-    return (
-        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
-        v_madc)
+    return NeuronHandle(
+        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
+        current=torch.stack(current), v_madc=v_madc)
 
 
-def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
+def cuba_refractory_iaf_integration(input: SynapseHandle, params: NamedTuple,
                                     hw_data: Optional[torch.Tensor] = None,
                                     dt: float = 1e-6) \
         -> Tuple[torch.Tensor, torch.Tensor]:
@@ -133,11 +138,15 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
         ref^{t+1} = params.tau_ref if z^{t+1} == 1
     Assumes i^0, v^0 = 0., v_reset
     :note: One `dt` synaptic delay between input and output
-    :param input: Input spikes in shape (batch, time, neurons).
+
+    :param input: SynapseHandle holding `graded_spikes` in shape (batch, time,
+        neurons).
     :param params: LIFParams object holding neuron parameters.
-    :return: Returns the spike trains in shape and membrane trace as a tuple.
-        Both tensors are of shape (batch, time, neurons).
+
+    :return: Returns NeuronHandle holding tensors with membrane traces, spikes
+        and synaptic current. Tensors are of shape (batch, time, neurons).
     """
+    input = input.graded_spikes
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
@@ -170,6 +179,6 @@ def cuba_refractory_iaf_integration(input: torch.Tensor, params: NamedTuple,
         membrane.append(v)
         current.append(i)
 
-    return (
-        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
-        v_madc)
+    return NeuronHandle(
+        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
+        current=torch.stack(current), v_madc=v_madc)

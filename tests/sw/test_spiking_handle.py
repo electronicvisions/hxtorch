@@ -77,14 +77,6 @@ class TestHXHandle(unittest.TestCase):
         self.assertFalse(handle.holds("spikes"))
         self.assertFalse(handle.holds("wrong_key"))
 
-        # test observable state
-        handle = NeuronHandle()
-        handle.put(spikes, v_cadc, current, v_madc)
-        self.assertTrue(torch.equal(spikes, handle.observable_state))
-        self.assertTrue(torch.equal(handle.spikes, handle.observable_state))
-        handle.put(None, v_cadc)
-        self.assertTrue(handle.observable_state is None)
-
     def test_readoutneuronhandle(self):
         """
         Test ReadoutNeuronHandle
@@ -126,14 +118,6 @@ class TestHXHandle(unittest.TestCase):
         self.assertTrue(handle.holds("v_cadc"))
         self.assertFalse(handle.holds("wrong_key"))
 
-        # test observable state
-        handle = ReadoutNeuronHandle()
-        handle.put(v_cadc, current, v_madc)
-        self.assertTrue(torch.equal(v_cadc, handle.observable_state))
-        self.assertTrue(torch.equal(handle.v_cadc, handle.observable_state))
-        handle.put(None)
-        self.assertTrue(handle.observable_state is None)
-
     def test_synapsehandle(self):
         """
         Test SynapseHandle
@@ -166,32 +150,6 @@ class TestHXHandle(unittest.TestCase):
         handle.put(graded_spikes=graded_spikes)
         self.assertTrue(handle.holds("graded_spikes"))
         self.assertFalse(handle.holds("wrong_key"))
-
-        # test observable state
-        handle = SynapseHandle()
-        handle.put(graded_spikes)
-        self.assertTrue(torch.equal(graded_spikes, handle.observable_state))
-        self.assertTrue(
-            torch.equal(handle.graded_spikes, handle.observable_state))
-        handle.put(None)
-
-    def test_observable_state(self):
-        """
-        Test observable state
-        """
-        # artificial data
-        data = torch.rand(size=(20, 10, 2))
-
-        # test put
-        handle = NeuronHandle(data)
-
-        self.assertTrue(torch.equal(handle.observable_state, data))
-        self.assertTrue(torch.equal(handle.spikes, data))
-        self.assertEqual(handle.observable_state_identifier, "spikes")
-
-        handle.observable_state_identifier = "v_cadc"
-        self.assertTrue(handle.observable_state is None)
-        self.assertEqual(handle.observable_state_identifier, "v_cadc")
 
 
 if __name__ == '__main__':

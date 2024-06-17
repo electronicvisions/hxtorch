@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
+import hxtorch.snn as hxsnn
 from hxtorch.spiking.functional import CUBALIParams, cuba_li_integration
 
 
@@ -32,29 +33,31 @@ class TestLIIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        membrane, current, v_madc = cuba_li_integration(
-            graded_spikes, params, dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_li_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
-        self.assertIsNone(v_madc)
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.current.shape)))
+        self.assertIsNone(h_out.v_madc)
 
         # No error
-        loss = membrane.sum()
+        loss = h_out.v_cadc.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.current[:, 0].detach().numpy())
 
         plt.savefig(self.plot_path.joinpath("./cuba_li_dynamics_mock.png"))
 
@@ -71,42 +74,49 @@ class TestLIIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        membrane, current, v_madc = cuba_li_integration(
-            graded_spikes, params, dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_li_integration(graded_spikes, params, dt=1e-6)
 
         # Add jitter
-        membrane += torch.rand(membrane.shape) * 0.05
+        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
 
         # Inject
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        membrane_hw, current, v_madc = cuba_li_integration(
-            graded_spikes, params, hw_data=(membrane, membrane), dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out_hw = cuba_li_integration(
+            graded_spikes, params, hw_data=(h_out.v_cadc, h_out.v_cadc),
+            dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.current.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(v_madc.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_madc.shape)))
 
         # Check HW data is still the same
-        self.assertTrue(torch.equal(membrane_hw, membrane))
+        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
 
         # No error
-        loss = membrane_hw.sum()
+        loss = h_out_hw.v_cadc.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_lif_dynamics_hw.png"))
 
 

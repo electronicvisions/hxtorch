@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+import hxtorch.snn as hxsnn
 from hxtorch.spiking.functional import (
     CUBAIAFParams, cuba_iaf_integration,
     cuba_refractory_iaf_integration)
@@ -39,32 +40,34 @@ class TestIAFIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current, v_madc = cuba_iaf_integration(
-            graded_spikes, params, dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_iaf_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(spikes.shape)))
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.spikes.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
-        self.assertIsNone(v_madc)
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.current.shape)))
+        self.assertIsNone(h_out.v_madc)
 
         # No error
-        loss = spikes.sum()
+        loss = h_out.spikes.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics.png"))
 
     def test_iaf_integration_hw_data(self):
@@ -85,51 +88,58 @@ class TestIAFIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current, v_madc = cuba_iaf_integration(
-            graded_spikes, params, dt=1e-6)
-        self.assertIsNone(v_madc)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_iaf_integration(graded_spikes, params, dt=1e-6)
+        self.assertIsNone(h_out.v_madc)
 
         # Add jitter
-        membrane += torch.rand(membrane.shape) * 0.05
-        spikes[
+        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
+        h_out.spikes[
             torch.randint(100, (1,)), torch.randint(10, (1,)),
             torch.randint(15, (1,))] = 1
 
         # Inject
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw, current, v_madc = cuba_iaf_integration(
-            graded_spikes, params, hw_data=(spikes, membrane, membrane),
-            dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out_hw = cuba_iaf_integration(
+            graded_spikes, params,
+            hw_data=(h_out.spikes, h_out.v_cadc, h_out.v_cadc), dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(spikes.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.spikes.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.current.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(v_madc.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_madc.shape)))
 
         # Check HW data is still the same
-        self.assertTrue(torch.equal(membrane_hw, membrane))
-        self.assertTrue(torch.equal(spikes_hw, spikes))
+        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
+        self.assertTrue(torch.equal(h_out_hw.spikes, h_out.spikes))
 
         # No error
-        loss = spikes.sum()
+        loss = h_out_hw.spikes.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.current[:, 0].detach().numpy())
         plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics_hw.png"))
 
     def test_refractory_iaf_integration(self):
@@ -150,32 +160,34 @@ class TestIAFIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current, v_madc = cuba_refractory_iaf_integration(
-            graded_spikes, params, dt=1e-6)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_refractory_iaf_integration(graded_spikes, params, dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(spikes.shape)))
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.spikes.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
-        self.assertIsNone(v_madc)
+                torch.tensor([100, 10, 15]), torch.tensor(h_out.current.shape)))
+        self.assertIsNone(h_out.v_madc)
 
         # No error
-        loss = spikes.sum()
+        loss = h_out.spikes.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out.current[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_iaf_dynamics.png"))
 
@@ -197,52 +209,59 @@ class TestIAFIntegration(unittest.TestCase):
         inputs[53, :, 3] = 1
 
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes, membrane, current, v_madc = cuba_refractory_iaf_integration(
-            graded_spikes, params, dt=1e-6)
-        self.assertIsNone(v_madc)
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out = cuba_refractory_iaf_integration(graded_spikes, params, dt=1e-6)
+        self.assertIsNone(h_out.v_madc)
 
         # Add jitter
-        membrane += torch.rand(membrane.shape) * 0.05
-        spikes[
+        h_out.v_cadc += torch.rand(h_out.v_cadc.shape) * 0.05
+        h_out.spikes[
             torch.randint(100, (1,)), torch.randint(10, (1,)),
             torch.randint(15, (1,))] = 1
 
         # Inject
-        graded_spikes = torch.nn.functional.linear(inputs, weight)
-        spikes_hw, membrane_hw, current, v_madc = \
+        graded_spikes = hxsnn.SynapseHandle(
+            torch.nn.functional.linear(inputs, weight))
+        h_out_hw = \
             cuba_refractory_iaf_integration(
-                graded_spikes, params, hw_data=(spikes, membrane, membrane),
-                dt=1e-6)
+                graded_spikes, params,
+                hw_data=(h_out.spikes, h_out.v_cadc, h_out.v_cadc), dt=1e-6)
 
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(spikes.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.spikes.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(membrane.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(current.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.current.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([100, 10, 15]), torch.tensor(v_madc.shape)))
+                torch.tensor([100, 10, 15]),
+                torch.tensor(h_out_hw.v_madc.shape)))
 
         # Check HW data is still the same
-        self.assertTrue(torch.equal(membrane_hw, membrane))
-        self.assertTrue(torch.equal(spikes_hw, spikes))
+        self.assertTrue(torch.equal(h_out_hw.v_cadc, h_out.v_cadc))
+        self.assertTrue(torch.equal(h_out_hw.spikes, h_out.spikes))
 
         # No error
-        loss = spikes.sum()
+        loss = h_out_hw.spikes.sum()
         loss.backward()
 
         # plot
         fig, ax = plt.subplots()
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), membrane[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.v_cadc[:, 0].detach().numpy())
         ax.plot(
-            np.arange(0., 1e-6 * 100, 1e-6), current[:, 0].detach().numpy())
+            np.arange(0., 1e-6 * 100, 1e-6),
+            h_out_hw.current[:, 0].detach().numpy())
         plt.savefig(
             self.plot_path.joinpath("./cuba_refractory_iaf_dynamics_hw.png"))
 

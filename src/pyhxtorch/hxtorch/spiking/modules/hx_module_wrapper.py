@@ -124,9 +124,7 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
         hw_data = tuple(
             hw_map.get(module.descriptor) for module in self.modules)
         # Concat input handles according to self.modules order
-        inputs = tuple(handle.observable_state for handle in input)
-        # Execute function
-        output_tensors = self.func(inputs, hw_data=hw_data)
+        output_tensors = self.func(input, hw_data=hw_data)
         # Check for have tuples
         if not isinstance(output_tensors, tuple):
             output_tensors = (output_tensors,)
@@ -134,7 +132,5 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
         # TODO: Allow for multiple outputs per module
         assert len(output_tensors) == len(self.modules)
         # Assign output tensors
-        for output_tensor, output_handle in zip(output_tensors, output):
-            out = (output_tensor,) if not isinstance(output_tensor, tuple) \
-                else output_tensor
-            output_handle.put(*out)
+        for returned_handle, output_handle in zip(output_tensors, output):
+            output_handle.clone(returned_handle)

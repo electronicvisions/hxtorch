@@ -2,6 +2,8 @@
 from typing import NamedTuple, Tuple, Optional
 import torch
 
+from hxtorch.spiking.handle import SynapseHandle, NeuronHandle
+
 
 class EventPropNeuron(torch.autograd.Function):
     """
@@ -201,12 +203,13 @@ class EventPropSynapse(torch.autograd.Function):
 
 
 # pylint: disable=redefined-builtin
-def eventprop_synapse(input: torch.Tensor, weight: torch.Tensor,
+def eventprop_synapse(input: NeuronHandle, weight: torch.Tensor,
                       _: torch.Tensor = None) -> torch.Tensor:
-    return EventPropSynapse.apply(input, weight)
+    return SynapseHandle(EventPropSynapse.apply(input.spikes, weight))
 
 
 # pylint: disable=redefined-builtin, invalid-name
-def eventprop_neuron(input: torch.Tensor, params: NamedTuple, dt: float,
+def eventprop_neuron(input: SynapseHandle, params: NamedTuple, dt: float,
                      hw_data: Optional[torch.Tensor]) -> Tuple[torch.Tensor]:
-    return EventPropNeuron.apply(input, params, dt, hw_data)
+    return NeuronHandle(
+        *EventPropNeuron.apply(input.graded_spikes, params, dt, hw_data))

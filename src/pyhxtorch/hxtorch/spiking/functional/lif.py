@@ -6,6 +6,7 @@ import dataclasses
 import torch
 
 from hxtorch.spiking.calibrated_params import CalibratedParams
+from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
 from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
@@ -79,7 +80,7 @@ def cuba_lif_step(
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def cuba_lif_integration(
-        input: torch.Tensor,
+        input: SynapseHandle,
         params: Union[CalibratedCUBALIFParams, CUBALIFParams],
         hw_data: Optional[torch.Tensor] = None, dt: float = 1e-6) \
         -> Tuple[torch.Tensor, ...]:
@@ -97,13 +98,15 @@ def cuba_lif_integration(
 
     TODO: Issue 3992
 
-    :param input: Input spikes in shape (batch, time, neurons).
+    :param input: SynapseHandle holding `graded_spikes` in shape (batch, time,
+        neurons).
     :param params: LIFParams object holding neuron parameters.
     :param dt: Step width of integration.
 
-    :return: Returns the spike trains in shape and membrane trace as a tuple.
-        Both tensors are of shape (batch, time, neurons).
+    :return: Returns NeuronHandle holding tensors with membrane traces, spikes
+        and synaptic current. Tensors are of shape (batch, time, neurons).
     """
+    input = input.graded_spikes
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
@@ -121,8 +124,8 @@ def cuba_lif_integration(
     for ts in range(T):
         z, v, i = cuba_lif_step(
             z, v, i, input[ts],
-            z_hw[ts] if hw_data else None,
-            v_cadc[ts] if hw_data else None,
+            z_hw[ts] if z_hw is not None else None,
+            v_cadc[ts] if v_cadc is not None else None,
             params, dt)
 
         # Save data
@@ -130,15 +133,15 @@ def cuba_lif_integration(
         spikes.append(z)
         membrane.append(v)
 
-    return (
-        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
-        v_madc)
+    return NeuronHandle(
+        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
+        current=torch.stack(current), v_madc=v_madc)
 
 
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
 def cuba_refractory_lif_integration(
-        input: torch.Tensor,
+        input: SynapseHandle,
         params: Union[CalibratedCUBALIFParams, CUBALIFParams],
         hw_data: Optional[torch.Tensor] = None, dt: float = 1e-6) \
         -> Tuple[torch.Tensor, ...]:
@@ -156,12 +159,14 @@ def cuba_refractory_lif_integration(
 
     Assumes i^0, v^0 = 0.
 
-    :param input: Input spikes in shape (batch, time, neurons).
+    :param input: SynapseHandle holding `graded_spikes` in shape (batch, time,
+        neurons).
     :param params: LIFParams object holding neuron parameters.
 
-    :return: Returns the spike trains in shape and membrane trace as a tuple.
-        Both tensors are of shape (batch, time, neurons).
+    :return: Returns NeuronHandle holding tensors with membrane traces, spikes
+        and synaptic current. Tensors are of shape (batch, time, neurons).
     """
+    input = input.graded_spikes
     dev = input.device
     T, bs, ps = input.shape
     z, i, v = torch.zeros(bs, ps).to(dev), torch.tensor(0.).to(dev), \
@@ -196,6 +201,6 @@ def cuba_refractory_lif_integration(
         spikes.append(z)
         membrane.append(v)
 
-    return (
-        torch.stack(spikes), torch.stack(membrane), torch.stack(current),
-        v_madc)
+    return NeuronHandle(
+        spikes=torch.stack(spikes), v_cadc=torch.stack(membrane),
+        current=torch.stack(current), v_madc=v_madc)
