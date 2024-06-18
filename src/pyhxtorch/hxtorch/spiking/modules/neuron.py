@@ -2,8 +2,7 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import (
-    TYPE_CHECKING, Dict, Tuple, Type, Optional, NamedTuple, Union, List)
+from typing import TYPE_CHECKING, Dict, Tuple, Type, Optional, Union, List
 import pylogging as logger
 import numpy as np
 
@@ -15,7 +14,7 @@ import pygrenade_vx as grenade
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
 from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
-from hxtorch.spiking.modules.types import Population
+from hxtorch.spiking.modules.types import Population, ModuleParameterType
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
@@ -42,10 +41,21 @@ class Neuron(Population):
         = lola.AtomicNeuron.Readout.Source.membrane
 
     # pylint: disable=too-many-arguments, too-many-locals
-    def __init__(self, size: int, experiment: Experiment,
+    def __init__(self, size: int,
+                 experiment: Experiment,
+                 leak: ModuleParameterType = 80,
+                 reset: ModuleParameterType = 80,
+                 threshold: ModuleParameterType = 125,
+                 tau_mem: ModuleParameterType = 10e-6,
+                 tau_syn: ModuleParameterType = 10e-6,
+                 i_synin_gm: ModuleParameterType = 500,
+                 membrane_capacitance: ModuleParameterType = 63,
+                 refractory_time: ModuleParameterType = 1e-6,
+                 synapse_dac_bias: ModuleParameterType = 600,
+                 holdoff_time: ModuleParameterType = 0e-6,
+                 method: str = "superspike",
+                 alpha: float = 50.,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 params: Union[NamedTuple, F.CUBALIFParams]
-                 = F.CUBALIFParams(1. / 10e-6, 1. / 10e-6),
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,
@@ -59,19 +69,59 @@ class Neuron(Population):
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
-                 neuron_structure: Optional[Morphology] = None) -> None:
+                 neuron_structure: Optional[Morphology] = None,
+                 **extra_params) -> None:
         """
         Initialize a Neuron. This module creates a population of spiking
         neurons of size `size`. This module has a internal spiking mask, which
         allows to disable the event output and spike recordings of specific
         neurons within the layer. This is particularly useful for dropout.
 
+        The neuron is parameterized by the `ModuleParameterType`d parameters:
+            leak, reset, threshold, tau_mem, tau_syn, i_synin_gm,
+            membrane_capacitance, refractory_time, synapse_dac_bias,
+            holdoff_time.
+        More infos to the respective parameters on BSS-2 can be found in
+        `calix.spiking.neuron.NeuronCalibTarget`. If the parameters are not
+        given as `ParameterType`, they are implicitly converted to
+        `HXParameter` which provides the same value to the BSS-2 calibration
+        (`param.hardware_value`) (and thus the hardware operation state) as to
+        the numerical model (`param.model_value`) defined in `forward_func`.
+        `MixedHXModelParameter` and `HXTransformedModelParameter` allow using
+        different values on BSS-2 and in the numerics. This is useful if the
+        dynamic range on hardware and in the numerical model  differ. If so,
+        the trace and weight scaling parameters need to be set accordingly in
+        order to translate the weights to their corresponding hardware value
+        and the hardware measurements into the dynamic range used in the
+        numerics.
+
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
-        :param params: Neuron Parameters in case of mock neuron integration of
-            for backward path. If func does have a param argument the params
-            object will get injected automatically.
+        :param leak: The leak potential. Defaults to HXParameter(80).
+        :param reset: The reset potential. Defaults to HXParameter(80).
+        :param threshold: The threshold potential. Defaults to
+            HXParameter(125).
+        :param tau_syn: The synaptic time constant in s. Defaults to
+            HXParameter(10e-6).
+        :param tau_mem: The membrane time constant in s. Defaults to
+            HXParameter(10e-6).
+        :param i_synin_gm: A hardware parameter adjusting the hardware neuron
+            -specific synaptic efficacy. Defaults to HXParameter(500).
+        :param membrane_capacitance: The capacitance of the membrane. The
+            available range is 0 to approximately 2.2 pF, represented as 0 to
+            63 LSB.
+        :param refractory_time: The refractory time constant in s. Defaults to
+            HXParameter(1e-6).
+        :param synapse_dac_bias: Synapse DAC bias current that is desired. Can
+            be lowered in order to reduce the amplitude of a spike at the input
+            of the synaptic input OTA. This can be useful to avoid saturation
+            when using larger synaptic time constants. Defaults to
+            HXParameter(600).
+        :param holdoff_time: Target length of the holdoff period in s. The
+            holdoff period is the time at the end of the refractory period in
+            which the clamping to the reset voltage is already released but new
+            spikes can still not be generated. Defaults to HXParameter(0e-6).
         :param enable_spike_recording: Boolean flag to enable or disable spike
             recording. Note, this does not disable the event out put of
             neurons. The event output has to be disabled via `mask`.
@@ -125,8 +175,20 @@ class Neuron(Population):
         :param neuron_structure: Structure of the neuron. If not supplied a
             single neuron circuit is used.
         """
-        super().__init__(size, experiment=experiment,
-                         execution_instance=execution_instance)
+        super().__init__(size,
+                         experiment=experiment,
+                         execution_instance=execution_instance,
+                         leak=leak,
+                         reset=reset,
+                         threshold=threshold,
+                         tau_mem=tau_mem,
+                         tau_syn=tau_syn,
+                         i_synin_gm=i_synin_gm,
+                         membrane_capacitance=membrane_capacitance,
+                         refractory_time=refractory_time,
+                         synapse_dac_bias=synapse_dac_bias,
+                         holdoff_time=holdoff_time,
+                         **extra_params)
 
         if placement_constraint is not None \
                 and len(placement_constraint) != size:
@@ -135,7 +197,8 @@ class Neuron(Population):
                 + "`hardware_constraints` does not equal the `size` of the "
                 + "module.")
 
-        self.params = params
+        self.alpha = alpha
+        self.method = method
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
@@ -145,7 +208,6 @@ class Neuron(Population):
         self._record_neuron_id = record_neuron_id
         self._placement_constraint = placement_constraint
         self._mask: Optional[torch.Tensor] = None
-        self.unit_ids: Optional[np.ndarray] = None
 
         self.scale = trace_scale
         self.offset = trace_offset
@@ -166,7 +228,8 @@ class Neuron(Population):
 
     def extra_repr(self) -> str:
         """ Add additional information """
-        reprs = f"params={self.params}, "
+        reprs = f"alpha={self.alpha}, " \
+            + f"method={self.method}, "
         if not self.experiment.mock:
             reprs += f"spike_recording={self._enable_spike_recording}, " \
                 + f"cadc_recording={self._enable_cadc_recording}, " \
@@ -459,7 +522,15 @@ class Neuron(Population):
                      hw_data: Optional[Tuple[torch.Tensor]] = None) \
             -> NeuronHandle:
         return NeuronHandle(*F.cuba_lif_integration(
-            input.graded_spikes, self.params, hw_data=hw_data,
+            input.graded_spikes,
+            leak=self.leak.model_value,
+            reset=self.reset.model_value,
+            threshold=self.threshold.model_value,
+            tau_syn=self.tau_syn.model_value,
+            tau_mem=self.tau_mem.model_value,
+            method=self.method,
+            alpha=self.alpha,
+            hw_data=hw_data,
             dt=self.experiment.dt))
 
 
@@ -468,5 +539,13 @@ class EventPropNeuron(Neuron):
     def forward_func(self, input: SynapseHandle,
                      hw_data: Optional[Tuple[torch.Tensor]] = None) \
             -> NeuronHandle:
+        # EA 2025-01-30: No keywords allowed in apply
         return NeuronHandle(*F.EventPropNeuronFunction.apply(
-            input.graded_spikes, self.params, self.experiment.dt, hw_data))
+            input.graded_spikes,
+            self.leak.model_value,
+            self.reset.model_value,
+            self.threshold.model_value,
+            self.tau_syn.model_value,
+            self.tau_mem.model_value,
+            hw_data,
+            self.experiment.dt))

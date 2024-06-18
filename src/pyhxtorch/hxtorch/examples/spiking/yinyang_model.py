@@ -20,7 +20,7 @@ class SNN(torch.nn.Module):
     # pylint: disable=too-many-arguments, invalid-name
 
     def __init__(self, n_in: int, n_hidden: int, n_out: int, mock: bool,
-                 calib_path: str, dt: float = 1.0e-6, tau_mem: float = 8e-6,
+                 dt: float = 1.0e-6, tau_mem: float = 8e-6,
                  tau_syn: float = 8e-6, alpha: float = 50,
                  trace_shift_hidden: int = 0, trace_shift_out: int = 0,
                  weight_init_hidden: Optional[Tuple[float, float]] = None,
@@ -38,7 +38,6 @@ class SNN(torch.nn.Module):
         :param n_hidden: Number of hidden units.
         :param n_out: Number of output units.
         :param mock: Indicating whether to train in software or on hardware.
-        :param calib_path: Path to hardware calibration file.
         :param dt: Time-binning width.
         :param tau_mem: Membrane time constant.
         :param tau_syn: Synaptic time constant.
@@ -62,17 +61,8 @@ class SNN(torch.nn.Module):
         """
         super().__init__()
 
-        # Neuron parameters
-        lif_params = F.CUBALIFParams(
-            tau_mem=tau_mem, tau_syn=tau_syn, alpha=alpha)
-        li_params = F.CUBALIParams(tau_mem=tau_mem, tau_syn=tau_syn)
-
         # Experiment instance to work on
         self.exp = hxsnn.Experiment(mock=mock, dt=dt)
-        if not mock:
-            self.exp.default_execution_instance.load_calib(
-                calib_path if calib_path
-                else calib_helper.nightly_calix_native_path("spiking2"))
 
         # Repeat input
         self.input_repetitions = input_repetitions
@@ -89,8 +79,18 @@ class SNN(torch.nn.Module):
 
         # Hidden layer
         self.lif_h = neuron_type(
-            n_hidden, experiment=self.exp, params=lif_params,
-            trace_scale=trace_scale, cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True,
+            n_hidden,
+            experiment=self.exp,
+            tau_mem=tau_mem,
+            tau_syn=tau_syn,
+            leak=hxsnn.MixedHXModelParameter(0., 80),
+            reset=hxsnn.MixedHXModelParameter(0., 80),
+            threshold=hxsnn.MixedHXModelParameter(1., 150),
+            i_synin_gm=500,
+            synapse_dac_bias=1000,
+            trace_scale=trace_scale,
+            cadc_time_shift=trace_shift_hidden,
+            shift_cadc_to_first=True,
             enable_cadc_recording=hidden_cadc_recording)
 
         # Output projection
@@ -101,9 +101,16 @@ class SNN(torch.nn.Module):
 
         # Readout layer
         self.li_readout = hxsnn.ReadoutNeuron(
-            n_out, experiment=self.exp, params=li_params,
-            trace_scale=trace_scale, cadc_time_shift=trace_shift_out,
-            shift_cadc_to_first=True, placement_constraint=list(
+            n_out,
+            experiment=self.exp,
+            tau_mem=tau_mem,
+            tau_syn=tau_syn,
+            leak=hxsnn.MixedHXModelParameter(0., 80),
+            i_synin_gm=500,
+            synapse_dac_bias=1000,
+            trace_scale=trace_scale,
+            cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
+            placement_constraint=list(
                 halco.LogicalNeuronOnDLS(
                     hxsnn.morphology.SingleCompartmentNeuron(1).compartments,
                     halco.AtomicNeuronOnDLS(

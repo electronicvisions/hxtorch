@@ -2,8 +2,7 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import (
-    TYPE_CHECKING, Dict, Tuple, Type, Optional, List, NamedTuple, Union)
+from typing import TYPE_CHECKING, Dict, Tuple, Type, Optional, List, Union
 import pylogging as logger
 
 import torch
@@ -14,6 +13,7 @@ import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import ReadoutNeuronHandle, SynapseHandle
 from hxtorch.spiking.morphology import Morphology
 from hxtorch.spiking.modules.neuron import Neuron
+from hxtorch.spiking.modules.types import ModuleParameterType
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
@@ -34,10 +34,15 @@ class ReadoutNeuron(Neuron):
     output_type: Type = ReadoutNeuronHandle
 
     # pylint: disable=too-many-arguments,too-many-locals
-    def __init__(self, size: int, experiment: Experiment,
+    def __init__(self, size: int,
+                 experiment: Experiment,
+                 leak: ModuleParameterType = 80,
+                 tau_mem: ModuleParameterType = 10e-6,
+                 tau_syn: ModuleParameterType = 10e-6,
+                 i_synin_gm: ModuleParameterType = 500,
+                 membrane_capacitance: ModuleParameterType = 63,
+                 synapse_dac_bias: ModuleParameterType = 600,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 params: Union[NamedTuple, F.CUBALIParams]
-                 = F.CUBALIParams(1. / 10e-6, 1. / 10e-6),
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,
                  enable_madc_recording: bool = False,
@@ -50,18 +55,49 @@ class ReadoutNeuron(Neuron):
                                     torch.Tensor, float] = 1.,
                  cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
-                 neuron_structure: Optional[Morphology] = None) -> None:
+                 neuron_structure: Optional[Morphology] = None,
+                 **extra_params) -> None:
         """
         Initialize a ReadoutNeuron. This module creates a population of non-
         spiking neurons of size `size` and is equivalent to Neuron when its
         spiking mask is disabled for all neurons.
 
+        The readout neuron is parameterized by the `ModuleParameterType`d
+        parameters:
+            leak, tau_mem, tau_syn, i_synin_gm, membrane_capacitance,
+            synapse_dac_bias
+        More infos to the respective parameters on BSS-2 can be found in
+        `calix.spiking.neuron.NeuronCalibTarget`. If the parameters are not
+        given as `ParameterType`, they are implicitly converted to
+        `HXParameter` which provides the same value to the BSS-2 calibration
+        (`param.hardware_value`) (and thus the hardware operation state) as to
+        the numerical model (`param.model_value`) defined in `forward_func`.
+        `MixedHXModelParameter` and `HXTransformedModelParameter` allow using
+        different values on BSS-2 and in the numerics. This is useful if the
+        dynamic range on hardware and in the numerical model  differ. If so,
+        the trace and weight scaling parameters need to be set accordingly in
+        order to translate the weights to their corresponding hardware value
+        and the hardware measurements into the dynamic range used in the
+        numerics.
+
         :param size: Size of the population.
         :param experiment: Experiment to register the module in.
         :param execution_instance: Execution instance to place to.
-        :param params: Neuron Parameters in case of mock neuron integration of
-            for backward path. If func does have a param argument the params
-            object will get injected automatically.
+        :param leak: The leak potential. Defaults to HXParameter(80).
+        :param tau_syn: The synaptic time constant in s. Defaults to
+            HXParameter(10e-6).
+        :param tau_mem: The membrane time constant in s. Defaults to
+            HXParameter(10e-6).
+        :param i_synin_gm: A hardware parameter adjusting the hardware neuron
+            -specific synaptic efficacy. Defaults to HXParameter(500).
+        :param membrane_capacitance: The capacitance of the membrane. The
+            available range is 0 to approximately 2.2 pF, represented as 0 to
+            63 LSB.
+        :param synapse_dac_bias: Synapse DAC bias current that is desired. Can
+            be lowered in order to reduce the amplitude of a spike at the input
+            of the synaptic input OTA. This can be useful to avoid saturation
+            when using larger synaptic time constants. Defaults to
+            HXParameter(600).
         :param enable_cadc_recording: Enables or disables parallel sampling of
             the populations membrane trace via the CADC. A maximum sample rate
             of 1.7us is possible.
@@ -113,11 +149,26 @@ class ReadoutNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, experiment, execution_instance, params, False,
-            enable_cadc_recording, enable_cadc_recording_placement_in_dram,
-            enable_madc_recording, record_neuron_id,
-            placement_constraint, trace_offset, trace_scale, cadc_time_shift,
-            shift_cadc_to_first, interpolation_mode, neuron_structure)
+            size,
+            experiment,
+            leak=leak,
+            tau_mem=tau_mem,
+            tau_syn=tau_syn,
+            i_synin_gm=i_synin_gm,
+            membrane_capacitance=membrane_capacitance,
+            synapse_dac_bias=synapse_dac_bias,
+            execution_instance=execution_instance,
+            enable_spike_recording=False,
+            enable_cadc_recording=enable_cadc_recording,
+            enable_madc_recording=enable_madc_recording,
+            record_neuron_id=record_neuron_id,
+            placement_constraint=placement_constraint,
+            trace_offset=trace_offset, trace_scale=trace_scale,
+            cadc_time_shift=cadc_time_shift,
+            shift_cadc_to_first=shift_cadc_to_first,
+            interpolation_mode=interpolation_mode,
+            neuron_structure=neuron_structure,
+            **extra_params)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,
@@ -175,6 +226,10 @@ class ReadoutNeuron(Neuron):
     def forward_func(self, input: SynapseHandle,
                      hw_data: Optional[Tuple[torch.Tensor]] = None) \
             -> ReadoutNeuronHandle:
-        return ReadoutNeuronHandle(
-            *F.cuba_li_integration(input.graded_spikes, self.params,
-                                   hw_data=hw_data, dt=self.experiment.dt))
+        return ReadoutNeuronHandle(*F.cuba_li_integration(
+            input.graded_spikes,
+            leak=self.leak.model_value,
+            tau_syn=self.tau_syn.model_value,
+            tau_mem=self.tau_mem.model_value,
+            hw_data=hw_data,
+            dt=self.experiment.dt))

@@ -8,6 +8,7 @@ import hxtorch
 from hxtorch.spiking import Experiment, run
 from hxtorch.spiking.modules import Neuron, Synapse
 from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.utils import calib_helper
 from hxtorch.spiking.execution_instance import ExecutionInstance
 
 
@@ -27,17 +28,20 @@ class TestMultiSingleChip(unittest.TestCase):
         experiment = Experiment(mock=False)
 
         # Modules
-        instance1 = ExecutionInstance()
+        instance1 = ExecutionInstance(
+            calib_path=calib_helper.nightly_calib_path())
         module1 = Synapse(10, 5, experiment, execution_instance=instance1)
         module2 = Neuron(
-              5, experiment, execution_instance=instance1,
-              enable_cadc_recording=True)
+            5, experiment, execution_instance=instance1,
+            enable_cadc_recording=True)
+
         # switch execution instance
-        instance2 = ExecutionInstance()
+        instance2 = ExecutionInstance(
+            calib_path=calib_helper.nightly_calib_path())
         module3 = Synapse(5, 15, experiment, execution_instance=instance2)
         module4 = Neuron(
-               15, experiment, execution_instance=instance2,
-               enable_cadc_recording=True)
+            15, experiment, execution_instance=instance2,
+            enable_cadc_recording=True)
 
         # Forward
         input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
@@ -53,8 +57,8 @@ class TestMultiSingleChip(unittest.TestCase):
         """ Test multi-single-chip experiment with multiple runs """
 
         experiment = Experiment(mock=False)
-        inst1 = ExecutionInstance()
-        inst2 = ExecutionInstance()
+        inst1 = ExecutionInstance(calib_path=calib_helper.nightly_calib_path())
+        inst2 = ExecutionInstance(calib_path=calib_helper.nightly_calib_path())
         synapse1 = Synapse(10, 8, experiment, execution_instance=inst1)
         synapse2 = Synapse(10, 8, experiment, execution_instance=inst2)
         neuron1 = Neuron(8, experiment, execution_instance=inst1)
@@ -79,8 +83,8 @@ class TestMultiSingleChip(unittest.TestCase):
         multiple inputs.
         """
         experiment = Experiment(mock=False)
-        inst1 = ExecutionInstance()
-        inst2 = ExecutionInstance()
+        inst1 = ExecutionInstance(calib_path=calib_helper.nightly_calib_path())
+        inst2 = ExecutionInstance(calib_path=calib_helper.nightly_calib_path())
 
         # Modules
         module1 = Synapse(10, 10, experiment, execution_instance=inst1)

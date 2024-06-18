@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 import hxtorch.snn as hxsnn
 from hxtorch.spiking.functional import (
-    CUBALIFParams, cuba_lif_integration, cuba_refractory_lif_integration)
+    cuba_lif_integration, cuba_refractory_lif_integration)
 
 
 class TestLIFIntegration(unittest.TestCase):
@@ -23,13 +23,15 @@ class TestLIFIntegration(unittest.TestCase):
 
     def test_cuba_lif_integration(self):
         """ Test CUBA LIF integration """
+
         # Params
-        params = CUBALIFParams(
-            tau_mem=6e-6,
-            tau_syn=6e-6,
-            refractory_time=1e-6,
-            threshold=0.7,
-            reset=-0.1)
+        tau_mem = 6e-6
+        tau_syn = 6e-6
+        threshold = 0.7
+        reset = -0.1
+        leak = 0
+        alpha = 50
+        method = "superspike"
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -41,7 +43,9 @@ class TestLIFIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = cuba_lif_integration(
-            graded_spikes, params, dt=1e-6)
+            graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+            tau_syn=tau_syn, threshold=threshold, method=method, alpha=alpha,
+            dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -76,12 +80,13 @@ class TestLIFIntegration(unittest.TestCase):
     def test_cuba_lif_integration_hw_data(self):
         """ Test CUBA LIF integration with hardware data """
         # Params
-        params = CUBALIFParams(
-            tau_mem=6e-6,
-            tau_syn=6e-6,
-            refractory_time=1e-6,
-            threshold=0.7,
-            reset=-0.1)
+        tau_mem = 6e-6
+        tau_syn = 6e-6
+        threshold = 0.7
+        reset = -0.1
+        leak = 0
+        alpha = 50
+        method = "superspike"
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -93,7 +98,9 @@ class TestLIFIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = cuba_lif_integration(
-            graded_spikes, params, dt=1e-6)
+            graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+            tau_syn=tau_syn, threshold=threshold, method=method, alpha=alpha,
+            dt=1e-6)
         self.assertIsNone(membrane_madc)
 
         # Add jitter
@@ -106,8 +113,10 @@ class TestLIFIntegration(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes_hw, membrane_cadc_hw, current_hw, membrane_madc_hw = \
             cuba_lif_integration(
-                graded_spikes, params,
-                hw_data=(spikes, membrane_cadc, membrane_cadc), dt=1e-6)
+                graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+                tau_syn=tau_syn, threshold=threshold, method=method,
+                alpha=alpha, hw_data=(spikes, membrane_cadc, membrane_cadc),
+                dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -149,12 +158,14 @@ class TestLIFIntegration(unittest.TestCase):
     def test_refractory_lif_integration(self):
         """ Test refractory LIF integration """
         # Params
-        params = CUBALIFParams(
-            tau_mem=6e-6,
-            tau_syn=6e-6,
-            refractory_time=1e-6,
-            threshold=0.7,
-            reset=-0.1)
+        leak = 0
+        tau_mem = 6e-6
+        tau_syn = 6e-6
+        refractory_time = 1e-6
+        threshold = 0.7
+        reset = -0.1
+        alpha = 50
+        method = "superspike"
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -166,7 +177,10 @@ class TestLIFIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = \
-            cuba_refractory_lif_integration(graded_spikes, params, dt=1e-6)
+            cuba_refractory_lif_integration(
+                graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+                tau_syn=tau_syn, threshold=threshold, alpha=alpha,
+                method=method, refractory_time=refractory_time, dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -199,12 +213,14 @@ class TestLIFIntegration(unittest.TestCase):
         """ Test refractory LIF integration with hardware data """
 
         # Params
-        params = CUBALIFParams(
-            tau_mem=6e-6,
-            tau_syn=6e-6,
-            refractory_time=1e-6,
-            threshold=0.7,
-            reset=-0.1)
+        leak = 0
+        tau_mem = 6e-6
+        tau_syn = 6e-6
+        refractory_time = 1e-6
+        threshold = 0.7
+        reset = -0.1
+        alpha = 50
+        method = "superspike"
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -216,7 +232,10 @@ class TestLIFIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = \
-            cuba_refractory_lif_integration(graded_spikes, params)
+            cuba_refractory_lif_integration(
+                graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+                tau_syn=tau_syn, threshold=threshold, method=method,
+                alpha=alpha, refractory_time=refractory_time, dt=1e-6)
 
         # Add jitter
         membrane_cadc += torch.rand(membrane_cadc.shape) * 0.05
@@ -228,7 +247,9 @@ class TestLIFIntegration(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes_hw, membrane_cadc_hw, current_hw, membrane_madc_hw = \
             cuba_refractory_lif_integration(
-                graded_spikes, params,
+                graded_spikes, leak=leak, reset=reset, tau_mem=tau_mem,
+                tau_syn=tau_syn, threshold=threshold,
+                refractory_time=refractory_time, alpha=alpha, method=method,
                 hw_data=(spikes, membrane_cadc, membrane_cadc))
 
         # Shapes

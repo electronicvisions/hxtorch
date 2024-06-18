@@ -8,35 +8,17 @@ import numpy as np
 import quantities as pq
 
 from dlens_vx_v3 import halco
+from calix.spiking import SpikingCalibTarget
 from calix.spiking.neuron import NeuronCalibTarget
 
-from hxtorch.spiking.calibrated_params import CalibratedParams
+from hxtorch.spiking.experiment import Experiment
+from hxtorch.spiking.modules.types import Population
+from hxtorch.spiking.parameter import HXParameter
 
 
-class TestCalibratedParams(unittest.TestCase):
-    """ Tests implicit neuron calibration """
+class TestPopulation(unittest.TestCase):
 
-    def test_init(self) -> None:
-        """ Test construction without errors """
-        # Default
-        CalibratedParams()
-
-        # Fill
-        CalibratedParams(
-            leak=torch.as_tensor(80),
-            reset=torch.as_tensor(80),
-            threshold=torch.as_tensor(125),
-            tau_mem=torch.as_tensor(10.),
-            tau_syn=torch.as_tensor(10.),
-            i_synin_gm=torch.as_tensor(500),
-            e_coba_reversal=torch.as_tensor(500),
-            e_coba_reference=torch.as_tensor(500),
-            membrane_capacitance=torch.as_tensor(63),
-            refractory_time=torch.as_tensor(2.),
-            synapse_dac_bias=torch.as_tensor(600),
-            holdoff_time=torch.as_tensor(0))
-
-    def test_from_calix_targets(self) -> None:
+    def test_params_from_calibration(self) -> None:
         """ Test conversion from calix targets to params """
         # Some logical neurons
         neurons = [
@@ -54,28 +36,32 @@ class TestCalibratedParams(unittest.TestCase):
             for neuron in neurons]
 
         # Default
-        target = NeuronCalibTarget.DenseDefault
-        params = CalibratedParams()
-        params.from_calix_targets(target, neurons)
-        self.check_params(target, params, selector, coords)
+        target = SpikingCalibTarget()
+        target.neuron = NeuronCalibTarget.DenseDefault
+
+        nrn = Population(25, experiment=Experiment())
+        nrn.params_from_calibration(target, neurons)
+        self.check_params(
+            target.neuron_target, nrn.params_dict(), selector, coords)
 
         # All numbers
-        target = NeuronCalibTarget(
-            leak=80,
-            reset=70,
-            threshold=125,
-            tau_mem=10. * pq.us,
-            tau_syn=10. * pq.us,
-            i_synin_gm=500,
-            e_coba_reversal=None,
-            e_coba_reference=None,
-            membrane_capacitance=63,
-            refractory_time=2. * pq.us,
-            synapse_dac_bias=600,
-            holdoff_time=0 * pq.us)
-        params = CalibratedParams()
-        params.from_calix_targets(target, neurons)
-        self.check_params(target, params, selector, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.leak=HXParameter(80)
+        nrn.reset=HXParameter(70)
+        nrn.threshold=HXParameter(125)
+        nrn.tau_mem=HXParameter(10e-6)
+        nrn.tau_syn=HXParameter(10e-6)
+        nrn.i_synin_gm=HXParameter(500)
+        nrn.e_coba_reversal=HXParameter(None)
+        nrn.e_coba_reference=HXParameter(None)
+        nrn.membrane_capacitance=HXParameter(63)
+        nrn.refractory_time=HXParameter(2e-6)
+        nrn.synapse_dac_bias=HXParameter(600)
+        nrn.holdoff_time=HXParameter(0e-6)
+
+        nrn.params_from_calibration(target, neurons)
+        self.check_params(
+            target.neuron_target, nrn.params_dict(), selector, coords)
 
         # Some larger logical neurons
         neurons = [
@@ -95,28 +81,30 @@ class TestCalibratedParams(unittest.TestCase):
             neuron.get_atomic_neurons()[0].toEnum().value()
             for neuron in neurons]
 
-        params = CalibratedParams()
-        params.from_calix_targets(target, neurons)
-        self.check_params(target, params, selector, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.params_from_calibration(target, neurons)
+        self.check_params(
+            target.neuron_target, nrn.params_dict(), selector, coords)
 
-        target = NeuronCalibTarget(
-            leak=80,
-            reset=70,
-            threshold=125,
-            tau_mem=10. * pq.us,
-            tau_syn=10. * pq.us,
-            i_synin_gm=500,
-            e_coba_reversal=None,
-            e_coba_reference=None,
-            membrane_capacitance=63,
-            refractory_time=2. * pq.us,
-            synapse_dac_bias=600,
-            holdoff_time=0 * pq.us)
-        params = CalibratedParams()
-        params.from_calix_targets(target, neurons)
-        self.check_params(target, params, selector, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.leak=HXParameter(80)
+        nrn.reset=HXParameter(70)
+        nrn.threshold=HXParameter(125)
+        nrn.tau_mem=HXParameter(10e-6)
+        nrn.tau_syn=HXParameter(10e-6)
+        nrn.i_synin_gm=HXParameter(500)
+        nrn.e_coba_reversal=HXParameter(None)
+        nrn.e_coba_reference=HXParameter(None)
+        nrn.membrane_capacitance=HXParameter(63)
+        nrn.refractory_time=HXParameter(2e-6)
+        nrn.synapse_dac_bias=HXParameter(600)
+        nrn.holdoff_time=HXParameter(0e-6)
 
-    def test_to_calix_targets(self) -> None:
+        nrn.params_from_calibration(target, neurons)
+        self.check_params(
+            target.neuron_target, nrn.params_dict(), selector, coords)
+
+    def test_calibration_from_params(self) -> None:
         """ Test conversion from params to calix targets """
         # Default target as ExecutionInstance does
         # Some logical neurons
@@ -133,72 +121,81 @@ class TestCalibratedParams(unittest.TestCase):
         size = len(neurons)
 
         # All numbers, non-default
-        params = CalibratedParams(
-            leak=110,
-            reset=120,
-            threshold=130,
-            tau_mem=2e-5,
-            tau_syn=3e-5,
-            i_synin_gm=600,
-            e_coba_reversal=None,
-            e_coba_reference=None,
-            membrane_capacitance=55,
-            refractory_time=3e-6,
-            synapse_dac_bias=700,
-            holdoff_time=1)
-        target = NeuronCalibTarget.DenseDefault
-        target.synapse_dac_bias = None
-        target.i_synin_gm = np.array([None, None])
-        params.to_calix_targets(target, neurons)
-        self.check_targets(target, params, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.leak=HXParameter(110)
+        nrn.reset=HXParameter(120)
+        nrn.threshold=HXParameter(130)
+        nrn.tau_mem=HXParameter(2e-6)
+        nrn.tau_syn=HXParameter(3e-6)
+        nrn.i_synin_gm=HXParameter(600)
+        nrn.e_coba_reversal=HXParameter(None)
+        nrn.e_coba_reference=HXParameter(None)
+        nrn.membrane_capacitance=HXParameter(55)
+        nrn.refractory_time=HXParameter(3e-6)
+        nrn.synapse_dac_bias=HXParameter(700)
+        nrn.holdoff_time=HXParameter(1e-6)
+    
+        target = SpikingCalibTarget()
+        target.neuron_target = NeuronCalibTarget.DenseDefault
+        target.neuron_target.synapse_dac_bias = None
+        target.neuron_target.i_synin_gm = np.array([None, None])
+        nrn.calibration_from_params(target, neurons)
+        self.check_targets(
+            target.neuron_target, nrn.params_dict(), coords)
 
         # All tensors, non-default
-        params = CalibratedParams(
-            leak=torch.tensor(110),
-            reset=torch.tensor(120),
-            threshold=torch.tensor(130),
-            tau_mem=torch.tensor(2e-5),
-            tau_syn=torch.tensor(3e-5),
-            i_synin_gm=torch.tensor(600),
-            e_coba_reversal=None,
-            e_coba_reference=None,
-            membrane_capacitance=torch.tensor(55),
-            refractory_time=torch.tensor(3e-6),
-            synapse_dac_bias=torch.tensor(700),
-            holdoff_time=torch.tensor(1))
-        target = NeuronCalibTarget.DenseDefault
-        target.synapse_dac_bias = None
-        target.i_synin_gm = np.array([None, None])
-        params.to_calix_targets(target, neurons)
-        self.check_targets(target, params, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.leak=HXParameter(torch.tensor(110))
+        nrn.reset=HXParameter(torch.tensor(120))
+        nrn.threshold=HXParameter(torch.tensor(130))
+        nrn.tau_mem=HXParameter(torch.tensor(2e-5))
+        nrn.tau_syn=HXParameter(torch.tensor(3e-5))
+        nrn.i_synin_gm=HXParameter(torch.tensor(600))
+        nrn.e_coba_reversal=HXParameter(None)
+        nrn.e_coba_reference=HXParameter(None)
+        nrn.membrane_capacitance=HXParameter(torch.tensor(55))
+        nrn.refractory_time=HXParameter(torch.tensor(3e-6))
+        nrn.synapse_dac_bias=HXParameter(torch.tensor(700))
+        nrn.holdoff_time=HXParameter(torch.tensor(1))
+
+        target = SpikingCalibTarget()
+        target.neuron_target = NeuronCalibTarget.DenseDefault
+        target.neuron_target.synapse_dac_bias = None
+        target.neuron_target.i_synin_gm = np.array([None, None])
+        nrn.calibration_from_params(target, neurons)
+        self.check_targets(target.neuron_target, nrn.params_dict(), coords)
 
         # All tensors of size, non-default
-        params = CalibratedParams(
-            leak=torch.full((size,), 110),
-            reset=torch.full((size,), 120),
-            threshold=torch.full((size,), 130),
-            tau_mem=torch.full((size,), 2e-5),
-            tau_syn=torch.full((2, size,), 3e-5),
-            i_synin_gm=torch.full((2,), 600),
-            e_coba_reversal=None,
-            e_coba_reference=None,
-            membrane_capacitance=torch.full((size,), 55),
-            refractory_time=torch.full((size,), 3e-6),
-            synapse_dac_bias=torch.tensor(700),
-            holdoff_time=torch.full((size,), 1))
-        target = NeuronCalibTarget.DenseDefault
-        target.synapse_dac_bias = None
-        target.i_synin_gm = np.array([None, None])
-        params.to_calix_targets(target, neurons)
-        self.check_targets(target, params, coords)
+        nrn = Population(25, experiment=Experiment())
+        nrn.leak=HXParameter(torch.full((size,), 110))
+        nrn.reset=HXParameter(torch.full((size,), 120))
+        nrn.threshold=HXParameter(torch.full((size,), 130))
+        nrn.tau_mem=HXParameter(torch.full((size,), 2e-5))
+        nrn.tau_syn=HXParameter(torch.full((2, size,), 3e-5))
+        nrn.i_synin_gm=HXParameter(torch.full((2,), 600))
+        nrn.e_coba_reversal=HXParameter(None)
+        nrn.e_coba_reference=HXParameter(None)
+        nrn.membrane_capacitance=HXParameter(torch.full((size,), 55))
+        nrn.refractory_time=HXParameter(torch.full((size,), 3e-6))
+        nrn.synapse_dac_bias=HXParameter(torch.tensor(700))
+        nrn.holdoff_time=HXParameter(torch.full((size,), 1))
 
-        target.i_synin_gm = np.array([400, None])
-        self.assertRaises(
-            AttributeError, partial(params.to_calix_targets, target, neurons))
+        target = SpikingCalibTarget()
+        target.neuron_target = NeuronCalibTarget.DenseDefault
+        target.neuron_target.synapse_dac_bias = None
+        target.neuron_target.i_synin_gm = np.array([None, None])
+        nrn.calibration_from_params(target, neurons)
+        self.check_targets(target.neuron_target, nrn.params_dict(), coords)
 
-        target.synapse_dac_bias = 600
+        target.neuron_target.i_synin_gm = np.array([400, None])
         self.assertRaises(
-            AttributeError, partial(params.to_calix_targets, target, neurons))
+            AttributeError,
+            partial(nrn.calibration_from_params, target, neurons))
+
+        target.neuron_target.synapse_dac_bias = 600
+        self.assertRaises(
+            AttributeError,
+            partial(nrn.calibration_from_params, target, neurons))
 
     def check_params(self, target, params, selector, coords):
         """ checks if params have expected shape and values """
@@ -207,19 +204,22 @@ class TestCalibratedParams(unittest.TestCase):
             self.assertTrue(
                 torch.equal(
                     torch.tensor([len(selector)]),
-                    torch.tensor(getattr(params, key).shape)))
+                    torch.tensor(params[key].hardware_value.shape)))
+            target_value = getattr(target, key)
+            if isinstance(target_value, pq.Quantity):
+                target_value = target_value.rescale(pq.s)
             if (not isinstance(getattr(target, key), np.ndarray)
                 or not getattr(target, key).shape):
                 self.assertTrue(
                     torch.all(
-                        torch.tensor(getattr(target, key))
-                        == getattr(params, key)))
-            elif getattr(target, key).shape == (halco.AtomicNeuronOnDLS.size,):
+                        torch.tensor(target_value)
+                        == params[key].hardware_value))
+            elif target_value.shape == (halco.AtomicNeuronOnDLS.size,):
                 self.assertTrue(
                     torch.equal(
                         torch.tensor(
-                            getattr(target, key)[selector]),
-                            getattr(params, key)))
+                            target_value[selector]),
+                            params[key].hardware_value))
 
         # tau_syn 
         if (not isinstance(target.tau_syn, np.ndarray)
@@ -227,66 +227,69 @@ class TestCalibratedParams(unittest.TestCase):
             self.assertTrue(
                 torch.equal(
                     torch.tensor([len(selector)]),
-                    torch.tensor(params.tau_syn.shape)))
+                    torch.tensor(params["tau_syn"].hardware_value.shape)))
             self.assertTrue(
-                torch.all(
-                    torch.tensor(target.tau_syn) == params.tau_syn))
+                torch.all(torch.tensor(target.tau_syn.rescale(pq.s))
+                          == params["tau_syn"].hardware_value))
         elif target.tau_syn.shape == (
             halco.SynapticInputOnNeuron.size, halco.AtomicNeuronOnDLS.size):
             self.assertTrue(
                 torch.equal(
                     torch.tensor(
                         [halco.SynapticInputOnNeuron.size, len(selector)]),
-                    torch.tensor(params.tau_syn.shape)))
+                    torch.tensor(params["tau_syn"].hardware_value.shape)))
             self.assertTrue(
                 torch.equal(
-                    torch.tensor(target.tau_syn[:, selector]), params.tau_syn))
+                    torch.tensor(target.tau_syn[:, selector].rescale(pq.s)),
+                    params["tau_syn"].hardware_value))
         elif target.tau_syn.shape == (halco.SynapticInputOnNeuron.size,):
             self.assertTrue(
                 torch.equal(
                     torch.tensor([len(selector)]),
-                    torch.tensor(params.tau_syn.shape)))
+                    torch.tensor(params["tau_syn"].hardware_value.shape)))
             self.assertTrue(
                 torch.equal(
-                    torch.tensor(target.tau_syn), params.tau_syn))
+                    torch.tensor(target.tau_syn.rescale(pq.s)),
+                    params["tau_syn"].hardware_value))
         elif target.tau_syn.shape == (halco.AtomicNeuronOnDLS.size,):
             self.assertTrue(
                 torch.equal(
                     torch.tensor([len(selector)]),
-                    torch.tensor(params.tau_syn.shape)))
+                    torch.tensor(params["tau_syn"].hardware_value.shape)))
             self.assertTrue(
                 torch.equal(
-                    torch.tensor(target.tau_syn)[selector], params.tau_syn))
+                    torch.tensor(target.tau_syn)[selector],
+                    params["tau_syn"].hardware_value))
 
         for key in ["e_coba_reversal", "e_coba_reference"]:
             if getattr(target, key) is None:
-                self.assertIsNone(getattr(params, key))
+                self.assertIsNone(params[key])
             else:
                 self.assertTrue(
                     torch.equal(
                         torch.tensor(
                             [halco.SynapticInputOnNeuron.size, len(selector)]),
-                        torch.tensor(getattr(params, key).shape)))
+                        torch.tensor(params[key].shape)))
                 if getattr(target, key).shape == (
                     halco.SynapticInputOnNeuron.size,):
                     if all(torch.isnan(getattr(target, key))):
-                        self.assertTrue(all(torch.isnan(getattr(params, key))))
+                        self.assertTrue(all(torch.isnan(params[key])))
                     else:
                         self.assertTrue(
                             torch.all(torch.tensor(getattr(target, key)))
-                            == getattr(params, key))
+                            == params[key])
                 else:
                     if torch.all(
                         torch.isnan(
                             torch.tensor(getattr(target, key))[:, coords])):
                         self.assertTrue(
-                            torch.all(torch.isnan(getattr(params, key))))
+                            torch.all(torch.isnan(params[key])))
                     else:
                         self.assertTrue(
                             torch.all(
                                 torch.tensor(
                                     getattr(target, key))[:, selector]
-                                    == getattr(params, key)))
+                                    == params[key]))
 
     def check_targets(self, target, params, coords):
         """ Checks if targets have expected shapes and values """
@@ -296,7 +299,7 @@ class TestCalibratedParams(unittest.TestCase):
                     "threshold",
                     "membrane_capacitance"]:
             this_target = getattr(target, key)
-            this_param = getattr(params, key)
+            this_param = params[key].hardware_value
             self.assertTrue(
                 torch.equal(
                     torch.tensor(this_target.shape),
@@ -308,7 +311,7 @@ class TestCalibratedParams(unittest.TestCase):
                     "refractory_time",
                     "holdoff_time"]:
             this_target = getattr(target, key)
-            this_param = getattr(params, key)
+            this_param = params[key].hardware_value
             self.assertTrue(
                 torch.equal(
                     torch.tensor(this_target.shape),
@@ -322,11 +325,11 @@ class TestCalibratedParams(unittest.TestCase):
             torch.equal(
                 torch.tensor(target.e_coba_reversal.shape),
                 torch.tensor([2, halco.AtomicNeuronOnDLS.size])))
-        if params.e_coba_reversal is not None:
+        if params["e_coba_reversal"].hardware_value is not None:
             self.assertTrue(
                 torch.all(
                     torch.tensor(target.e_coba_reversal[:, coords])
-                    == params.e_coba_reversal))
+                    == params["e_coba_reversal"].hardware_value))
         else:
             self.assertTrue(
                 torch.all(
@@ -340,11 +343,11 @@ class TestCalibratedParams(unittest.TestCase):
                 torch.tensor(
                     [halco.SynapticInputOnNeuron.size,
                      halco.AtomicNeuronOnDLS.size])))
-        if params.e_coba_reference is not None:
+        if params["e_coba_reference"].hardware_value is not None:
             self.assertTrue(
                 torch.all(
                     torch.tensor(target.e_coba_reference[:, coords])
-                    == params.e_coba_reference))
+                    == params["e_coba_reference"].hardware_value))
         else:
             self.assertTrue(
                 torch.all(torch.isnan(torch.tensor(
@@ -358,8 +361,8 @@ class TestCalibratedParams(unittest.TestCase):
                               halco.AtomicNeuronOnDLS.size])))
         self.assertTrue(
             torch.all(
-                torch.tensor(
-                    target.tau_syn[:, coords]) == params.tau_syn * 1e6))
+                torch.tensor(target.tau_syn[:, coords])
+                == params["tau_syn"].hardware_value * 1e6))
 
         # i_synin_gm
         self.assertTrue(
@@ -369,10 +372,12 @@ class TestCalibratedParams(unittest.TestCase):
                     torch.tensor([halco.SynapticInputOnNeuron.size])))
         self.assertTrue(
             torch.all(
-                torch.tensor(target.i_synin_gm) == params.i_synin_gm))
+                torch.tensor(target.i_synin_gm)
+                == params["i_synin_gm"].hardware_value))
 
         # synapse_dac_bias
-        self.assertEqual(target.synapse_dac_bias, params.synapse_dac_bias)
+        self.assertEqual(
+            target.synapse_dac_bias, params["synapse_dac_bias"].hardware_value)
 
 
 if __name__ == "__main__":

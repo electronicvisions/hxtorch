@@ -197,11 +197,11 @@ class ExecutionInstance(BaseExecutionInstance):
             target.neuron_target.i_synin_gm = np.array([None, None])
             # if any neuron module has params, use for calibration
             for module in self.modules:
-                if hasattr(module, "calibration_from_params") and hasattr(
-                        module, "params") and module.params is not None \
-                        and hasattr(module.params, "to_calix_targets"):
+                if hasattr(module, "calibration_from_params"):
                     self.log.INFO(f"Add calib params of '{module}'.")
-                    module.calibration_from_params(target)
+                    neurons = self.neuron_placement.id2logicalneuron(
+                        module.unit_ids)
+                    module.calibration_from_params(target, neurons)
                     execute_calib = True
 
         # otherwise use nightly calibration
@@ -226,7 +226,10 @@ class ExecutionInstance(BaseExecutionInstance):
                     "Try to infer params from loaded calibration file...")
                 for module in self.modules:
                     if hasattr(module, "params_from_calibration"):
-                        module.params_from_calibration(self.calib.target)
+                        neurons = self.neuron_placement.id2logicalneuron(
+                            module.unit_ids)
+                        module.params_from_calibration(
+                            self.calib.target, neurons)
         else:
             release_hardware()
             self.log.INFO("Calibrating...")

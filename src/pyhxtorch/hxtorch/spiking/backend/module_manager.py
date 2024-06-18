@@ -93,7 +93,8 @@ class ModuleManager(BaseModuleManager):
     # Types that are recognized as populations on hardware
     _default_input_type = spiking_module.InputNeuron
     # Types that are recognized as populations on hardware
-    _population_types = (spiking_module.Population,)
+    _population_types = (
+        spiking_module.Population, spiking_module.InputPopulation)
 
     def __init__(self):
         """

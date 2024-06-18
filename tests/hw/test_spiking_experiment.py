@@ -8,6 +8,7 @@ import hxtorch
 from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import HXModule, InputNeuron, Neuron, Synapse
 from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.utils import calib_helper
 from dlens_vx_v3.halco import DLSGlobal
 
 
@@ -89,6 +90,9 @@ class TestExperiment(unittest.TestCase):
 
         # HW mode
         experiment = Experiment(mock=False)
+        experiment.default_execution_instance.load_calib(
+            calib_path=calib_helper.nightly_calib_path())
+
         # Modules
         module1 = Synapse(10, 10, experiment)
         module2 = Neuron(10, experiment)
@@ -118,6 +122,9 @@ class TestExperiment(unittest.TestCase):
 
         # Deeper net
         experiment = Experiment(mock=False)
+        experiment.default_execution_instance.load_calib(
+            calib_path=calib_helper.nightly_calib_path())
+
         # Modules
         module1 = Synapse(10, 10, experiment)
         module2 = Neuron(10, experiment)
@@ -148,6 +155,9 @@ class TestExperiment(unittest.TestCase):
 
     def test_inter_batch_entry_wait(self):
         experiment = Experiment(mock=False)
+        experiment.default_execution_instance.load_calib(
+            calib_path=calib_helper.nightly_calib_path())
+
         module1 = Synapse(10, 10, experiment)
         module2 = Neuron(10, experiment)
         input_handle = NeuronHandle(spikes=torch.randn((2, 10, 10)))

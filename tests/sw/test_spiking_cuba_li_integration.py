@@ -9,7 +9,7 @@ import torch
 import matplotlib.pyplot as plt
 
 import hxtorch.snn as hxsnn
-from hxtorch.spiking.functional import CUBALIParams, cuba_li_integration
+from hxtorch.spiking.functional import cuba_li_integration
 
 
 class TestLIIntegration(unittest.TestCase):
@@ -23,7 +23,9 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration(self):
         """ Test CUBA LI integration """
         # Params
-        params = CUBALIParams(tau_mem=6e-6, tau_syn=6e-6)
+        tau_mem=6e-6
+        tau_syn=6e-6
+        leak=0
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -35,7 +37,8 @@ class TestLIIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         membrane_cadc, current, membrane_madc = cuba_li_integration(
-            graded_spikes, params, dt=1e-6)
+            graded_spikes, leak=leak, tau_syn=tau_syn, tau_mem=tau_mem,
+            dt=1e-6)
 
         # Shapes
         self.assertTrue(
@@ -66,7 +69,9 @@ class TestLIIntegration(unittest.TestCase):
     def test_cuba_li_integration_hw_data(self):
         """ Test CUBA LI integration with hardware data """
         # Params
-        params = CUBALIParams(tau_mem=6e-6, tau_syn=6e-6)
+        tau_mem=6e-6
+        tau_syn=6e-6
+        leak=0
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -78,7 +83,8 @@ class TestLIIntegration(unittest.TestCase):
         weight = torch.nn.parameter.Parameter(torch.randn(15, 5))
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         membrane_cadc, current, membrane_madc = cuba_li_integration(
-            graded_spikes, params, dt=1e-6)
+            graded_spikes, leak=leak, tau_syn=tau_syn, tau_mem=tau_mem,
+            dt=1e-6)
 
         # Add jitter
         membrane_cadc += torch.rand(membrane_cadc.shape) * 0.05
@@ -86,7 +92,8 @@ class TestLIIntegration(unittest.TestCase):
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         membrane_cadc_hw, current_hw, membrane_madc_hw = cuba_li_integration(
-            graded_spikes, params, hw_data=(membrane_cadc, membrane_cadc))
+            graded_spikes, leak=leak, tau_syn=tau_syn, tau_mem=tau_mem,
+            hw_data=(membrane_cadc, membrane_cadc), dt=1e-6)
 
         # Shapes
         self.assertTrue(

@@ -440,6 +440,8 @@ class TestNeuron(HWTestCase):
             - Ensure correct order.
         """
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(10, experiment=experiment)
@@ -483,6 +485,8 @@ class TestNeuron(HWTestCase):
             - Ensure correct neuron is recorded.
         """
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -513,6 +517,8 @@ class TestNeuron(HWTestCase):
                 torch.tensor([2, 3235, 10])))
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif_1 = hxsnn.Neuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -574,6 +580,8 @@ class TestReadoutNeuron(HWTestCase):
             - Ensure correct order.
         """
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         li = hxsnn.ReadoutNeuron(10, experiment=experiment)
 
@@ -609,6 +617,8 @@ class TestReadoutNeuron(HWTestCase):
             - Ensure correct neuron is recorded.
         """
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         li = hxsnn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -635,6 +645,8 @@ class TestReadoutNeuron(HWTestCase):
 
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         li_1 = hxsnn.ReadoutNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -749,6 +761,8 @@ class TestIAFNeuron(HWTestCase):
         """
         for use_dram in [False, True]:
             experiment = hxsnn.Experiment(dt=self.dt)
+            experiment.default_execution_instance.load_calib(  # avoid calibration
+                calib_path=calib_helper.nightly_calib_path())
             # Modules
             linear = hxsnn.Synapse(10, 10, experiment=experiment)
             lif = hxsnn.IAFNeuron(
@@ -802,6 +816,8 @@ class TestIAFNeuron(HWTestCase):
             - Ensure correct neuron is recorded.
         """
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -832,6 +848,8 @@ class TestIAFNeuron(HWTestCase):
 
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif_1 = hxsnn.IAFNeuron(
             10, enable_madc_recording=True, record_neuron_id=1,
@@ -954,6 +972,8 @@ class TestSparseSynapse(HWTestCase):
         """
         connections = (torch.randn(30, 44) < 0.1).float()
         experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.SparseSynapse(
             connections.to_sparse(), experiment=experiment)
         lif = hxsnn.ReadoutNeuron(44, experiment=experiment)

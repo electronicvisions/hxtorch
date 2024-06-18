@@ -8,7 +8,6 @@ from copy import deepcopy
 from hxtorch.spiking.execution_instance import (
     ExecutionInstance, ExecutionInstances)
 from hxtorch.spiking.utils import calib_helper
-from hxtorch.spiking.calibrated_params import CalibratedParams
 import hxtorch.spiking as hxsnn
 
 logger.default_config(level=logger.LogLevel.INFO)
@@ -137,10 +136,8 @@ class TestExecutionInstance(HXTestCase):
             calib_path=calib_helper.nightly_calix_native_path())
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        params = CalibratedParams(leak=0)
-        old_params = deepcopy(params)
-        nrn = hxsnn.Neuron(
-            10, exp, execution_instance=inst, params=params)
+        nrn = hxsnn.Neuron(10, exp, leak=0., execution_instance=inst)
+        old_params = deepcopy(nrn.params_dict())
         # Ensure modules get placed
         syn.register_hw_entity()
         nrn.register_hw_entity()
@@ -148,7 +145,8 @@ class TestExecutionInstance(HXTestCase):
         self.assertNotEqual(0, len(inst.modules))
         inst.calibrate()
         self.assertIsNotNone(inst.calib)
-        self.assertNotEqual(params.leak[0], old_params.leak)
+        self.assertNotEqual(
+            nrn.leak.hardware_value[0], old_params["leak"].hardware_value)
 
         # Non-native calix path
         # -> params should not be loadable and no calibration executed
@@ -156,10 +154,9 @@ class TestExecutionInstance(HXTestCase):
             calib_path=calib_helper.nightly_calib_path())
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        params = CalibratedParams(leak=0)
-        old_params = deepcopy(params)
-        nrn = hxsnn.Neuron(
-            10, exp, execution_instance=inst, params=params)
+        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
+        nrn.register_hw_entity()
+        old_params = deepcopy(nrn.params_dict())
         # Ensure modules get placed
         syn.register_hw_entity()
         nrn.register_hw_entity()
@@ -167,30 +164,16 @@ class TestExecutionInstance(HXTestCase):
         self.assertNotEqual(0, len(inst.modules))
         inst.calibrate()
         self.assertIsNone(inst.calib)
-        self.assertEqual(params, old_params)
+        for key, value in nrn.params_dict().items():
+            self.assertEqual(value.hardware_value,
+                             old_params[key].hardware_value)
 
-        # No calib path assigned
-        # -> try to load params from params objects if it has `to_calix_target`
-        # Does not have it -> load nightly at least
-        inst = ExecutionInstance()
-        exp = hxsnn.Experiment()
-        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
-        inst.modules = [syn, nrn]
-        self.assertNotEqual(0, len(inst.modules))
-
-        inst.calibrate()
-        self.assertIsNotNone(inst.chip)
-        self.assertEqual(
-            inst.calib_path, calib_helper.nightly_calix_native_path())
-        
-        # Now we assign CalibratedParams which has `to_calix_target`
+        # Now we assign default values
         # Should calibrate
         inst = ExecutionInstance()
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.Neuron(
-            10, exp, execution_instance=inst, params=CalibratedParams())
+        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
         # Ensure modules get placed
         syn.register_hw_entity()
         nrn.register_hw_entity()

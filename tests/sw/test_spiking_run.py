@@ -6,11 +6,13 @@ import torch
 from hxtorch.spiking import run, Experiment
 from hxtorch.spiking.modules import HXModule, Neuron, Synapse
 from hxtorch.spiking.handle import TensorHandle, NeuronHandle
+from hxtorch.spiking.parameter import ModelParameter
 
 
 class TestSNNRun(unittest.TestCase):
     """ Test snn run """
 
+    @unittest.skip("Neurons must be connected via synapses in new implementation")
     def test_run(self):
         """ Test run in abstract case """
         # Experiment
@@ -22,7 +24,6 @@ class TestSNNRun(unittest.TestCase):
         module3 = HXModule(experiment)
 
         # Input handle
-        print("Experiment: ", experiment, module1.experiment)
         input_handle = TensorHandle(torch.zeros(10, 1, 12))
         h1 = module1(input_handle)
         h2 = module2(h1)
@@ -48,11 +49,14 @@ class TestSNNRun(unittest.TestCase):
 
         # Modules
         l1 = Synapse(5, 10, experiment)
-        n1 = Neuron(10, experiment)
+        n1 = Neuron(10, experiment, tau_syn=ModelParameter(1),
+                    tau_mem=ModelParameter(1))
         l2 = Synapse(10, 20, experiment)
-        n2 = Neuron(20, experiment)
+        n2 = Neuron(20, experiment, tau_syn=ModelParameter(1),
+                    tau_mem=ModelParameter(1))
         l3 = Synapse(20, 1, experiment)
-        n3 = Neuron(1, experiment)
+        n3 = Neuron(1, experiment, tau_syn=ModelParameter(1),
+                    tau_mem=ModelParameter(1))
 
         # Input handle
         input_handle = NeuronHandle(torch.zeros(10, 1, 5))

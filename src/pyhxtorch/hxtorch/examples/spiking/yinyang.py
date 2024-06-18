@@ -80,10 +80,6 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--readout-scaling", type=float, default=10.0)
     parser.add_argument("--weight-scale", type=float, default=64.)
     parser.add_argument("--trace-scale", type=float, default=1. / 50.)
-    parser.add_argument(
-        "--calibration-path", type=str, metavar="<path>",
-        default=os.getenv("HXTORCH_CALIBRATION_PATH"),
-        help="path to custom calibration to use instead of latest nightly")
 
     parser.add_argument("--plot-path", type=str)
 
@@ -294,7 +290,6 @@ def main(args: argparse.Namespace) -> float:
             n_hidden=args.n_hidden,
             n_out=3,
             mock=args.mock,
-            calib_path=args.calibration_path,
             dt=args.dt,
             tau_mem=args.tau_mem,
             tau_syn=args.tau_syn,

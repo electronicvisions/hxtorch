@@ -7,6 +7,7 @@ from hxtorch.spiking.morphology import SingleCompartmentNeuron
 import torch
 import hxtorch
 from hxtorch import spiking as hxsnn
+from hxtorch.spiking.utils import calib_helper
 import pygrenade_vx.network as grenade
 import pygrenade_vx.common as grenade_common
 from dlens_vx_v3 import hal, halco
@@ -245,7 +246,10 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
     def test(self):
         experiment = hxsnn.Experiment(hw_routing_func=self.hw_routing_func)
+        experiment.default_execution_instance.load_calib(
+            calib_path=calib_helper.nightly_calib_path())
         self.execution_instance = experiment.default_execution_instance.ID
+        
         synapse_ih = hxsnn.Synapse(256, 246, experiment=experiment)
         synapse_ih.weight.data = (torch.rand(synapse_ih.weight.shape) - 0.5) * 126.
         neuron_h = hxsnn.Neuron(

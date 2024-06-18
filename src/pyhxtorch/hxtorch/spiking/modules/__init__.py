@@ -1,4 +1,5 @@
-from hxtorch.spiking.modules.types import Projection, Population
+from hxtorch.spiking.modules.types import (
+    Projection, Population, InputPopulation)
 from hxtorch.spiking.modules.hx_module import HXBaseExperimentModule, HXModule
 from hxtorch.spiking.modules.hx_module_wrapper import HXModuleWrapper
 from hxtorch.spiking.modules.neuron import Neuron, EventPropNeuron

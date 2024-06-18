@@ -12,7 +12,8 @@ import pygrenade_vx as grenade
 from _hxtorch_spiking import tensor_to_spike_times  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import NeuronHandle
-from hxtorch.spiking.modules.types import Population
+from hxtorch.spiking.modules.types import InputPopulation
+
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 log = logger.get("hxtorch.spiking.modules")
 
 
-class InputNeuron(Population):
+class InputNeuron(InputPopulation):
     """
     Spike source generating spikes at the times [ms] given in the spike_times
     array.

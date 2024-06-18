@@ -163,7 +163,7 @@ class TestModuleManager(unittest.TestCase):
         # Test neuron followed by dropout
         modules = ModuleManager()
         experiment = snn.Experiment(mock=True)
-        module1 = snn.Neuron(10, experiment, None)
+        module1 = snn.Neuron(10, experiment, tau_syn=None, tau_mem=None)
         module2 = snn.BatchDropout(10, 0.5, experiment)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()
@@ -359,7 +359,8 @@ class TestModuleManager(unittest.TestCase):
         modules = ModuleManager()
         module1 = snn.InputNeuron(12, experiment=experiment)
         module2 = snn.Synapse(10, 12, experiment=experiment)
-        module3 = snn.Neuron(10, experiment=experiment)
+        module3 = snn.Neuron(
+            10, experiment=experiment, tau_syn=None, tau_mem=None)
         module4 = snn.BatchDropout(10, 0.5, experiment=experiment)
         handle1 = snn.NeuronHandle()
         handle2 = snn.NeuronHandle()

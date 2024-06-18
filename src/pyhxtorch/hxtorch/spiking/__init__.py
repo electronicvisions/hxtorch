@@ -5,7 +5,9 @@ from hxtorch.spiking.modules import (
     ReadoutNeuron, IAFNeuron, Synapse, SparseSynapse, BatchDropout)
 from hxtorch.spiking.handle import (
     Handle, TensorHandle, SynapseHandle, NeuronHandle, ReadoutNeuronHandle)
-from hxtorch.spiking.calibrated_params import CalibratedParams
+from hxtorch.spiking.parameter import (
+    HXParameter, MixedHXModelParameter, HXTransformedModelParameter,
+    ModelParameter)
 from hxtorch.spiking.experiment import Experiment
 from hxtorch.spiking.execution_instance import ExecutionInstance
 from hxtorch.spiking.run import run

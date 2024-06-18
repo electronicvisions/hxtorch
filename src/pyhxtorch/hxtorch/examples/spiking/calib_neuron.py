@@ -15,19 +15,18 @@ def main():
     # Experiment
     experiment = hxsnn.Experiment(mock=False)
 
-    # Neuron- and calibration-parameters
-    lif_params = hxsnn.functional.CalibratedCUBALIFParams(
-        tau_mem=20e-6,
-        tau_syn=6e-6,
-        refractory_time=1e-6,
-        leak=80.,
-        reset=80.,
-        threshold=torch.tensor([80., 90., 100., 120.]))
-
     # Modules
     synapse = hxsnn.Synapse(
         in_features=2, out_features=4, experiment=experiment)
-    neuron = hxsnn.Neuron(size=4, experiment=experiment, params=lif_params)
+    neuron = hxsnn.Neuron(
+        size=4,
+        experiment=experiment,
+        tau_syn=hxsnn.HXParameter(6e-6),
+        tau_mem=hxsnn.HXParameter(20e-6),
+        refractory_time=hxsnn.HXParameter(1e-6),
+        leak=hxsnn.HXParameter(80.),
+        reset=hxsnn.HXParameter(80.),
+        threshold=hxsnn.HXParameter(torch.tensor([80., 90., 100., 120.])))
 
     # Weights
     torch.nn.init.normal_(synapse.weight, mean=63., std=0.)
@@ -48,10 +47,10 @@ def main():
     log.INFO("Spikes: ", output.spikes.to_sparse())
 
     # Calibration results are stored to be accessed by user
-    log.INFO("Neuron params: ", neuron.params)
+    log.INFO("Neuron params: ", neuron.params_dict())
 
     # Modify parameters, e.g. leak over threshold
-    neuron.params.leak = 1022
+    neuron.leak.hardware_value = 1022.
 
     # Zero input
     spikes[:, :, :] = 0.

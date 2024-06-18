@@ -1,32 +1,19 @@
 """
 Leaky-integrate neurons
 """
-from typing import NamedTuple, Optional, Union
-import dataclasses
+from typing import Optional
 import torch
 
-from hxtorch.spiking.calibrated_params import CalibratedParams
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 
-class CUBALIParams(NamedTuple):
-
-    """ Parameters for CUBA LI integration and backward path """
-
-    tau_mem: torch.Tensor
-    tau_syn: torch.Tensor
-    leak: torch.Tensor = torch.tensor(0.)
-
-
-@dataclasses.dataclass(unsafe_hash=True)
-class CalibratedCUBALIParams(CalibratedParams):
-    """ Parameters for CUBA LI integration and backward path """
-
-
 # Allow redefining builtin for PyTorch consistency
-# pylint: disable=redefined-builtin, invalid-name, too-many-locals
+# pylint: disable=redefined-builtin, invalid-name, too-many-locals, too-many-arguments
 def cuba_li_integration(input: torch.Tensor,
-                        params: Union[CalibratedCUBALIParams, CUBALIParams],
+                        *,
+                        leak: torch.Tensor,
+                        tau_syn: torch.Tensor,
+                        tau_mem: torch.Tensor,
                         hw_data: Optional[torch.Tensor] = None,
                         dt: float = 1e-6) -> torch.Tensor:
     """
@@ -38,16 +25,22 @@ def cuba_li_integration(input: torch.Tensor,
 
     Assumes i^0, v^0 = 0.
     :note: One `dt` synaptic delay between input and output
+
     :param input: Input graded spike tensor of shape (batch, time, neurons).
-    :param params: LIParams object holding neuron parameters.
+    :param leak: The leak voltage as torch.Tensor.
+    :param tau_syn: The synaptic time constant as torch.Tensor.
+    :param tau_mem: The membrane time constant as torch.Tensor.
+    :param hw_data: An optional tuple holding optional hardware observables in
+        the order (None, membrane_cadc, membrane_madc).
     :param dt: Integration step width
 
     :return: Returns the membrane trace in shape (batch, time, neurons).
     """
     dev = input.device
     T, bs, ps = input.shape
-    i, v = torch.tensor(0.).to(dev), \
-        torch.empty(bs, ps).fill_(params.leak).to(dev)
+    i = torch.tensor(0.).to(dev)
+    v = torch.empty(bs, ps, device=dev)
+    v[:, :] = leak
     membrane_cadc, membrane_madc = None, None
 
     if hw_data is not None:
@@ -58,12 +51,12 @@ def cuba_li_integration(input: torch.Tensor,
 
     for ts in range(T):
         # Membrane
-        dv = dt / params.tau_mem * (params.leak - v + i)
+        dv = dt / tau_mem * (leak - v + i)
         v = Unterjubel.apply(v + dv, membrane_cadc[ts]) \
             if membrane_cadc is not None else v + dv
 
         # Current
-        di = -dt / params.tau_syn * i
+        di = -dt / tau_syn * i
         i = i + di + input[ts]
 
         # Save data

@@ -70,6 +70,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
             self.mask.shape[1], self.mask.shape[0], experiment=experiment,
             execution_instance=execution_instance)
 
+        self.bias = None
         self.weight = Parameter(
             torch.empty(
                 (self.out_features, self.in_features), device=device,

@@ -1,5 +1,5 @@
 # pylint: disable=abstract-method, too-many-locals
-from typing import NamedTuple, Tuple, Optional
+from typing import Tuple, Optional
 import torch
 
 
@@ -12,11 +12,17 @@ class EventPropNeuronFunction(torch.autograd.Function):
     # Allow names z (spikes), v (membrane), i (current) and T (time dimension
     #   length).
     # Allow different argument params to use dt, tau_mem etc.
-    # pylint: disable=redefined-builtin, invalid-name, arguments-differ
+    # pylint: disable=redefined-builtin, invalid-name, arguments-differ, too-many-arguments
     @staticmethod
-    def forward(ctx, input: torch.Tensor, params: NamedTuple, dt: float,
-                hw_data: Optional[torch.Tensor] = None) \
-            -> Tuple[torch.Tensor]:
+    def forward(ctx,
+                input: torch.Tensor,
+                leak: torch.Tensor,
+                reset: torch.Tensor,
+                threshold: torch.Tensor,
+                tau_syn: torch.Tensor,
+                tau_mem: torch.Tensor,
+                hw_data: Optional[torch.Tensor] = None,
+                dt: float = 1e-6) -> Tuple[torch.Tensor]:
         r"""
         Forward function returning hardware data if given or otherwise
         integrating LIF neuron dynamics, therefore generating spikes at
@@ -26,7 +32,11 @@ class EventPropNeuronFunction(torch.autograd.Function):
             input[0] holds graded spikes, input[1] holds zero-tensor with same
             shape as placeholder to allow backpropagation of two (batch, time,
             neurons)-shaped tensors.
-        :param params: CUBALIFParams object holding neuron parameters.
+        :param leak: The leak voltage as torch.Tensor.
+        :param reset: The reset voltage as torch.Tensor.
+        :param threshold: The threshold voltage as torch.Tensor.
+        :param tau_syn: The synaptic time constant as torch.Tensor.
+        :param tau_mem: The membrane time constant as torch.Tensor.
         :param dt: Step width of integration.
         :param hw_data: Optionally available observables from hardware.
 
@@ -39,7 +49,8 @@ class EventPropNeuronFunction(torch.autograd.Function):
         # If hardware observables are given, return them directly.
         dev = input.device
         if hw_data is not None:
-            ctx.extra_kwargs = {"params": params, "dt": dt}
+            ctx.extra_kwargs = {
+                "params": (leak, reset, threshold, tau_syn, tau_mem), "dt": dt}
             hw_data = tuple(data.to(dev) if data is not None
                             else None for data in hw_data)
             ctx.save_for_backward(input, *hw_data)
@@ -47,25 +58,25 @@ class EventPropNeuronFunction(torch.autograd.Function):
 
         # Otherwise integrate the neuron dynamics in software
         T, bs, ps = input[0].shape
-        z, i, v = torch.zeros(bs, ps).to(dev), torch.zeros(bs, ps).to(dev), \
-            torch.empty(bs, ps).fill_(params.leak).to(dev)
+        z, i = torch.zeros(bs, ps).to(dev), torch.zeros(bs, ps).to(dev)
+        v = torch.empty(bs, ps, device=dev)
+        v[:, :] = leak
         spikes, current, membrane = [z], [i], [v]
         for ts in range(T - 1):
             # Current
-            i = i * (1 - dt / params.tau_syn) + input[0][ts]
+            i = i * (1 - dt / tau_syn) + input[0][ts]
             current.append(i)
 
             # Membrane
-            dv = dt / params.tau_mem * (params.leak - v + i)
+            dv = dt / tau_mem * (leak - v + i)
             v = dv + v
 
             # Spikes
-            spike = torch.gt(
-                v - params.threshold, 0.0).to((v - params.threshold).dtype)
+            spike = torch.gt(v - threshold, 0.0).to((v - threshold).dtype)
             z = spike
 
             # Reset
-            v = (1 - z.detach()) * v + z.detach() * params.reset
+            v = (1 - z.detach()) * v + z.detach() * reset
 
             # Save data
             spikes.append(z)
@@ -76,7 +87,8 @@ class EventPropNeuronFunction(torch.autograd.Function):
         current = torch.stack(current)
 
         ctx.save_for_backward(input, spikes, membrane, current)
-        ctx.extra_kwargs = {"params": params, "dt": dt}
+        ctx.extra_kwargs = {
+            "params": (leak, reset, threshold, tau_syn, tau_mem), "dt": dt}
 
         return spikes, membrane, current
 
@@ -101,7 +113,7 @@ class EventPropNeuronFunction(torch.autograd.Function):
         input_current = ctx.saved_tensors[0][0]
         T, _, _ = input_current.shape
         z = ctx.saved_tensors[1]
-        params = ctx.extra_kwargs["params"]
+        leak, reset, threshold, tau_syn, tau_mem = ctx.extra_kwargs["params"]
         dt = ctx.extra_kwargs["dt"]
 
         # adjoints
@@ -115,15 +127,15 @@ class EventPropNeuronFunction(torch.autograd.Function):
             # compute current
             for ts in range(T - 1):
                 i[ts + 1] = \
-                    i[ts] * (1 - dt / params.tau_syn) + input_current[ts]
+                    i[ts] * (1 - dt / tau_syn) + input_current[ts]
 
         for ts in range(T - 1, 0, -1):
-            dv_m = params.leak - params.threshold + i[ts - 1]
-            dv_p = params.leak - params.reset + i[ts - 1]
+            dv_m = leak - threshold + i[ts - 1]
+            dv_p = leak - reset + i[ts - 1]
 
             lambda_i[ts - 1] = lambda_i[ts] + dt / \
-                params.tau_syn * (lambda_v[ts] - lambda_i[ts])
-            lambda_v[ts - 1] = lambda_v[ts] * (1 - dt / params.tau_mem)
+                tau_syn * (lambda_v[ts] - lambda_i[ts])
+            lambda_v[ts - 1] = lambda_v[ts] * (1 - dt / tau_mem)
 
             output_term = z[ts] / dv_m * grad_spikes[ts]
             output_term[torch.isnan(output_term)] = 0.0
@@ -139,8 +151,8 @@ class EventPropNeuronFunction(torch.autograd.Function):
                 + output_term
             )
 
-        return torch.stack((lambda_i * params.tau_syn,
-                            lambda_v - lambda_i)), None, None, None
+        return (torch.stack((lambda_i * tau_syn, lambda_v - lambda_i)), None,
+                None, None, None, None, None, None)
 
 
 class EventPropSynapseFunction(torch.autograd.Function):
