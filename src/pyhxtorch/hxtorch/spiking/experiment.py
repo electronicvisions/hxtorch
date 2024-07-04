@@ -72,6 +72,7 @@ class Experiment(BaseExperiment):
 
         # Recording
         self.cadc_recording = {}
+        self.cadc_recording_placement_in_dram = {}
         self.has_madc_recording = False
 
         # Grenade stuff
@@ -112,6 +113,7 @@ class Experiment(BaseExperiment):
         self.modules.clear()
 
         self.cadc_recording = {}
+        self.cadc_recording_placement_in_dram = {}
         self.has_madc_recording = False
 
         self.grenade_network = None
@@ -200,6 +202,8 @@ class Experiment(BaseExperiment):
         if self.cadc_recording:
             for execution_instance, neurons in self.cadc_recording.items():
                 cadc_recording = grenade.network.CADCRecording()
+                if self.cadc_recording_placement_in_dram[execution_instance]:
+                    cadc_recording.placement_on_dram = True
                 cadc_recording.neurons = [v[0] for _, v in neurons.items()]
                 network_builder.add(cadc_recording, execution_instance)
 

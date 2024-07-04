@@ -47,6 +47,7 @@ class IAFNeuron(Neuron):
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
+                 enable_cadc_recording_placement_in_dram: bool = False,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
                  placement_constraint: Optional[
@@ -80,6 +81,8 @@ class IAFNeuron(Neuron):
         :param enable_cadc_recording: Enables or disables parallel sampling of
             the populations membrane trace via the CADC. A maximum sample rate
             of 1.7us is possible.
+        :param enable_cadc_recording_placement_in_dram: Whether to place CADC
+            recording data into DRAM (period ~6us) or SRAM (period ~2us).
         :param enable_madc_recording: Enables or disables the recording of the
             neurons `record_neuron_id` membrane trace via the MADC. Only a
             single neuron can be recorded. This membrane traces is samples with
@@ -128,7 +131,8 @@ class IAFNeuron(Neuron):
         super().__init__(
             size, experiment, func, execution_instance,
             params, enable_spike_recording,
-            enable_cadc_recording, enable_madc_recording, record_neuron_id,
+            enable_cadc_recording, enable_cadc_recording_placement_in_dram,
+            enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
             shift_cadc_to_first, interpolation_mode, neuron_structure)
 

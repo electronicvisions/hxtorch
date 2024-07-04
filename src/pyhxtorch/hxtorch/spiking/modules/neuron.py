@@ -50,6 +50,7 @@ class Neuron(Population):
                  params: Optional[NamedTuple] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
+                 enable_cadc_recording_placement_in_dram: bool = False,
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
                  placement_constraint: Optional[
@@ -82,6 +83,8 @@ class Neuron(Population):
         :param enable_cadc_recording: Enables or disables parallel sampling of
             the populations membrane trace via the CADC. A maximum sample rate
             of 1.7us is possible.
+        :param enable_cadc_recording_placement_in_dram: Whether to place CADC
+            recording data into DRAM (period ~6us) or SRAM (period ~2us).
         :param enable_madc_recording: Enables or disables the recording of the
             neurons `record_neuron_id` membrane trace via the MADC. Only a
             single neuron can be recorded. This membrane traces is samples with
@@ -142,6 +145,8 @@ class Neuron(Population):
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
+        self._enable_cadc_rec_in_dram = \
+            enable_cadc_recording_placement_in_dram
         self._enable_madc_recording = enable_madc_recording
         self._record_neuron_id = record_neuron_id
         self._placement_constraint = placement_constraint
@@ -375,6 +380,22 @@ class Neuron(Population):
                     self.execution_instance].update({
                         unit_id: self.experiment.cadc_recording[
                             self.execution_instance][unit_id] + [neuron]})
+            if self.execution_instance not \
+                    in self.experiment.cadc_recording_placement_in_dram:
+                self.experiment.cadc_recording_placement_in_dram.update({
+                    self.execution_instance: None})
+            if self.experiment.cadc_recording_placement_in_dram[
+                    self.execution_instance]:
+                if self.experiment.cadc_recording_placement_in_dram[
+                        self.execution_instance] \
+                    is not None and not self.experiment\
+                        .cadc_recording_placement_in_dram[
+                            self.execution_instance]:
+                    raise RuntimeError("Requesting CADC DRAM and SRAM "
+                                       "recording simultaneously.")
+            self.experiment.cadc_recording_placement_in_dram[
+                self.execution_instance] = \
+                self._enable_cadc_rec_in_dram
 
         # No recording registered -> return
         if not self._enable_madc_recording:

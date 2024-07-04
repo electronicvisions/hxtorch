@@ -861,50 +861,54 @@ class TestIAFNeuron(HWTestCase):
         TODO:
             - Ensure correct order.
         """
-        experiment = hxsnn.Experiment(
-            dt=self.dt,
-            calib_path=calib_helper.nightly_calib_path())
-        # Modules
-        linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.IAFNeuron(
-            10, enable_cadc_recording=True, experiment=experiment)
-        # Weights
-        linear.weight.data.fill_(0.)
-        for idx in range(10):
-            linear.weight.data[idx, idx] = 50
-        # Inputs
-        spikes = torch.zeros(110, 10, 10)
-        for idx in range(10):
-            spikes[idx * 10 + 5, :, idx] = 1
-        # Forward
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
-        s_handle = lif(i_handle)
+        for use_dram in [False, True]:
+            experiment = hxsnn.Experiment(
+                dt=self.dt,
+                calib_path=calib_helper.nightly_calib_path())
+            # Modules
+            linear = hxsnn.Synapse(10, 10, experiment=experiment)
+            lif = hxsnn.IAFNeuron(
+                10, enable_cadc_recording=True,
+                enable_cadc_recording_placement_in_dram=use_dram,
+                experiment=experiment)
+            # Weights
+            linear.weight.data.fill_(0.)
+            for idx in range(10):
+                linear.weight.data[idx, idx] = 50
+            # Inputs
+            spikes = torch.zeros(110, 10, 10)
+            for idx in range(10):
+                spikes[idx * 10 + 5, :, idx] = 1
+            # Forward
+            i_handle = linear(hxsnn.NeuronHandle(spikes))
+            s_handle = lif(i_handle)
 
-        self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.v_cadc is None)
-        self.assertTrue(s_handle.v_madc is None)
+            self.assertTrue(s_handle.spikes is None)
+            self.assertTrue(s_handle.v_cadc is None)
+            self.assertTrue(s_handle.v_madc is None)
 
-        # Execute
-        hxsnn.run(experiment, 110)
-        # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110 + 1, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.v_cadc.shape),
-                torch.tensor([110 + 1, 10, 10])))
-        self.assertTrue(s_handle.v_madc is None)
+            # Execute
+            hxsnn.run(experiment, 110)
+            # Assert types and shapes
+            self.assertIsInstance(s_handle.spikes, torch.Tensor)
+            self.assertTrue(
+                torch.equal(
+                    torch.tensor(s_handle.spikes.shape),
+                    torch.tensor([110 + 1, 10, 10])))
+            self.assertTrue(
+                torch.equal(
+                    torch.tensor(s_handle.v_cadc.shape),
+                    torch.tensor([110 + 1, 10, 10])))
+            self.assertTrue(s_handle.v_madc is None)
 
-        # plot
-        self.plot_path.mkdir(exist_ok=True)
-        trace = s_handle.v_cadc[:, 0].detach().numpy()
-        fig, ax = plt.subplots()
-        ax.plot(
-            np.arange(0., trace.shape[0]), trace)
-        plt.savefig(self.plot_path.joinpath("./cuba_iaf_dynamics.png"))
+            # plot
+            self.plot_path.mkdir(exist_ok=True)
+            trace = s_handle.v_cadc[:, 0].detach().numpy()
+            fig, ax = plt.subplots()
+            ax.plot(
+                np.arange(0., trace.shape[0]), trace)
+            plt.savefig(self.plot_path.joinpath(
+                f"./cuba_iaf_dynamics_{int(use_dram)}.png"))
 
     def test_record_madc(self):
         """
