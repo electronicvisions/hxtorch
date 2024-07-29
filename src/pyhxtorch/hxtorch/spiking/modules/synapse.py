@@ -144,8 +144,8 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                 pre_size), self.execution_instance)
 
             # [nrn on pop pre, compartment on nrn pre,
-            #  nrn on pop post, compartment on nrn post]
-            connections = np.array([[i, 0, i, 0] for i in range(pre_size)])
+            #  nrn on pop post, compartment on nrn post, delay in clock cycles]
+            connections = np.array([[i, 0, i, 0, 0] for i in range(pre_size)])
             iei_projection = grenade.network.InterExecutionInstanceProjection()
             iei_projection.from_numpy(connections, pre, iei_pre)
 
