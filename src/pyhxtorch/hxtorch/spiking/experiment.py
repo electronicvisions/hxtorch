@@ -147,21 +147,6 @@ class Experiment(BaseExperiment):
                 + "nightly calib.")
             self._chip = self.load_calib(calib_helper.nightly_calib_path())
 
-        # NOTE: Reserved for inserted config.
-        builder = sta.PlaybackProgramBuilder()
-        pre_realtime = sta.PlaybackProgramBuilder()
-        inside_realtime_begin = sta.PlaybackProgramBuilder()
-        inside_realtime = sta.AbsoluteTimePlaybackProgramBuilder()
-        inside_realtime_end = sta.PlaybackProgramBuilder()
-        post_realtime = sta.PlaybackProgramBuilder()
-
-        self.injection_pre_static_config = builder
-        self.injection_pre_realtime = pre_realtime
-        self.injection_inside_realtime_begin = inside_realtime_begin
-        self.injection_inside_realtime = inside_realtime
-        self.injection_inside_realtime_end = inside_realtime_end
-        self.injection_post_realtime = post_realtime
-
         self._static_config_prepared = True
         log.TRACE("Preparation of static config done.")
 
@@ -292,25 +277,34 @@ class Experiment(BaseExperiment):
 
     def _generate_hooks(self) \
             -> grenade.signal_flow.ExecutionInstanceHooks:
-        """ Handle injected config (not supported yet) """
-        assert self.injection_pre_static_config is not None
-        assert self.injection_pre_realtime is not None
-        assert self.injection_inside_realtime_begin is not None
-        assert self.injection_inside_realtime is not None
-        assert self.injection_inside_realtime_end is not None
-        assert self.injection_post_realtime is not None
+        """ Handle injected config """
         pre_static_config = sta.PlaybackProgramBuilder()
         pre_realtime = sta.PlaybackProgramBuilder()
         inside_realtime_begin = sta.PlaybackProgramBuilder()
         inside_realtime = sta.AbsoluteTimePlaybackProgramBuilder()
         inside_realtime_end = sta.PlaybackProgramBuilder()
         post_realtime = sta.PlaybackProgramBuilder()
-        pre_static_config.copy_back(self.injection_pre_static_config)
-        pre_realtime.copy_back(self.injection_pre_realtime)
-        inside_realtime_begin.copy_back(self.injection_inside_realtime_begin)
-        inside_realtime.copy(self.injection_inside_realtime)
-        inside_realtime_end.copy_back(self.injection_inside_realtime_end)
-        post_realtime.copy_back(self.injection_post_realtime)
+
+        if self.injection_pre_static_config is not None:
+            pre_static_config.copy_back(self.injection_pre_static_config)
+
+        if self.injection_pre_realtime is not None:
+            pre_realtime.copy_back(self.injection_pre_realtime)
+
+        if self.injection_inside_realtime_begin is not None:
+            inside_realtime_begin.copy_back(
+                self.injection_inside_realtime_begin
+            )
+
+        if self.injection_inside_realtime is not None:
+            inside_realtime.copy(self.injection_inside_realtime)
+
+        if self.injection_inside_realtime_end is not None:
+            inside_realtime_end.copy_back(self.injection_inside_realtime_end)
+
+        if self.injection_post_realtime is not None:
+            post_realtime.copy_back(self.injection_post_realtime)
+
         return grenade.signal_flow.ExecutionInstanceHooks(
             pre_static_config, pre_realtime, inside_realtime_begin,
             inside_realtime, inside_realtime_end, post_realtime)
