@@ -27,6 +27,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(
 	        pybind11::init<spike_type, int, int>(), pybind11::arg("data"),
 	        pybind11::arg("batch_size"), pybind11::arg("population_size"))
+	    .def_property_readonly("batch_size", &hxtorch::spiking::SpikeHandle::batch_size)
+	    .def_property_readonly("population_size", &hxtorch::spiking::SpikeHandle::population_size)
 	    .def("get_data", &hxtorch::spiking::SpikeHandle::get_data)
 	    .def(
 	        "set_data",
@@ -40,6 +42,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(
 	        pybind11::init<cadc_type, int, int>(), pybind11::arg("data"),
 	        pybind11::arg("batch_size"), pybind11::arg("population_size"))
+	    .def_property_readonly("batch_size", &hxtorch::spiking::CADCHandle::batch_size)
+	    .def_property_readonly("population_size", &hxtorch::spiking::CADCHandle::population_size)
 	    .def("get_data", &hxtorch::spiking::CADCHandle::get_data)
 	    .def(
 	        "set_data",
@@ -61,6 +65,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	    .def(
 	        pybind11::init<madc_type, int, int>(), pybind11::arg("data"),
 	        pybind11::arg("batch_size"), pybind11::arg("population_size"))
+	    .def_property_readonly("batch_size", &hxtorch::spiking::MADCHandle::batch_size)
+	    .def_property_readonly("population_size", &hxtorch::spiking::MADCHandle::population_size)
 	    .def("get_data", &hxtorch::spiking::MADCHandle::get_data)
 	    .def(
 	        "set_data",
