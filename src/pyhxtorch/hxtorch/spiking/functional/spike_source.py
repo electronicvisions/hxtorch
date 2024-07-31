@@ -1,18 +1,27 @@
 """
 Define different input spike sources
 """
+from typing import Optional
 import torch
+
+from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 
 # Allow redefining builtin for PyTorch consistency
-def input_neuron(input: torch.Tensor) -> torch.Tensor:  # pylint: disable=redefined-builtin
+# pylint: disable=redefined-builtin
+def input_neuron(input: torch.Tensor,
+                 hw_data: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
-    Identity input neuron. This forwards only the input tensor and is only used
-    for consistency in `HXInputNeuron` which can also takes autograd
-    functions. This enables gradient flow though input layers.
+    Input neuron, forwards spikes without modification in non-hardware runs
+    but injects loop-back recorded spikes if available.
 
     :param input: Input spike tensor.
+    :param hw_data: Loop-back spikes, if available.
 
     :returns: Returns the input spike tensor.
     """
-    return input
+    if hw_data is None:
+        return input
+
+    time_steps, _, _ = input.shape
+    return Unterjubel.apply(input, hw_data.to(input.device)[:time_steps, ...])

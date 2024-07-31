@@ -63,7 +63,9 @@ class InputNeuron(Population):
         """
         # create grenade population
         gpopulation = grenade.network.ExternalSourcePopulation(
-            [grenade.network.ExternalSourcePopulation.Neuron(False)]
+            [grenade.network.ExternalSourcePopulation.Neuron(
+                self.experiment.input_loopback
+            )]
             * self.size)
         # add to builder
         self.descriptor = builder.add(
@@ -96,4 +98,7 @@ class InputNeuron(Population):
 
     def post_process(self, hw_data: HardwareObservables, runtime: float) \
             -> Tuple[Optional[torch.Tensor], ...]:
-        """ Placeholder for future looped-back data postprocessing """
+        if self.experiment.input_loopback:
+            return hw_data.spikes.to_dense(runtime, self.experiment.dt).float()
+
+        return None

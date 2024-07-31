@@ -55,13 +55,17 @@ class Experiment(BaseExperiment):
     def __init__(
             self, mock: bool = False, dt: float = 1e-6,
             calib_path: Optional[Union[Path, str]] = None,
-            hw_routing_func=grenade.network.routing.PortfolioRouter()) -> None:
+            hw_routing_func=grenade.network.routing.PortfolioRouter(),
+            input_loopback: bool = False) -> None:
         """
         Instantiate a new experiment, representing an experiment on hardware
         and/or in software.
 
         :param mock: Indicating whether module is executed on hardware (False)
             or simulated in software (True).
+        :param input_loopback: Record input spikes and use them for gradient
+            calculation. Depending on link congestion, this may or may not be
+            beneficial for the calculated gradient's precision.
         """
         super().__init__(ModuleManager(), mock=mock, dt=dt)
 
@@ -74,6 +78,7 @@ class Experiment(BaseExperiment):
         self.cadc_recording = {}
         self.cadc_recording_placement_in_dram = {}
         self.has_madc_recording = False
+        self.input_loopback = input_loopback
 
         # Grenade stuff
         self.grenade_network = None
