@@ -27,15 +27,15 @@ class TestMultiSingleChip(unittest.TestCase):
         experiment = Experiment(mock=False)
 
         # Modules
-        module1 = Synapse(10, 10, experiment,
+        module1 = Synapse(10, 5, experiment,
                           execution_instance=ExecutionInstanceID(0))
-        module2 = Neuron(10, experiment,
+        module2 = Neuron(5, experiment,
                          execution_instance=ExecutionInstanceID(0),
                          enable_cadc_recording=True)
         # switch execution instance
-        module3 = Synapse(10, 10, experiment,
+        module3 = Synapse(5, 15, experiment,
                           execution_instance=ExecutionInstanceID(1))
-        module4 = Neuron(10, experiment,
+        module4 = Neuron(15, experiment,
                          execution_instance=ExecutionInstanceID(1),
                          enable_cadc_recording=True)
 

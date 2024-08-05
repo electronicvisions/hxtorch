@@ -138,7 +138,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
         # add inter-execution-instance projection and source if necessary
         if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
-            pre_size = weight_transformed.shape[0]
+            pre_size = weight_transformed.shape[1]
 
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
                 pre_size), self.execution_instance)
