@@ -166,16 +166,17 @@ std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
 				    static_cast<int64_t>(atomic_neuron_on_network.neuron_on_population)});
 			}
 		}
+	}
 
-		// handle
-		for (auto const& [descriptor, s] : samples) {
-			ret[descriptor] = CADCHandle(
-			    std::move(s), static_cast<int>(data.batch_size()),
-			    static_cast<int>(
-			        std::get<Population>(execution_instance.populations.at(
-			                                 descriptor.toPopulationOnExecutionInstance()))
-			            .neurons.size()));
-		}
+	// handle
+	for (auto const& [descriptor, s] : samples) {
+		ret[descriptor] = CADCHandle(
+		    std::move(s), static_cast<int>(data.batch_size()),
+		    static_cast<int>(std::get<Population>(
+		                         network_graph.get_network()
+		                             ->execution_instances.at(descriptor.toExecutionInstanceID())
+		                             .populations.at(descriptor.toPopulationOnExecutionInstance()))
+		                         .neurons.size()));
 	}
 
 	return ret;
