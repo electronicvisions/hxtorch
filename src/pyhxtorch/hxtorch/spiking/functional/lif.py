@@ -70,7 +70,7 @@ def cuba_lif_step(
     z = Unterjubel.apply(spike, z_hw) if z_hw is not None else spike
 
     # Reset
-    if z_hw is None:
+    if v_hw is None:
         v = (1 - z.detach()) * v + z.detach() * params.reset
 
     return z, v, i
