@@ -2,7 +2,7 @@
 Implementing BatchDropout Module
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Type, Optional, Union
+from typing import TYPE_CHECKING, Type, Optional
 import pylogging as logger
 
 import torch
@@ -29,9 +29,7 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
     output_type: Type = NeuronHandle
 
     # pylint: disable=too-many-arguments
-    def __init__(self, size: int, dropout: float, experiment: Experiment,
-                 func: Union[
-                     Callable, torch.autograd.Function] = F.batch_dropout) \
+    def __init__(self, size: int, dropout: float, experiment: Experiment) \
             -> None:
         """
         Initialize BatchDropout layer. This layer disables spiking neurons in
@@ -43,12 +41,8 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
         :param dropout: Probability that a neuron in the precessing layer gets
             disabled during training.
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation. Defaults to
-            `batch_dropout`.
         """
-        super().__init__(experiment=experiment, func=func)
+        super().__init__(experiment=experiment)
 
         self.size = size
         self._dropout = dropout
@@ -71,8 +65,6 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
             self.mask = (torch.rand(self.size) > self._dropout)
         else:
             self.mask = torch.ones(self.size).bool()
-        self.extra_args = (self._mask,)
-
         return self._mask
 
     @property
@@ -94,3 +86,7 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
         # Mark dirty
         self._changed_since_last_run = True
         self._mask = mask
+
+    # pylint: disable=redefined-builtin, arguments-differ
+    def forward_func(self, input: NeuronHandle) -> NeuronHandle:
+        return NeuronHandle(F.batch_dropout(input.spikes, self.mask))

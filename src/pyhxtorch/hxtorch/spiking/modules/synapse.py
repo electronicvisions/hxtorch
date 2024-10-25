@@ -2,7 +2,7 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Tuple, Type, Union, Optional
+from typing import TYPE_CHECKING, Callable, Tuple, Type, Optional
 import math
 import numpy as np
 import pylogging as logger
@@ -15,7 +15,7 @@ import pygrenade_vx as grenade
 import _hxtorch_core
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.transforms import weight_transforms
-from hxtorch.spiking.handle import SynapseHandle
+from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
 from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
@@ -38,7 +38,6 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     # pylint: disable=too-many-arguments
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function] = F.linear,
                  execution_instance: Optional[ExecutionInstance] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
@@ -51,15 +50,11 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param device: Device to execute on. Only considered in mock-mode.
         :param dtype: Data type of weight tensor.
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation. Required function args:
-                [input (torch.Tensor), weight (torch.Tensor)]
         :param execution_instance: Execution instance to place to.
         """
         super().__init__(
             in_features, out_features, experiment=experiment,
-            execution_instance=execution_instance, func=func)
+            execution_instance=execution_instance)
 
         self.weight = Parameter(
             torch.empty(
@@ -68,7 +63,6 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self.weight_transform = transform
 
         self.reset_parameters()
-        self.extra_args = (self.weight,)
 
     @property
     def changed_since_last_run(self) -> bool:
@@ -174,3 +168,14 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         log.TRACE(f"Added projection '{self}' to grenade graph.")
 
         return self.descriptor
+
+    # pylint: disable=redefined-builtin, arguments-differ
+    def forward_func(self, input: NeuronHandle) -> SynapseHandle:
+        return SynapseHandle(F.linear(input.spikes, self.weight, None))
+
+
+class EventPropSynapse(Synapse):
+    # pylint: disable=redefined-builtin, arguments-differ
+    def forward_func(self, input: NeuronHandle) -> SynapseHandle:
+        return SynapseHandle(
+            F.EventPropSynapseFunction.apply(input.spikes, self.weight))

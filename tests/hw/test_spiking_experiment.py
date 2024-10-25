@@ -90,8 +90,8 @@ class TestExperiment(unittest.TestCase):
         # HW mode
         experiment = Experiment(mock=False)
         # Modules
-        module1 = Synapse(10, 10, experiment, lambda x: x)
-        module2 = Neuron(10, experiment, lambda x: x)
+        module1 = Synapse(10, 10, experiment)
+        module2 = Neuron(10, experiment)
         # Forward
         input_handle = NeuronHandle(spikes=torch.randn((10, 10, 10)))
         handle1 = module1(input_handle)
@@ -119,12 +119,12 @@ class TestExperiment(unittest.TestCase):
         # Deeper net
         experiment = Experiment(mock=False)
         # Modules
-        module1 = Synapse(10, 10, experiment, lambda x: x)
-        module2 = Neuron(10, experiment, lambda x: x)
-        module3 = Synapse(10, 10, experiment, lambda x: x)
-        module4 = Neuron(10, experiment, lambda x: x)
-        module5 = Synapse(10, 10, experiment, lambda x: x)
-        module6 = Neuron(10, experiment, lambda x: x)
+        module1 = Synapse(10, 10, experiment)
+        module2 = Neuron(10, experiment)
+        module3 = Synapse(10, 10, experiment)
+        module4 = Neuron(10, experiment)
+        module5 = Synapse(10, 10, experiment)
+        module6 = Neuron(10, experiment)
 
         # Forward
         input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
@@ -148,8 +148,8 @@ class TestExperiment(unittest.TestCase):
 
     def test_inter_batch_entry_wait(self):
         experiment = Experiment(mock=False)
-        module1 = Synapse(10, 10, experiment, lambda x: x)
-        module2 = Neuron(10, experiment, lambda x: x)
+        module1 = Synapse(10, 10, experiment)
+        module2 = Neuron(10, experiment)
         input_handle = NeuronHandle(spikes=torch.randn((2, 10, 10)))
         handle1 = module1(input_handle)
         module2(handle1)

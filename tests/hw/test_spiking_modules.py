@@ -56,41 +56,27 @@ class TestHXModules(unittest.TestCase):
         """
         Test prepare_function strips func properly
         """
-        # Test with normal function with params and hw_results
-        def func(input, params=None, hw_data=None):
-            return input, params, hw_data
+        # Test with hw_results
+        class HXModule(hxsnn.HXModule):
+            def forward_func(self, input, hw_data=None):
+                return input, hw_data
 
         experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, func)
-        module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.func
-        output, params, result_ret = new_func((None,), "hw_result")
-        self.assertEqual(params, "new_params")
-        self.assertEqual(result_ret, "hw_result")
-        self.assertIsNone(output)
-
-        # Test with normal function with params and without hw_results
-        def func(input, params=None):
-            return input, params
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, func)
-        module.extra_kwargs.update({"params": "new_params"})
-        new_func = module.func
-        output, params_ret = new_func((None,))
-        self.assertEqual(params_ret, "new_params")
-        self.assertIsNone(output)
-
-        # Test with normal function without params and with hw_results
-        def func(input, hw_data=None):
-            return input, hw_data
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, func)
-        module.extra_kwargs.update({"params": "new_params"})
+        module = HXModule(experiment)
         new_func = module.func
         output, result_ret = new_func((None,), "hw_result")
         self.assertEqual(result_ret, "hw_result")
+        self.assertIsNone(output)
+
+        # Test with without hw_results
+        class HXModule(hxsnn.HXModule):
+            def forward_func(selfw, input):
+                return input
+
+        experiment = hxsnn.Experiment(mock=True)
+        module = HXModule(experiment)
+        new_func = module.func
+        output = new_func((None,), "hw_result")
         self.assertIsNone(output)
 
     def test_exec_forward(self):
@@ -98,36 +84,15 @@ class TestHXModules(unittest.TestCase):
         Test execute_forward work as expected.
         """
         # Normal function
-        def func(input, one, two, hw_data=None):
-            self.assertEqual(hw_data, "hw_result")
-            self.assertEqual((one, two), (1, 2))
-            return input
+        class Module(hxsnn.HXModule):
+            def forward_func(selfw, input, hw_data=None):
+                self.assertEqual(selfw.param, "param1")
+                self.assertEqual(hw_data, "hw_result")
+                return input
 
         experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, func)
-        module.extra_kwargs.update({"params": "new_params"})
-        module.extra_args = (1, 2)
-
-        # Input and output handles
-        input_handle = hxsnn.NeuronHandle(torch.zeros(10, 5))
-        output_handle = hxsnn.NeuronHandle()
-
-        # Execute
-        module.exec_forward(
-            input_handle, output_handle, {module.descriptor: "hw_result"})
-        self.assertTrue(torch.equal(input_handle.spikes, output_handle.spikes))
-
-        # Normal function
-        def func(input, one, two, params=None, hw_data=None):
-            self.assertEqual(params, "new_params")
-            self.assertEqual(hw_data, "hw_result")
-            self.assertEqual((one, two), (1, 2))
-            return input
-
-        experiment = hxsnn.Experiment(mock=True)
-        module = hxsnn.HXModule(experiment, func)
-        module.extra_kwargs.update({"params": "new_params"})
-        module.extra_args = (1, 2)
+        module = Module(experiment)
+        module.param = "param1"
 
         # Input and output handles
         input_handle = hxsnn.NeuronHandle(torch.zeros(10, 5))
@@ -151,50 +116,26 @@ class TestHXModuleWrapper(unittest.TestCase):
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(10, experiment=experiment)
 
-        wrapper = hxsnn.HXModuleWrapper(experiment, [linear, lif], None)
+        wrapper = hxsnn.HXModuleWrapper(experiment, linear=linear, lif=lif)
 
         # Should contain
-        self.assertTrue(wrapper.contains([linear]))
-        self.assertTrue(wrapper.contains([lif]))
+        self.assertTrue(wrapper.contains(linear))
+        self.assertTrue(wrapper.contains(lif))
         self.assertTrue(wrapper.contains([linear, lif]))
 
         # Should not contain
         lif2 = hxsnn.Neuron(10, experiment=experiment)
+        self.assertFalse(wrapper.contains(lif2))
         self.assertFalse(wrapper.contains([lif2]))
         self.assertFalse(wrapper.contains([linear, lif2]))
 
     def test_print(self):
         """ Test module printing """
-        def func(input, params=None, hw_data=None):
-            return input, params, hw_data
         experiment = hxsnn.Experiment()
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         lif = hxsnn.Neuron(10, experiment=experiment)
-        module = hxsnn.HXModuleWrapper(experiment, [linear, lif], func)
+        module = hxsnn.HXModuleWrapper(experiment, linear=linear, lif=lif)
         logger.INFO(module)
-
-    def test_extra_args(self):
-        """ test extra args """
-        # Experiment
-        experiment = hxsnn.Experiment()
-
-        # Modules
-        linear1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif1 = hxsnn.Neuron(10, experiment=experiment)
-        linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif2 = hxsnn.Neuron(10, experiment=experiment)
-
-        wrapper = hxsnn.HXModuleWrapper(
-            experiment, [linear1, lif1, linear2, lif2], None)
-
-        self.assertEqual(
-            wrapper.extra_args, linear1.extra_args + linear2.extra_args)
-        self.assertEqual(
-            wrapper.extra_kwargs,
-            {"params1": lif1.extra_kwargs["params"],
-             "dt1": lif1.extra_kwargs["dt"],
-             "params2": lif2.extra_kwargs["params"],
-             "dt2": lif2.extra_kwargs["dt"]})
 
     def test_update(self):
         """ Test update modules """
@@ -204,27 +145,23 @@ class TestHXModuleWrapper(unittest.TestCase):
         # Modules
         linear1 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif1 = hxsnn.Neuron(10, experiment=experiment)
-        wrapper = hxsnn.HXModuleWrapper(
-            experiment, [linear1, lif1], None)
-        self.assertEqual([linear1, lif1], wrapper.modules)
+        wrapper = hxsnn.HXModuleWrapper(experiment, linear1=linear1, lif1=lif1)
+        self.assertEqual({"linear1": linear1, "lif1": lif1}, wrapper.modules)
 
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif2 = hxsnn.Neuron(10, experiment=experiment)
-        wrapper.update([linear2, lif2])
-        self.assertEqual([linear2, lif2], wrapper.modules)
+        wrapper.update(linear1=linear2, lif1=lif2)
+        self.assertEqual({"linear1": linear2, "lif1": lif2}, wrapper.modules)
 
     def test_exec_forward(self):
         """ """
         in_tensor = torch.zeros(10, 5, 10)
 
-        def func(input, arg1, arg2, arg3):
-            self.assertTrue(torch.equal(input.spikes, in_tensor))
-            self.assertEqual(arg1, "w1")
-            self.assertEqual(arg2, "b1")
-            self.assertEqual(arg3, "w2")
-            return (
-                hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
-                hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
+        class Wrapper(hxsnn.HXModuleWrapper):
+            def forward_func(selfw, input, hw_data=None):
+                return (
+                    hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
+                    hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()
@@ -234,14 +171,11 @@ class TestHXModuleWrapper(unittest.TestCase):
         lif1 = hxsnn.Neuron(10, experiment=experiment)
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif2 = hxsnn.Neuron(10, experiment=experiment)
-        # Change args before function assignment
-        linear1.extra_args = ("w1", "b1")
-        linear2.extra_args = ("w2",)
 
-        wrapper = hxsnn.HXModuleWrapper(
-            experiment, [linear1, lif1, linear2, lif2], func)
+        wrapper = Wrapper(
+            experiment, linear1=linear1, lif1=lif1, linear2=linear2, lif2=lif2)
 
-        # Fake grenade descriptiors
+        # Fake grenade descriptors
         linear1.descriptor = "linear1"
         lif1.descriptor = "lif1"
         linear2.descriptor = "linear2"
@@ -267,16 +201,13 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertEqual(nrn2.spikes, "nrn2")
 
         # Test with HW data
-        def func(input, arg1, arg2, arg3, hw_data):
-            self.assertTrue(torch.equal(input.spikes, in_tensor))
-            self.assertEqual(arg1, "w1")
-            self.assertEqual(arg2, "b1")
-            self.assertEqual(arg3, "w2")
-            self.assertEqual(
-                hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
-            return (
-                hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
-                hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
+        class HWDataWrapper(hxsnn.HXModuleWrapper):
+            def forward_func(selfw, input, hw_data=None):
+                self.assertEqual(
+                    hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
+                return (
+                    hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
+                    hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()
@@ -286,14 +217,11 @@ class TestHXModuleWrapper(unittest.TestCase):
         lif1 = hxsnn.Neuron(10, experiment=experiment)
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
         lif2 = hxsnn.Neuron(10, experiment=experiment)
-        # Change args before function assignment
-        linear1.extra_args = ("w1", "b1")
-        linear2.extra_args = ("w2",)
 
-        wrapper = hxsnn.HXModuleWrapper(
-            experiment, [linear1, lif1, linear2, lif2], func)
+        wrapper = HWDataWrapper(
+            experiment, linear1=linear1, lif1=lif1, linear2=linear2, lif2=lif2)
 
-        # Fake greande descriptiors
+        # Fake grenade descriptors
         linear1.descriptor = "linear1"
         lif1.descriptor = "lif1"
         linear2.descriptor = "linear2"
@@ -322,6 +250,42 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertEqual(nrn1.membrane_cadc, "v1")
         self.assertEqual(syn2.graded_spikes, "syn2")
         self.assertEqual(nrn2.spikes, "nrn2")
+
+    def test_forward(self):
+        in_tensor = torch.zeros(10, 5, 10)
+
+        # Test with HW data
+        class Wrapper(hxsnn.HXModuleWrapper):
+            def forward_func(selfw, input, hw_data=None):
+                self.assertEqual((("syn",), ("nrn",)))
+                return (
+                    hxsnn.SynapseHandle("syn"), hxsnn.NeuronHandle("z1", "v1"))
+
+        # Experiment
+        experiment = hxsnn.Experiment()
+
+        # Modules
+        linear = hxsnn.Synapse(10, 10, experiment=experiment)
+        lif = hxsnn.Neuron(10, experiment=experiment)
+        wrapper = Wrapper(experiment, linear=linear, lif=lif)
+
+        # forward
+        inputs = hxsnn.NeuronHandle()
+        syn = linear(inputs)
+        nrn = lif(syn)
+        wrapper()
+
+        self.assertEqual(len(experiment.modules.wrappers), 1)
+        self.assertEqual(experiment.modules.wrappers, {wrapper: "w_0"})
+
+        # forward again
+        inputs = hxsnn.NeuronHandle(in_tensor)
+        syn = linear(inputs)
+        nrn = lif(syn)
+        wrapper()
+
+        self.assertEqual(len(experiment.modules.wrappers), 1)
+        self.assertEqual(experiment.modules.wrappers, {wrapper: "w_0"})
 
 
 class HWTestCase(unittest.TestCase):
@@ -1041,10 +1005,12 @@ class TestBatchDropout(HWTestCase):
             torch.equal(mask1, torch.ones_like(mask1)))
 
         # Test correct mask is passed to func
-        def bd(x, mask):
-            return x, mask
+        class BatchDropout(hxsnn.BatchDropout):
+            def forward_func(self, x):
+                return x, self.mask
+
         experiment = hxsnn.Experiment()
-        dropout = hxsnn.BatchDropout(33, 0.5, experiment, bd)
+        dropout = BatchDropout(33, 0.5, experiment)
         dropout.set_mask()
         input = torch.zeros(10, 10, 33)
         output, mask1 = dropout.func((input,))

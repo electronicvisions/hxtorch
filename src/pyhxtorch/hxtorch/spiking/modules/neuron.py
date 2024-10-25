@@ -3,8 +3,7 @@ Implementing SNN modules
 """
 from __future__ import annotations
 from typing import (
-    TYPE_CHECKING, Callable, Dict, Tuple, Type, Optional, NamedTuple, Union,
-    List)
+    TYPE_CHECKING, Dict, Tuple, Type, Optional, NamedTuple, Union, List)
 import pylogging as logger
 import numpy as np
 
@@ -15,7 +14,7 @@ import pygrenade_vx as grenade
 
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
 from hxtorch.spiking.modules.types import Population
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
@@ -44,8 +43,6 @@ class Neuron(Population):
 
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function]
-                 = F.cuba_lif_integration,
                  execution_instance: Optional[ExecutionInstance] = None,
                  params: Union[NamedTuple, F.CUBALIFParams]
                  = F.CUBALIFParams(1. / 10e-6, 1. / 10e-6),
@@ -71,9 +68,6 @@ class Neuron(Population):
 
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation. Defaults to `LIF`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
@@ -132,7 +126,7 @@ class Neuron(Population):
             single neuron circuit is used.
         """
         super().__init__(size, experiment=experiment,
-                         execution_instance=execution_instance, func=func)
+                         execution_instance=execution_instance)
 
         if placement_constraint is not None \
                 and len(placement_constraint) != size:
@@ -142,7 +136,6 @@ class Neuron(Population):
                 + "module.")
 
         self.params = params
-        self.extra_kwargs.update({"params": params, "dt": experiment.dt})
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
@@ -460,3 +453,20 @@ class Neuron(Population):
             madc = hw_data.madc.to_raw()
 
         return spikes, cadc, madc
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> NeuronHandle:
+        return NeuronHandle(*F.cuba_lif_integration(
+            input.graded_spikes, self.params, hw_data=hw_data,
+            dt=self.experiment.dt))
+
+
+class EventPropNeuron(Neuron):
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> NeuronHandle:
+        return NeuronHandle(*F.EventPropNeuronFunction.apply(
+            input.graded_spikes, self.params, self.experiment.dt, hw_data))

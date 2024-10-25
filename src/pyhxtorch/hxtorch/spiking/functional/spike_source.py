@@ -10,7 +10,7 @@ from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin
-def input_neuron(input: NeuronHandle,
+def input_neuron(input: torch.Tensor,
                  hw_data: Optional[torch.Tensor] = None) -> NeuronHandle:
     """
     Input neuron, forwards spikes without modification in non-hardware runs
@@ -25,6 +25,4 @@ def input_neuron(input: NeuronHandle,
         return input
 
     time_steps, _, _ = input.shape
-    return NeuronHandle(
-        spikes=Unterjubel.apply(
-            input, hw_data.to(input.device)[:time_steps, ...]))
+    return Unterjubel.apply(input, hw_data.to(input.device)[:time_steps, ...])

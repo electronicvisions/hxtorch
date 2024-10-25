@@ -402,7 +402,7 @@ class ModuleManager(BaseModuleManager):
         # Keep original graph
         for wrapper, w_id in self.wrappers.items():
             self.graph.add_node(w_id, is_wrapper=True)
-            ids = [self.nodes[m] for m in wrapper.modules]
+            ids = [self.nodes[m] for m in wrapper.modules.values()]
 
             targets, sources = [], []
             for n_id in ids:

@@ -6,7 +6,6 @@ import dataclasses
 import torch
 
 from hxtorch.spiking.calibrated_params import CalibratedParams
-from hxtorch.spiking.handle import ReadoutNeuronHandle, SynapseHandle
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 
@@ -26,7 +25,7 @@ class CalibratedCUBALIParams(CalibratedParams):
 
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals
-def cuba_li_integration(input: SynapseHandle,
+def cuba_li_integration(input: torch.Tensor,
                         params: Union[CalibratedCUBALIParams, CUBALIParams],
                         hw_data: Optional[torch.Tensor] = None,
                         dt: float = 1e-6) -> torch.Tensor:
@@ -39,14 +38,12 @@ def cuba_li_integration(input: SynapseHandle,
 
     Assumes i^0, v^0 = 0.
     :note: One `dt` synaptic delay between input and output
-    :param input: Input graded spike handle with tensors of shape (batch, time,
-         neurons).
+    :param input: Input graded spike tensor of shape (batch, time, neurons).
     :param params: LIParams object holding neuron parameters.
     :param dt: Integration step width
 
     :return: Returns the membrane trace in shape (batch, time, neurons).
     """
-    input = input.graded_spikes
     dev = input.device
     T, bs, ps = input.shape
     i, v = torch.tensor(0.).to(dev), \
@@ -73,6 +70,4 @@ def cuba_li_integration(input: SynapseHandle,
         membrane.append(v)
         current.append(i)
 
-    return ReadoutNeuronHandle(
-        membrane_cadc=torch.stack(membrane), current=torch.stack(current),
-        membrane_madc=membrane_madc)
+    return torch.stack(membrane), torch.stack(current), membrane_madc

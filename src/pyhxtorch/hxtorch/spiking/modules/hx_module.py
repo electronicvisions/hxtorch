@@ -5,7 +5,6 @@ from __future__ import annotations
 import abc
 from typing import (
     TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, Optional, Union)
-from functools import partial
 import inspect
 import pylogging as logger
 
@@ -49,17 +48,6 @@ class HXBaseExperimentModule(torch.nn.Module):
         :return: Returns the function assigned to the module.
         """
 
-    @func.setter
-    @abc.abstractmethod
-    def func(self, function: Callable) -> None:
-        """
-        Assign a PyTorch-differentiable function to the module. This function
-        is used in mock-mode or gets the hardware observables injected in non-
-        mock-mode if the function provides a keyword argument 'hw_data'.
-
-        :param function: The function describing the modules
-        """
-
     # Allow redefinition of builtin in order to be consistent with PyTorch
     # pylint: disable=redefined-builtin
     def forward(self, *input: Union[Tuple[TensorHandle], TensorHandle]) \
@@ -98,58 +86,26 @@ class HXBaseExperimentModule(torch.nn.Module):
 
 class HXTorchFunctionMixin:
 
-    def __init__(self, func: Union[Callable, torch.autograd.Function]) -> None:
-        """
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation.
-            TODO: Inform about func args
-        """
+    def __init__(self) -> None:
         self._func_is_wrapped = False
         self._func_name = None
-
-        self.func = func
-        self.extra_args: Tuple[Any] = tuple()
-        self.extra_kwargs: Dict[str, Any] = {}
 
     def extra_repr(self) -> str:
         """ Add additional information """
         return f"function={self._func_name}, {super().extra_repr()}"
 
+    # pylint: disable=redefined-builtin, unused-argument
+    def forward_func(self, input: TensorHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> TensorHandle:
+        return input
+
     @property
     def func(self) -> Callable:
         if not self._func_is_wrapped:
-            self._func = self._prepare_func(self._func)
+            self._func = self._prepare_func(self.forward_func)
             self._func_is_wrapped = True
         return self._func
-
-    @func.setter
-    def func(self, function: Optional[Callable]) -> None:
-        """
-        Assign a PyTorch-differentiable function to the module. This function
-        is used in mock-mode or gets the hardware observables injected in non-
-        mock-mode if the function provides a keyword argument 'hw_data'.
-
-        :param function: The function describing the modules
-        """
-        self._func = function
-        try:
-            self._func_name = function.__name__ if function is not None \
-                else None
-        except AttributeError:
-            self._func_name = "unknown"
-        self._func_is_wrapped = False
-
-    def _wrap_func(self, function):
-        # Signature for wrapping
-        signature = inspect.signature(function)
-
-        # Wrap all kwargs except for hw_data
-        for key, value in self.extra_kwargs.items():
-            if key in signature.parameters and key != "hw_data":
-                function = partial(function, **{key: value})
-
-        return function, signature
 
     # pylint: disable=function-redefined, unused-argument
     def _prepare_func(self, function) -> Callable:
@@ -163,17 +119,24 @@ class HXTorchFunctionMixin:
         :returns: Returns the member 'func(input, *args, **kwargs,
             hw_data=...)' stripped down to 'func(input, hw_data=...).
         """
+        # Infer function name
+        try:
+            self._func_name = function.__name__ if function is not None \
+                else None
+        except AttributeError:
+            self._func_name = "unknown"
+
         # In case of HW or SW execution but no autograd func we inject hw data
         # as keyword argument
-        local_func, signature = self._wrap_func(function)
+        signature = inspect.signature(function)
 
         # Wrap HW data on demand
         if "hw_data" in signature.parameters:
             def func(inputs, hw_data=None):
-                return local_func(*inputs, *self.extra_args, hw_data=hw_data)
+                return function(*inputs, hw_data=hw_data)
         else:
             def func(inputs, hw_data=None):
-                return local_func(*inputs, *self.extra_args)
+                return function(*inputs)
 
         return func
 
@@ -271,19 +234,14 @@ class HXModule(
     """
 
     def __init__(self, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function],
                  execution_instance: Optional[ExecutionInstance] = None) \
             -> None:
         """
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation.
-            TODO: Inform about func args
         :param execution_instance: Execution instance to place to.
         """
         HXBaseExperimentModule.__init__(self, experiment)
-        HXTorchFunctionMixin.__init__(self, func)
+        HXTorchFunctionMixin.__init__(self)
         HXHardwareEntityMixin.__init__(self, execution_instance)
 
 
@@ -293,14 +251,9 @@ class HXFunctionalModule(HXTorchFunctionMixin, HXBaseExperimentModule):
     not have a direct hardware representation
     """
 
-    def __init__(self, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function]) -> None:
+    def __init__(self, experiment: Experiment) -> None:
         """
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation.
-            TODO: Inform about func args
         """
         HXBaseExperimentModule.__init__(self, experiment)
-        HXTorchFunctionMixin.__init__(self, func)
+        HXTorchFunctionMixin.__init__(self)

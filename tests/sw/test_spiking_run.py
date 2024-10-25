@@ -4,8 +4,8 @@ Test snn run function
 import unittest
 import torch
 from hxtorch.spiking import run, Experiment
-from hxtorch.spiking.modules import Neuron, Synapse
-from hxtorch.spiking.handle import SynapseHandle, NeuronHandle
+from hxtorch.spiking.modules import HXModule, Neuron, Synapse
+from hxtorch.spiking.handle import TensorHandle, NeuronHandle
 
 
 class TestSNNRun(unittest.TestCase):
@@ -17,50 +17,45 @@ class TestSNNRun(unittest.TestCase):
         experiment = Experiment(mock=True)
 
         # Modules
-        module1 = Neuron(10, experiment, lambda x: x)
-        module2 = Neuron(10, experiment, lambda x: x)
-        module3 = Neuron(10, experiment, lambda x: x)
+        module1 = HXModule(experiment)
+        module2 = HXModule(experiment)
+        module3 = HXModule(experiment)
 
         # Input handle
-        input_handle = NeuronHandle(torch.zeros(10, 12))
+        print("Experiment: ", experiment, module1.experiment)
+        input_handle = TensorHandle(torch.zeros(10, 1, 12))
         h1 = module1(input_handle)
         h2 = module2(h1)
         h3 = module3(h2)
 
         # Handles should be empty
-        self.assertIsNone(h1.spikes)
-        self.assertIsNone(h2.spikes)
-        self.assertIsNone(h3.spikes)
+        self.assertIsNone(h1.tensor)
+        self.assertIsNone(h2.tensor)
+        self.assertIsNone(h3.tensor)
 
         # Run
         run(experiment, None)
 
         # Handles should be full now
-        self.assertTrue(torch.equal(h1.spikes, torch.zeros(10, 12)))
-        self.assertTrue(torch.equal(h2.spikes, torch.zeros(10, 12)))
-        self.assertTrue(torch.equal(h3.spikes, torch.zeros(10, 12)))
+        self.assertTrue(torch.equal(h1.tensor, torch.zeros(10, 1, 12)))
+        self.assertTrue(torch.equal(h2.tensor, torch.zeros(10, 1, 12)))
+        self.assertTrue(torch.equal(h3.tensor, torch.zeros(10, 1, 12)))
 
     def test_run_realistic(self):
         """ Test run in realistic scenario """
         # Experiment
         experiment = Experiment(mock=True)
 
-        def syn_func(x: NeuronHandle, w):
-            return SynapseHandle(x.spikes)
-
-        def nrn_func(x: SynapseHandle):
-            return NeuronHandle(x.graded_spikes)
-
         # Modules
-        l1 = Synapse(5, 10, experiment, syn_func)
-        n1 = Neuron(10, experiment, nrn_func)
-        l2 = Synapse(10, 20, experiment, syn_func)
-        n2 = Neuron(20, experiment, nrn_func)
-        l3 = Synapse(20, 1, experiment, syn_func)
-        n3 = Neuron(1, experiment, nrn_func)
+        l1 = Synapse(5, 10, experiment)
+        n1 = Neuron(10, experiment)
+        l2 = Synapse(10, 20, experiment)
+        n2 = Neuron(20, experiment)
+        l3 = Synapse(20, 1, experiment)
+        n3 = Neuron(1, experiment)
 
         # Input handle
-        input_handle = NeuronHandle(torch.zeros(10, 5))
+        input_handle = NeuronHandle(torch.zeros(10, 1, 5))
         h1 = l1(input_handle)
         h2 = n1(h1)
         h3 = l2(h2)
@@ -80,12 +75,12 @@ class TestSNNRun(unittest.TestCase):
         run(experiment, None)
 
         # Handles should be full now
-        self.assertTrue(torch.equal(h1.graded_spikes, torch.zeros(10, 5)))
-        self.assertTrue(torch.equal(h2.spikes, torch.zeros(10, 5)))
-        self.assertTrue(torch.equal(h3.graded_spikes, torch.zeros(10, 5)))
-        self.assertTrue(torch.equal(h4.spikes, torch.zeros(10, 5)))
-        self.assertTrue(torch.equal(h5.graded_spikes, torch.zeros(10, 5)))
-        self.assertTrue(torch.equal(h6.spikes, torch.zeros(10, 5)))
+        self.assertTrue(torch.equal(h1.graded_spikes, torch.zeros(10, 1, 10)))
+        self.assertTrue(torch.equal(h2.spikes, torch.zeros(10, 1, 10)))
+        self.assertTrue(torch.equal(h3.graded_spikes, torch.zeros(10, 1, 20)))
+        self.assertTrue(torch.equal(h4.spikes, torch.zeros(10, 1, 20)))
+        self.assertTrue(torch.equal(h5.graded_spikes, torch.zeros(10, 1, 1)))
+        self.assertTrue(torch.equal(h6.spikes, torch.zeros(10, 1, 1)))
 
 
 if __name__ == "__main__":

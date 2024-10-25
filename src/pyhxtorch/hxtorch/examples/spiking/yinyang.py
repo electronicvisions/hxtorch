@@ -15,8 +15,8 @@ import torch
 from torch.utils.data import DataLoader
 
 import hxtorch
-from hxtorch.spiking.functional import (
-    linear, cuba_lif_integration, eventprop_synapse, eventprop_neuron)
+from hxtorch.spiking.modules import (
+    Synapse, EventPropSynapse, Neuron, EventPropNeuron)
 from hxtorch.examples.spiking.yinyang_model import SNN, Model
 from hxtorch.spiking.datasets.yinyang import YinYangDataset
 from hxtorch.spiking.transforms.decode import MaxOverTime
@@ -270,11 +270,11 @@ def main(args: argparse.Namespace) -> float:
     hidden_cadc_recording = True
     log.INFO(f"{args.gradient_estimator}")
     if args.gradient_estimator == "surrogate_gradient":
-        synapse_func = linear
-        neuron_func = cuba_lif_integration
+        synapse_type = Synapse
+        neuron_type = Neuron
     elif args.gradient_estimator == "eventprop":
-        synapse_func = eventprop_synapse
-        neuron_func = eventprop_neuron
+        synapse_type = EventPropSynapse
+        neuron_type = EventPropNeuron
         hidden_cadc_recording = False
     else:
         log.ERROR("Please specify one of the currently supported gradient "
@@ -308,8 +308,8 @@ def main(args: argparse.Namespace) -> float:
             weight_scale=args.weight_scale,
             trace_scale=args.trace_scale,
             input_repetitions=1 if args.mock else 5,
-            synapse_func=synapse_func,
-            neuron_func=neuron_func,
+            synapse_type=synapse_type,
+            neuron_type=neuron_type,
             hidden_cadc_recording=hidden_cadc_recording,
             device=dev),
         MaxOverTime(),

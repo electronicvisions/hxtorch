@@ -2,10 +2,8 @@
 from typing import NamedTuple, Tuple, Optional
 import torch
 
-from hxtorch.spiking.handle import SynapseHandle, NeuronHandle
 
-
-class EventPropNeuron(torch.autograd.Function):
+class EventPropNeuronFunction(torch.autograd.Function):
     """
     Define gradient using adjoint code (EventProp) from norse
     """
@@ -145,7 +143,7 @@ class EventPropNeuron(torch.autograd.Function):
                             lambda_v - lambda_i)), None, None, None
 
 
-class EventPropSynapse(torch.autograd.Function):
+class EventPropSynapseFunction(torch.autograd.Function):
     """
     Synapse function for proper gradient transport when using EventPropNeuron.
     """
@@ -200,16 +198,3 @@ class EventPropSynapse(torch.autograd.Function):
                     input.transpose(0, 1))
 
         return grad_input, grad_weight, None
-
-
-# pylint: disable=redefined-builtin
-def eventprop_synapse(input: NeuronHandle, weight: torch.Tensor,
-                      _: torch.Tensor = None) -> torch.Tensor:
-    return SynapseHandle(EventPropSynapse.apply(input.spikes, weight))
-
-
-# pylint: disable=redefined-builtin, invalid-name
-def eventprop_neuron(input: SynapseHandle, params: NamedTuple, dt: float,
-                     hw_data: Optional[torch.Tensor]) -> Tuple[torch.Tensor]:
-    return NeuronHandle(
-        *EventPropNeuron.apply(input.graded_spikes, params, dt, hw_data))

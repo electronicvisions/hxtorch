@@ -2,7 +2,7 @@
 Defining basic types to create hw-executable instances
 """
 # pylint: disable=no-member, invalid-name
-from typing import Callable, Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 from abc import ABC, abstractmethod
 import itertools
 import pylogging as logger
@@ -317,36 +317,28 @@ class Experiment(BaseExperiment):
         """
         return self.modules.add_node(module, input_handles, output_handle)
 
-    def wrap_modules(self, modules: List[spiking_modules.HXModule],
-                     func: Optional[Callable] = None):
+    def connect_wrapper(self, wrapper: spiking_modules.HXModuleWrapper):
         """
-        Wrap a number of given modules into a wrapper to which a single
-        function `func` can be assigned. In the PyTorch graph the individual
-        module functions are then bypassed and only the wrapper's function is
-        considered when building the PyTorch graph. This functionality is of
+        Add a wrapper module to the experiment and assign it to the experiments
+        modules. In the PyTorch graph the individual module functions assigned
+        to the wrapper are then bypassed and only the wrapper's `forward_func`
+        is considered when building the PyTorch graph. This functionality is of
         interest if several modules have cyclic dependencies and need to be
         represented by one PyTorch function.
-        :param modules: A list of module to be wrapped. These modules need to
-            constitute a closed sub-graph with no modules in between that are
-            not element of the wrapper.
-        :func: The function to assign to the wrapper.
-            TODO: Add info about this functions signature.
+
+        :param wrapper: The HWModuleWrapper to add to the experiment.
         """
         # Unique modules
-        assert len(set(modules)) == len(modules)
+        assert len(set(wrapper.modules)) == len(wrapper.modules)
 
         # Check if modules are already existent
-        for wrapper in self.modules.wrappers:
-            if set(wrapper.modules) == set(modules):
-                wrapper.update(modules, func)
-                return
-            if wrapper.contains(modules):
+        for other_wrapper in self.modules.wrappers:
+            if other_wrapper.contains(wrapper.modules):
                 raise ValueError(
-                    "You tried to register a group of modules that are "
-                    + "partially registered in another group")
+                    "You tried to register a wrapper with a group of modules "
+                    + "that are partially registered in another group.")
 
-        self.modules.add_wrapper(
-            spiking_modules.HXModuleWrapper(self, modules, func))
+        self.modules.add_wrapper(wrapper)
 
     def register_population(self, module: spiking_modules.HXModule) -> None:
         """

@@ -42,8 +42,7 @@ class InputNeuron(Population):
         :param execution_instance: Execution instance to place to.
         """
         super().__init__(
-            size, experiment, func=F.input_neuron,
-            execution_instance=execution_instance)
+            size, experiment, execution_instance=execution_instance)
 
     def register_hw_entity(self) -> None:
         """
@@ -98,3 +97,10 @@ class InputNeuron(Population):
             return hw_data.spikes.to_dense(runtime, self.experiment.dt).float()
 
         return None
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: NeuronHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> NeuronHandle:
+        return NeuronHandle(
+            spikes=F.input_neuron(input.spikes, hw_data=hw_data))

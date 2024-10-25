@@ -4,7 +4,7 @@ Implementing integrate-and-fire neuron module
 # pylint: disable=too-many-lines
 from __future__ import annotations
 from typing import (
-    TYPE_CHECKING, Callable, Dict, Type, Optional, List, NamedTuple, Union)
+    TYPE_CHECKING, Tuple, Dict, Type, Optional, List, NamedTuple, Union)
 import pylogging as logger
 
 import torch
@@ -12,7 +12,7 @@ import torch
 from dlens_vx_v3 import lola, hal, halco
 
 import hxtorch.spiking.functional as F
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
 from hxtorch.spiking.morphology import Morphology
 from hxtorch.spiking.modules.neuron import Neuron
 if TYPE_CHECKING:
@@ -40,8 +40,6 @@ class IAFNeuron(Neuron):
 
     # pylint: disable=too-many-arguments, too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function]
-                 = F.cuba_iaf_integration,
                  execution_instance: Optional[ExecutionInstance] = None,
                  params: Union[NamedTuple, F.CUBAIAFParams]
                  = F.CUBAIAFParams(1. / 10e-6, 1. / 10e-6),
@@ -68,9 +66,6 @@ class IAFNeuron(Neuron):
 
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation. Defaults to `LIF`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
@@ -129,12 +124,12 @@ class IAFNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, experiment, func, execution_instance,
-            params, enable_spike_recording,
-            enable_cadc_recording, enable_cadc_recording_placement_in_dram,
-            enable_madc_recording, record_neuron_id,
-            placement_constraint, trace_offset, trace_scale, cadc_time_shift,
-            shift_cadc_to_first, interpolation_mode, neuron_structure)
+            size, experiment, execution_instance, params,
+            enable_spike_recording, enable_cadc_recording,
+            enable_cadc_recording_placement_in_dram, enable_madc_recording,
+            record_neuron_id, placement_constraint, trace_offset, trace_scale,
+            cadc_time_shift, shift_cadc_to_first, interpolation_mode,
+            neuron_structure)
 
     def configure_hw_entity(self, neuron_id: int,
                             neuron_block: lola.NeuronBlock,
@@ -152,3 +147,12 @@ class IAFNeuron(Neuron):
             neuron_id, neuron_block, coord)
         self._neuron_structure.disable_leak(coord, neuron_block)
         return neuron_block
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> NeuronHandle:
+        return NeuronHandle(
+            *F.cuba_iaf_integration(
+                input.graded_spikes, self.params, hw_data=hw_data,
+                dt=self.experiment.dt))

@@ -3,8 +3,7 @@ Implementing SNN modules
 """
 from __future__ import annotations
 from typing import (
-    TYPE_CHECKING, Callable, Dict, Tuple, Type, Optional, List, NamedTuple,
-    Union)
+    TYPE_CHECKING, Dict, Tuple, Type, Optional, List, NamedTuple, Union)
 import pylogging as logger
 
 import torch
@@ -12,7 +11,7 @@ import torch
 from dlens_vx_v3 import lola, halco
 
 import hxtorch.spiking.functional as F
-from hxtorch.spiking.handle import ReadoutNeuronHandle
+from hxtorch.spiking.handle import ReadoutNeuronHandle, SynapseHandle
 from hxtorch.spiking.morphology import Morphology
 from hxtorch.spiking.modules.neuron import Neuron
 if TYPE_CHECKING:
@@ -36,8 +35,6 @@ class ReadoutNeuron(Neuron):
 
     # pylint: disable=too-many-arguments,too-many-locals
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function]
-                 = F.cuba_li_integration,
                  execution_instance: Optional[ExecutionInstance] = None,
                  params: Union[NamedTuple, F.CUBALIParams]
                  = F.CUBALIParams(1. / 10e-6, 1. / 10e-6),
@@ -61,9 +58,6 @@ class ReadoutNeuron(Neuron):
 
         :param size: Size of the population.
         :param experiment: Experiment to register the module in.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation. Defaults to `LI`.
         :param execution_instance: Execution instance to place to.
         :param params: Neuron Parameters in case of mock neuron integration of
             for backward path. If func does have a param argument the params
@@ -119,7 +113,7 @@ class ReadoutNeuron(Neuron):
             single neuron circuit is used.
         """
         super().__init__(
-            size, experiment, func, execution_instance, params, False,
+            size, experiment, execution_instance, params, False,
             enable_cadc_recording, enable_cadc_recording_placement_in_dram,
             enable_madc_recording, record_neuron_id,
             placement_constraint, trace_offset, trace_scale, cadc_time_shift,
@@ -176,3 +170,11 @@ class ReadoutNeuron(Neuron):
         _, cadc, madc = super().post_process(hw_data, runtime)
 
         return cadc, madc
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> ReadoutNeuronHandle:
+        return ReadoutNeuronHandle(
+            *F.cuba_li_integration(input.graded_spikes, self.params,
+                                   hw_data=hw_data, dt=self.experiment.dt))

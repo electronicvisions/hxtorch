@@ -2,7 +2,7 @@
 Define module types
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Union, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 import torch
 from hxtorch.spiking.modules.hx_module import HXModule
 if TYPE_CHECKING:
@@ -19,19 +19,14 @@ class Population(HXModule):
     size: int
 
     def __init__(self, size: int, experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function],
                  execution_instance: Optional[ExecutionInstance] = None) \
             -> None:
         """
         :param size: Number of input neurons.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation.
-            TODO: Inform about func args
         """
-        super().__init__(experiment, func, execution_instance)
+        super().__init__(experiment, execution_instance)
         self.size = size
         self.read_params_from_calibration = True
         self.params = None
@@ -65,8 +60,6 @@ class Population(HXModule):
         self.params = self.params.from_calix_targets(
             spiking_calib_target.neuron_target, neurons)
         self._params_hash = hash(self.params)
-        # get params from calib target
-        self.extra_kwargs.update({"params": self.params})
 
     def calibration_from_params(
             self, spiking_calib_target: SpikingCalibTarget) -> Dict:
@@ -96,20 +89,15 @@ class Projection(HXModule):
     # pylint: disable=too-many-arguments
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
-                 func: Union[Callable, torch.autograd.Function],
                  execution_instance: ExecutionInstance) -> None:
         """
         :param experiment: Experiment to append layer to.
         :param in_features: Size of input dimension.
         :param out_features: Size of output dimension.
         :param experiment: Experiment to append layer to.
-        :param func: Callable function implementing the module's forward
-            functionality or a torch.autograd.Function implementing the
-            module's forward and backward operation.
-            TODO: Inform about func args
         :param execution_instance: Execution instance to place to.
         """
-        super().__init__(experiment, func, execution_instance)
+        super().__init__(experiment, execution_instance)
         self.in_features = in_features
         self.out_features = out_features
 

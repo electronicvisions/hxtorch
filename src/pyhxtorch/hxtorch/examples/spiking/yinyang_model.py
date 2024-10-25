@@ -27,8 +27,8 @@ class SNN(torch.nn.Module):
                  weight_init_output: Optional[Tuple[float, float]] = None,
                  weight_scale: float = 1., trace_scale: float = 1.,
                  input_repetitions: int = 1,
-                 synapse_func: Callable = F.linear,
-                 neuron_func: Callable = F.cuba_lif_integration,
+                 synapse_type: hxsnn.HXModule = hxsnn.Synapse,
+                 neuron_type: hxsnn.HXModule = hxsnn.Neuron,
                  hidden_cadc_recording: bool = False,
                  device: torch.device = torch.device("cpu")) -> None:
         """
@@ -53,9 +53,10 @@ class SNN(torch.nn.Module):
         :param weight_scale: The factor with which the software weights are
             scaled when mapped to hardware.
         :param input_repetitions: Number of times to repeat input channels.
-        :param synapse_func: Function to compute synapse output.
-        :param neuron_func: Function to compute neuron output and
-            provide backpropagation ability.
+        :param synapse_type: Module type of input-to-hidden projection
+            providing backpropagation functionality.
+        :param neuron_type: Module type of hidden neuron layer providing
+            backpropagation functionality.
         :param device: The used PyTorch device used for tensor operations in
             software.
         """
@@ -67,8 +68,7 @@ class SNN(torch.nn.Module):
         li_params = F.CUBALIParams(tau_mem=tau_mem, tau_syn=tau_syn)
 
         # Experiment instance to work on
-        self.exp = hxsnn.Experiment(
-            mock=mock, dt=dt)
+        self.exp = hxsnn.Experiment(mock=mock, dt=dt)
         if not mock:
             self.exp.default_execution_instance.load_calib(
                 calib_path if calib_path
@@ -77,9 +77,8 @@ class SNN(torch.nn.Module):
         # Repeat input
         self.input_repetitions = input_repetitions
         # Input projection
-        self.linear_h = hxsnn.Synapse(
+        self.linear_h = synapse_type(
             n_in * input_repetitions, n_hidden, experiment=self.exp,
-            func=synapse_func,
             transform=partial(
                 weight_transforms.linear_saturating, scale=weight_scale))
         # Initialize weights
@@ -89,10 +88,9 @@ class SNN(torch.nn.Module):
             self.linear_h.weight.data = w.repeat(1, input_repetitions)
 
         # Hidden layer
-        self.lif_h = hxsnn.Neuron(
-            n_hidden, experiment=self.exp, func=neuron_func,
-            params=lif_params, trace_scale=trace_scale,
-            cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True,
+        self.lif_h = neuron_type(
+            n_hidden, experiment=self.exp, params=lif_params,
+            trace_scale=trace_scale, cadc_time_shift=trace_shift_hidden, shift_cadc_to_first=True,
             enable_cadc_recording=hidden_cadc_recording)
 
         # Output projection
@@ -103,10 +101,9 @@ class SNN(torch.nn.Module):
 
         # Readout layer
         self.li_readout = hxsnn.ReadoutNeuron(
-            n_out, experiment=self.exp, func=F.cuba_li_integration,
-            params=li_params, trace_scale=trace_scale,
-            cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
-            placement_constraint=list(
+            n_out, experiment=self.exp, params=li_params,
+            trace_scale=trace_scale, cadc_time_shift=trace_shift_out,
+            shift_cadc_to_first=True, placement_constraint=list(
                 halco.LogicalNeuronOnDLS(
                     hxsnn.morphology.SingleCompartmentNeuron(1).compartments,
                     halco.AtomicNeuronOnDLS(

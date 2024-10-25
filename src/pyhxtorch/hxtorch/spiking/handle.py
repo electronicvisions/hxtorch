@@ -28,7 +28,7 @@ class HandleMeta(type):
         return super().__new__(mcs, clsname, bases, dict_)
 
 
-class TensorHandle(metaclass=HandleMeta):
+class Handle(metaclass=HandleMeta):
 
     """
     Base class for HX tensor handles. New tensor handles have to be derived
@@ -82,10 +82,10 @@ class TensorHandle(metaclass=HandleMeta):
             assert key in keys, "Encountered unknown key."
             self.data[key] = value
 
-    def clone(self, handle: "TensorHandle") -> None:
+    def clone(self, handle: "Handle") -> None:
         """
         Copy contents for `handle` to `this` handle. `This` handle must contain
-        a data field for eacht data field in `handle`.
+        a data field for each data field in `handle`.
 
         :param handle: The handle to clone.
         """
@@ -100,7 +100,23 @@ class TensorHandle(metaclass=HandleMeta):
             self.data[key] = None
 
 
-class NeuronHandle(TensorHandle):
+class TensorHandle(Handle):
+
+    """ Specialization for single tensor, mostly for testing """
+
+    _carries = ["tensor"]
+
+    def __init__(self, tensor: Optional[torch.Tensor] = None) -> None:
+        """
+        Instantiate a tensor handle to hold a single tensor.
+
+        :param tensor: torch.Tensor holding data.
+        """
+        super().__init__()
+        self.tensor = tensor
+
+
+class NeuronHandle(Handle):
 
     """ Specialization for HX neuron observables """
 
@@ -127,7 +143,7 @@ class NeuronHandle(TensorHandle):
         self.membrane_madc = membrane_madc
 
 
-class ReadoutNeuronHandle(TensorHandle):
+class ReadoutNeuronHandle(Handle):
 
     """ Specialization for HX neuron observables """
 
@@ -153,7 +169,7 @@ class ReadoutNeuronHandle(TensorHandle):
         self.membrane_madc = membrane_madc
 
 
-class SynapseHandle(TensorHandle):
+class SynapseHandle(Handle):
 
     """ Specialization for HX synapses """
 
