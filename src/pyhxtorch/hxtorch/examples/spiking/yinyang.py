@@ -295,6 +295,9 @@ def main(args: argparse.Namespace) -> float:
 
         scheduler.step()
 
+    if not args.mock:
+        hxtorch.release_hardware()
+
     plot(losses_train, accs_train, losses_test, accs_test, args)
 
     return losses_train, accs_train, losses_test, accs_test
