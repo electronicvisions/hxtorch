@@ -172,7 +172,7 @@ def build(bld):
         tests=bld.path.ant_glob('src/pyhxtorch/**/*.py'),
         pylint_config=os.path.join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=os.path.join(get_toplevel_path(), "code-format", "pycodestyle"),
-        timeout=60
+        test_timeout=60
     )
 
     bld(
