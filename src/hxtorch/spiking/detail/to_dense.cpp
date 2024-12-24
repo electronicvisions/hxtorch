@@ -203,8 +203,12 @@ std::tuple<torch::Tensor, torch::Tensor> sparse_cadc_to_dense_raw(
     int batch_size,
     int population_size)
 {
-	// rough estimate of time steps
-	int time_steps = data.size() / batch_size / population_size;
+	// get minimum number of time steps per batch and neuron
+	std::vector<int> count_time_steps(batch_size * population_size, 0);
+	for (auto const& [value, time, b, n] : data) {
+		++count_time_steps.at(b * population_size + n);
+	}
+	int time_steps = *std::min_element(count_time_steps.begin(), count_time_steps.end());
 
 	torch::Tensor samples = torch::empty(
 	    {time_steps, batch_size, population_size}, torch::TensorOptions().dtype(torch::kFloat));
@@ -222,8 +226,6 @@ std::tuple<torch::Tensor, torch::Tensor> sparse_cadc_to_dense_raw(
 			running_index.at(b).at(n)++;
 		}
 	}
-
-	// TODO: Fill remaining samples
 
 	return std::make_tuple(samples, times);
 }
