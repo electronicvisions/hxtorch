@@ -185,8 +185,8 @@ class ExecutionInstance(BaseExecutionInstance):
 
         execute_calib = False
         if not self.calib_path:
-            self.log.TRACE("No calibration path present. Try to infer "
-                           + "parameters for calibrations")
+            self.log.TRACE("No calibration path present. Trying to infer "
+                           + "parameters for calibration...")
             # gather calibration information
             target = \
                 SpikingCalibTarget(
@@ -198,7 +198,7 @@ class ExecutionInstance(BaseExecutionInstance):
             # if any neuron module has params, use for calibration
             for module in self.modules:
                 if hasattr(module, "calibration_from_params"):
-                    self.log.INFO(f"Add calib params of '{module}'.")
+                    self.log.INFO(f"Adding calib params of '{module}'.")
                     neurons = self.neuron_placement.id2logicalneuron(
                         module.unit_ids)
                     module.calibration_from_params(target, neurons)
@@ -223,7 +223,7 @@ class ExecutionInstance(BaseExecutionInstance):
                     "was indicated as calibration file. Skipped.")
             else:
                 self.log.INFO(
-                    "Try to infer params from loaded calibration file...")
+                    "Trying to infer params from loaded calibration file...")
                 for module in self.modules:
                     if hasattr(module, "params_from_calibration"):
                         neurons = self.neuron_placement.id2logicalneuron(
