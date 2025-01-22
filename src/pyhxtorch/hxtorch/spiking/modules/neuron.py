@@ -361,6 +361,7 @@ class Neuron(Population):
             for in_pop_id, unit_id in enumerate(self.unit_ids):
                 neuron = grenade.network.CADCRecording.Neuron()
                 neuron.coordinate.population = self.descriptor
+                neuron.source = self._cadc_readout_source
                 neuron.coordinate.neuron_on_population = in_pop_id
                 neuron.coordinate.compartment_on_neuron = 0
                 neuron.coordinate.atomic_neuron_on_compartment = 0
