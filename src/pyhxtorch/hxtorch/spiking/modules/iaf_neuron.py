@@ -64,7 +64,7 @@ class IAFNeuron(Neuron):
                                      torch.Tensor, float] = 0.,
                  trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
                                     torch.Tensor, float] = 1.,
-                 cadc_time_shift: int = 1, shift_cadc_to_first: bool = False,
+                 cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
                  interpolation_mode: str = "linear",
                  neuron_structure: Optional[Morphology] = None,
                  **extra_params) -> None:
