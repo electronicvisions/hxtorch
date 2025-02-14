@@ -129,7 +129,7 @@ class SNN(torch.nn.Module):
 
     def forward(self, spikes: torch.Tensor) -> torch.Tensor:
         """
-        Perform a forward path.
+        Perform a forward pass.
 
         :param spikes: NeuronHandle holding spikes as input.
 
