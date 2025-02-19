@@ -160,6 +160,9 @@ class ReadoutNeuron(Neuron):
             execution_instance=execution_instance,
             enable_spike_recording=False,
             enable_cadc_recording=enable_cadc_recording,
+            enable_cadc_recording_placement_in_dram=(
+                enable_cadc_recording_placement_in_dram
+            ),
             enable_madc_recording=enable_madc_recording,
             record_neuron_id=record_neuron_id,
             placement_constraint=placement_constraint,
