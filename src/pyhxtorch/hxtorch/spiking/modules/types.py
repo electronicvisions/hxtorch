@@ -289,10 +289,7 @@ class Population(BasePopulation):
         if not entity.shape:
             return torch.full((2, size), entity)
         if len(entity.shape) == 1:
-            if entity.size == 2:
-                return entity.repeat((1, size)).clone().detach()
-            if entity.size == halco.AtomicNeuronOnDLS.size:
-                return entity.repeat((2, 1)).clone().detach()
+            return entity.repeat((2, 1)).clone().detach()
         return entity.clone().detach()
 
     @staticmethod
