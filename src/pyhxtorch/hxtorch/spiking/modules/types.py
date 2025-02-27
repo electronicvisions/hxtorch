@@ -42,6 +42,12 @@ class BasePopulation(HXModule):
         """ Add additional information """
         return f"size={self.size}, {super().extra_repr()}"
 
+    def has_trainable_params(self) -> bool:
+        """
+        Check whether population has trainable parameters.
+        """
+        return False
+
 
 class InputPopulation(BasePopulation):
     """ Base type for external input populations """
@@ -105,6 +111,10 @@ class Population(BasePopulation):
                 param = HXParameter(param)
             setattr(self, param_key, param)
 
+    def has_trainable_params(self) -> bool:
+        return any(getattr(self, param).is_trainable()
+                   for param in self._calibratable_parameters_defaults)
+
     def extra_repr(self) -> str:
         reprs = ""
         for key, value in self.params_dict().items():
@@ -121,6 +131,15 @@ class Population(BasePopulation):
         calibrate = self._params_hash != new_params_hash
         self._params_hash = new_params_hash
         return calibrate
+
+    def set_trainable_params(self, chip):
+        for param in [p for p in self._calibratable_parameters_defaults
+                      if getattr(self, p).is_trainable()]:
+            coords = (
+                self.execution_instance.neuron_placement
+                .id2logicalneuron(self.unit_ids)
+            )
+            getattr(self, param).set_on_chip(chip, coords)
 
     # pylint: disable=too-many-branches
     def params_from_calibration(self, targets: SpikingCalibTarget, neurons) \

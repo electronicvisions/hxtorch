@@ -360,6 +360,9 @@ class Experiment(BaseExperiment):
     def _calibrate(self):
         """ """
         for execution_instance in self._execution_instances:
+            if any(pop.has_trainable_params() for pop in self._populations):
+                execution_instance.set_neuron_parameters_on_chip()
+                continue
             execution_instance.calibrate()
 
     def get_hw_results(self, runtime: Optional[int]) \

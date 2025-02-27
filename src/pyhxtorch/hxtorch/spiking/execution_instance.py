@@ -244,6 +244,13 @@ class ExecutionInstance(BaseExecutionInstance):
             self.log.INFO("Calibration finished... ")
         self.log.TRACE(f"Prepared static config of {self}.")
 
+    def set_neuron_parameters_on_chip(self):
+        if self.chip is None:
+            self.calibrate()
+        for module in [m for m in self.modules
+                       if hasattr(m, "set_trainable_params")]:
+            module.set_trainable_params(self.chip)
+
     def cadc_recordings(self) -> grenade.network.CADCRecording:
         """
         Return the instance's ``CADCRecording`` object, holding all neurons
