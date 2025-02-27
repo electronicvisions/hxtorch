@@ -237,3 +237,23 @@ class ReadoutNeuron(Neuron):
             tau_mem=self.tau_mem.model_value,
             hw_data=hw_data,
             dt=self.experiment.dt))
+
+
+class ReadoutNeuronExp(ReadoutNeuron):
+    """
+    Neuron layer with exponential Euler intergration scheme.
+    Synaptic and memebrane time constant are required to be provided
+    as HXTransformedModelParameter(exp(-dt/tau), -dt/ln(tau)).
+    This ensures that the correct model and hardware values are being used.
+    """
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, *input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> ReadoutNeuronHandle:
+        return ReadoutNeuronHandle(*F.exp_cuba_li_integration(
+            tuple(handle.graded_spikes for handle in input),
+            leak=self.leak.model_value,
+            tau_syn_exp=self.tau_syn.model_value,
+            tau_mem_exp=self.tau_mem.model_value,
+            hw_data=hw_data))

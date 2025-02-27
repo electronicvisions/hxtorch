@@ -1,6 +1,8 @@
 from hxtorch.spiking.functional.lif import (
-    cuba_lif_integration, cuba_refractory_lif_integration)
-from hxtorch.spiking.functional.li import cuba_li_integration
+    cuba_lif_integration, cuba_refractory_lif_integration,
+    exp_cuba_lif_integration)
+from hxtorch.spiking.functional.li import (
+    cuba_li_integration, exp_cuba_li_integration)
 from hxtorch.spiking.functional.iaf import (
     cuba_iaf_integration, cuba_refractory_iaf_integration)
 from hxtorch.spiking.functional.linear import (

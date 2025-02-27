@@ -554,3 +554,27 @@ class EventPropNeuron(Neuron):
             self.tau_mem.model_value,
             hw_data,
             self.experiment.dt))
+
+
+class NeuronExp(Neuron):
+    """
+    Neuron layer with exponential Euler intergration scheme.
+    Synaptic and memebrane time constant are required to be provided
+    as HXTransformedModelParameter(exp(-dt/tau), -dt/ln(tau)).
+    This ensures that the correct model and hardware values are being used.
+    """
+
+    # pylint: disable=redefined-builtin
+    def forward_func(self, input: SynapseHandle,
+                     hw_data: Optional[Tuple[torch.Tensor]] = None) \
+            -> NeuronHandle:
+        return NeuronHandle(*F.exp_cuba_lif_integration(
+            input.graded_spikes,
+            leak=self.leak.model_value,
+            reset=self.reset.model_value,
+            threshold=self.threshold.model_value,
+            tau_syn_exp=self.tau_syn.model_value,
+            tau_mem_exp=self.tau_mem.model_value,
+            method=self.method,
+            alpha=self.alpha,
+            hw_data=hw_data))
