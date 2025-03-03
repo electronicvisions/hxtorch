@@ -129,11 +129,12 @@ class TestRun(unittest.TestCase):
 
         # Execute a couple times like you would when training a model
         for i in range(10):
-            output = _hxtorch_spiking.run(
-                config, network, inputs,
-                {grenade.common.ExecutionInstanceID():
-                 grenade.execution.ExecutionInstanceHooks()})
-            print(output)
+            output = grenade.network.run(
+                hxtorch._runtime.executor,
+                network,
+                config,
+                inputs,
+            )
 
 
 if __name__ == "__main__":

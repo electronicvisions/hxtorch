@@ -56,21 +56,21 @@ lola::vx::v3::Chip const load_and_apply_calibration(std::string calibration_path
 
 } // namespace
 
-void init_hardware_minimal()
+void init_hardware_minimal(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor)
 {
 	detail::getExecutor().reset();
 	lola::vx::v3::Chip const chip;
 	detail::getChip() = chip;
-	grenade::vx::execution::JITGraphExecutor executor;
-	detail::getExecutor() =
-	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
+	detail::getExecutor() = executor;
 }
 
-void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
+void init_hardware(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor,
+    std::optional<HWDBPath> const& hwdb_path,
+    bool ann)
 {
-	grenade::vx::execution::JITGraphExecutor executor;
-	detail::getExecutor() =
-	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
+	detail::getExecutor() = executor;
 
 	if (ann) {
 		std::optional<std::string> hwdb_path_value;
@@ -83,7 +83,8 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
 
 		auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
 		                              detail::getExecutor()
-		                                  ->get_unique_identifier(hwdb_path_value)
+		                                  ->get()
+		                                  .get_unique_identifier(hwdb_path_value)
 		                                  .at(grenade::common::ConnectionOnExecutor())
 		                                  .at(0) +
 		                              "/"s + version + "/" + "hagen_cocolist.pbin"s;
@@ -92,12 +93,12 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
 	}
 }
 
-void init_hardware(CalibrationPath const& calibration_path)
+void init_hardware(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor,
+    CalibrationPath const& calibration_path)
 {
 	detail::getChip() = load_and_apply_calibration(calibration_path.value);
-	grenade::vx::execution::JITGraphExecutor executor;
-	detail::getExecutor() =
-	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
+	detail::getExecutor() = executor;
 }
 
 std::vector<std::string> get_unique_identifier(std::optional<HWDBPath> const& hwdb_path)
@@ -107,16 +108,15 @@ std::vector<std::string> get_unique_identifier(std::optional<HWDBPath> const& hw
 		hwdb_path_value = hwdb_path->path;
 	}
 	return detail::getExecutor()
-	    ->get_unique_identifier(hwdb_path_value)
+	    ->get()
+	    .get_unique_identifier(hwdb_path_value)
 	    .at(grenade::common::ConnectionOnExecutor());
 }
 
 void release_hardware()
 {
 	if (detail::getExecutor()) {
-		auto connections = detail::getExecutor()->release_connections();
 		detail::getExecutor().reset();
-		connections.clear();
 	}
 }
 

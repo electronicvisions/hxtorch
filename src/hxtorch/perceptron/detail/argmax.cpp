@@ -96,7 +96,7 @@ torch::Tensor argmax(torch::Tensor const& input, c10::optional<int64_t> const di
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto const results = kernel.run(
-	    input_in, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
 	tracer_add("argmax", std::move(kernel));
 	auto const ret = convert_argmax_output(results, sizes_2d, input.sizes(), dim, keepdim);
 	tracer_update_output(ret);

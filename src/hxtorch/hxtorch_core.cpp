@@ -1,11 +1,13 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "hxtorch/core/connection.h"
 #include "hxtorch/core/dense_spikes_to_list.h"
 #include "hxtorch/core/docstrings.h"
 #include "hxtorch/core/extract_data.h"
 #include "hxtorch/core/weight_to_connection.h"
+#include "pyhxcomm/common/handle_connection.h"
 #include <pybind11/pybind11.h>
 
 #include "grenade/vx/signal_flow/output_data.h"
@@ -14,24 +16,33 @@ PYBIND11_MODULE(_hxtorch_core, m)
 {
 	m.import("pygrenade_vx");
 	m.def(
-	    "init_hardware",
-	    (void (*)(std::optional<hxtorch::core::HWDBPath> const&, bool)) &
+	    "_init_hardware",
+	    (void (*)(
+	        std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const&,
+	        std::optional<hxtorch::core::HWDBPath> const&, bool)) &
 	        hxtorch::core::init_hardware,
-	    __doc_hxtorch_init_hardware, pybind11::arg("hwdb_path") = std::nullopt,
-	    pybind11::arg("ann") = false);
+	    __doc_hxtorch_init_hardware, pybind11::arg("executor"),
+	    pybind11::arg("hwdb_path") = std::nullopt, pybind11::arg("ann") = false);
 	m.def(
-	    "init_hardware",
-	    (void (*)(hxtorch::core::CalibrationPath const&)) & hxtorch::core::init_hardware,
-	    __doc_hxtorch_init_hardware_2, pybind11::arg("calibration_path"));
+	    "_init_hardware",
+	    (void (*)(
+	        std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const&,
+	        hxtorch::core::CalibrationPath const&)) &
+	        hxtorch::core::init_hardware,
+	    __doc_hxtorch_init_hardware_2, pybind11::arg("executor"),
+	    pybind11::arg("calibration_path"));
 	m.def(
-	    "init_hardware_minimal", &hxtorch::core::init_hardware_minimal,
+	    "_init_hardware_minimal",
+	    (void (*)(
+	        std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const&)) &
+	        hxtorch::core::init_hardware_minimal,
 	    __doc_hxtorch_init_hardware_minimal);
 	m.def(
 	    "get_unique_identifier",
 	    (std::vector<std::string>(*)(std::optional<hxtorch::core::HWDBPath> const&)) &
 	        hxtorch::core::get_unique_identifier,
 	    __doc_hxtorch_get_unique_identifier, pybind11::arg("hwdb_path") = std::nullopt);
-	m.def("release_hardware", &hxtorch::core::release_hardware, __doc_hxtorch_release_hardware);
+	m.def("_release_hardware", &hxtorch::core::release_hardware, __doc_hxtorch_release_hardware);
 
 	pybind11::class_<hxtorch::core::HWDBPath>(m, "HWDBPath", __doc_hxtorch_HWDBPath)
 	    .def(

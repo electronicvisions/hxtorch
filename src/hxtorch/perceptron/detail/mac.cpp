@@ -153,7 +153,7 @@ torch::Tensor mac_forward(
 	auto ret = torch::zeros({static_cast<int64_t>(num_inputs), static_cast<int64_t>(num_cols)});
 	auto ret_a = ret.accessor<float, 2>();
 	auto const results =
-	    mac.run(xin, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	    mac.run(xin, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
 	tracer_add("mac", std::move(mac));
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < results.at(0).size(); i++) {

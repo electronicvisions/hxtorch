@@ -117,7 +117,8 @@ torch::Tensor inference_trace(torch::Tensor const& input, std::string const& fil
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto const result_variant = ops.run(
-	    input_variant, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	    input_variant, hxtorch::core::detail::getChip(),
+	    hxtorch::core::detail::getExecutor()->get());
 
 	torch::Tensor ret;
 	if (std::holds_alternative<grenade::vx::compute::ConvertingReLU>(ops.data.front())) {

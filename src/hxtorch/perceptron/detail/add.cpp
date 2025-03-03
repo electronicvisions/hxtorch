@@ -85,8 +85,8 @@ torch::Tensor add_forward(torch::Tensor const& input, torch::Tensor const& other
 	if (!hxtorch::core::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
 	}
-	auto const results =
-	    add.run(input_in, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	auto const results = add.run(
+	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
 	tracer_add("add", std::move(add));
 	return convert_add_output(results, sizes_2d, input.sizes());
 }

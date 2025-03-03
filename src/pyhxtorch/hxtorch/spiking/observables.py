@@ -3,7 +3,7 @@ from typing import Optional, Union, Tuple, Dict
 from dataclasses import dataclass
 import torch
 
-import _hxtorch_spiking
+import _hxtorch_spiking  # pylint: disable=import-error
 from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
 import pygrenade_vx as grenade
 

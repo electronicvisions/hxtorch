@@ -1,4 +1,6 @@
 #pragma once
+#include "grenade/vx/execution/jit_graph_executor.h"
+#include "pyhxcomm/common/handle_connection.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,7 +28,10 @@ struct HWDBPath
  * @param ann Bool indicating whether additionally a default chip object is constructed for ANNs
  * from a calibration loaded from `hwdb_path`, or if not given, from the latest nightly calibration.
  */
-void init_hardware(std::optional<HWDBPath> const& hwdb_path = std::nullopt, bool ann = false);
+void init_hardware(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor,
+    std::optional<HWDBPath> const& hwdb_path = std::nullopt,
+    bool ann = false);
 
 
 /**
@@ -43,13 +48,16 @@ struct CalibrationPath
  *
  * @param calibration_path Calibration path to load from
  */
-void init_hardware(CalibrationPath const& calibration_path);
+void init_hardware(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor,
+    CalibrationPath const& calibration_path);
 
 /**
  * Initialize automatically from the environment
  * without ExperimentInit and without any calibration.
  */
-void init_hardware_minimal();
+void init_hardware_minimal(
+    std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>> const& executor);
 
 /**
  * Get unique identifier

@@ -1,7 +1,14 @@
 # pylint: disable=unused-import, reimported
 import sys as _sys
 import pylogging as logger
-from _hxtorch_core import *
+
+from _hxtorch_core import *  # pylint: disable=import-error
+from hxtorch._runtime import (
+    init_hardware,
+    init_hardware_minimal,
+    release_hardware,
+)
+from hxtorch import _runtime
 from hxtorch import perceptron
 from hxtorch import spiking
 import hxtorch.perceptron as ann

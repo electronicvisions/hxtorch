@@ -107,7 +107,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/hxtorch/core/**/*.cpp'),
         target = 'hxtorch_core_cpp',
-        use = ['hxtorch_inc', 'grenade_vx', 'grenade_vx_serialization', 'hate_inc'],
+        use = ['hxtorch_inc', 'grenade_vx', 'grenade_vx_serialization', 'hate_inc', 'pyhxcomm_inc', 'pyhxcomm_vx'],
         install_path='${PREFIX}/lib',
         uselib = ['PYEXT']
     )

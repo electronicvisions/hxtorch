@@ -11,6 +11,7 @@ import _hxtorch_spiking
 import pygrenade_vx as grenade
 from pygrenade_vx.network import (
     Population, ExternalSourcePopulation, Projection, Receptor)
+from hxtorch.spiking.utils import calib_helper
 
 
 class TestExtractNSpikes(unittest.TestCase):
@@ -114,15 +115,19 @@ class TestExtractNSpikes(unittest.TestCase):
         network_graph, config = self.generate_network(config)
         # Get inputs
         inputs = self.generate_inputs(network_graph)
-        # Get chip config
-        data = _hxtorch_spiking.run(
-            config, network_graph, inputs, {
-                grenade.common.ExecutionInstanceID():
-                grenade.execution.ExecutionInstanceHooks()})
+
+        data = grenade.network.run(
+            hxtorch._runtime.executor,
+            network_graph,
+            config,
+            inputs,
+        )
+
         spikes = _hxtorch_core.extract_n_spikes(
             data, network_graph,
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100,
             {self.int_pop_descr: 2})
+
 
         self.assertEqual(len(spikes), 1)
         self.assertEqual(len(spikes[self.int_pop_descr]), 2)

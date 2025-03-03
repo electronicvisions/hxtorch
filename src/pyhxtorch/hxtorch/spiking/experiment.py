@@ -12,8 +12,9 @@ import numpy as np
 
 from dlens_vx_v3 import hal
 import pygrenade_vx as grenade
+import pygrenade_vx.network
 
-import _hxtorch_spiking  # pylint: disable=no-name-in-module
+from hxtorch import _runtime
 from hxtorch.spiking.observables import HardwareObservablesExtractor
 from hxtorch.spiking.execution_info import ExecutionInfo
 from hxtorch.spiking.execution_instance import (
@@ -457,9 +458,16 @@ class Experiment(BaseExperiment):
                 topologically_sorted_execution_instance_ids
             }
 
-        outputs = _hxtorch_spiking.run(
-            self._execution_instances.chips, network, inputs,
-            self._execution_instances.playback_hooks)
+        executor = _runtime.executor
+        if executor is None:
+            raise RuntimeError("Executor not initialized.")
+        outputs = pygrenade_vx.network.run(
+            executor,
+            network,
+            self._execution_instances.chips,
+            inputs,
+            self._execution_instances.playback_hooks,
+        )
 
         if outputs.read_ppu_symbols:
             self.ppu_symbols_read = outputs.read_ppu_symbols

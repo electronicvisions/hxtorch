@@ -63,8 +63,8 @@ torch::Tensor relu_forward(torch::Tensor const& input)
 	if (!hxtorch::core::detail::getExecutor()) {
 		throw std::runtime_error("No connection allocated.");
 	}
-	auto const results =
-	    relu.run(input_in, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	auto const results = relu.run(
+	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
 	tracer_add("relu", std::move(relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }
@@ -96,7 +96,7 @@ torch::Tensor converting_relu_forward(torch::Tensor const& input, int64_t const 
 		throw std::runtime_error("No connection allocated.");
 	}
 	auto const results = converting_relu.run(
-	    input_in, hxtorch::core::detail::getChip(), *hxtorch::core::detail::getExecutor());
+	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
 	tracer_add("converting_relu", std::move(converting_relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "pyhxcomm/common/handle_connection.h"
 #include <memory>
 
 namespace grenade::vx::execution {
@@ -15,7 +16,7 @@ namespace hxtorch::core::detail {
  * Get singleton executor.
  * @return Reference to executor
  */
-std::unique_ptr<grenade::vx::execution::JITGraphExecutor>& getExecutor();
+std::shared_ptr<pyhxcomm::Handle<grenade::vx::execution::JITGraphExecutor>>& getExecutor();
 
 /**
  * Get singleton chip configuration.

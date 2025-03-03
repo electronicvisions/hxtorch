@@ -11,7 +11,6 @@
 
 #include "hxtorch/spiking/docstrings.h"
 #include "hxtorch/spiking/extract_tensors.h"
-#include "hxtorch/spiking/run.h"
 #include "hxtorch/spiking/tensor_to_spike_times.h"
 #include "hxtorch/spiking/types.h"
 
@@ -74,9 +73,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	           int population_size) { handle.set_data(data, batch_size, population_size); },
 	        pybind11::arg("data"), pybind11::arg("batch_size"), pybind11::arg("population_size"))
 	    .def("to_raw", &hxtorch::spiking::MADCHandle::to_raw);
-	m.def(
-	    "run", &hxtorch::spiking::run, pybind11::arg("config"), pybind11::arg("network_graph"),
-	    pybind11::arg("inputs"), pybind11::arg("hooks"));
 	m.def(
 	    "tensor_to_spike_times", &hxtorch::spiking::tensor_to_spike_times, pybind11::arg("times"),
 	    pybind11::arg("dt"));

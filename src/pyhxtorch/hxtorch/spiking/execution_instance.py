@@ -11,13 +11,13 @@ import numpy as np
 from dlens_vx_v3 import lola, sta
 import pygrenade_vx as grenade
 import pylogging as logger
-from _hxtorch_core import init_hardware, release_hardware
 
 # pylint: disable=import-error, no-name-in-module
 from calix import calibrate
 from calix.spiking import SpikingCalibTarget, SpikingCalibOptions
 from calix.spiking.neuron import NeuronCalibTarget
 
+from hxtorch import _runtime
 from hxtorch.spiking.neuron_placement import NeuronPlacement
 from hxtorch.spiking.utils import calib_helper
 if TYPE_CHECKING:
@@ -251,14 +251,14 @@ class ExecutionInstance(BaseExecutionInstance):
                         module.params_from_calibration(
                             self.calib.target, neurons)
         else:
-            release_hardware()
+            _runtime.release_hardware()
             self.log.INFO("Calibrating...")
             self.calib = calibrate(
                 target, SpikingCalibOptions(), self.calib_cache_dir)
             dumper = sta.PlaybackProgramBuilderDumper()
             self.calib.apply(dumper)
             self.chip = sta.convert_to_chip(dumper.done())
-            init_hardware()
+            _runtime.init_hardware()
             self.log.INFO("Calibration finished... ")
         self.log.TRACE(f"Prepared static config of {self}.")
 
