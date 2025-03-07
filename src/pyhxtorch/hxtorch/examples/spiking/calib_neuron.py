@@ -3,8 +3,6 @@ import torch
 import hxtorch
 import hxtorch.spiking as hxsnn
 
-hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.TRACE)
-
 
 def main():
     log = hxtorch.logger.get("hxtorch.examples.spiking.calib_neuron")
@@ -71,7 +69,6 @@ def main():
 
 
 if __name__ == "__main__":
-    hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.TRACE)
     for key in ["hxcomm", "grenade", "stadls", "calix"]:
         other_logger = hxtorch.logger.get(key)
         hxtorch.logger.set_loglevel(other_logger, hxtorch.logger.LogLevel.WARN)
