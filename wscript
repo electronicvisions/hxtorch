@@ -85,7 +85,7 @@ def configure(cfg):
                     #include <torch/torch.h>
                     #include <torch/csrc/jit/runtime/custom_operator.h>
                     int main() { return 0; }''',
-                  lib = libnames,
+                  lib = libnames + cfg.env.LIB_PYEMBED,
                   libpath = libpath_torch,
                   cxxflags = map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch)),
                   uselib_store="TORCH")
