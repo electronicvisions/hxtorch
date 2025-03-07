@@ -80,6 +80,16 @@ def configure(cfg):
     # manually add the torch includes as system includes
     cfg.env['CXXFLAGS_TORCH_CPP'] += map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch))
 
+    # FIXME: just testing
+    cfg.check_cxx(fragment ='''
+                    #include <torch/torch.h>
+                    #include <torch/csrc/jit/runtime/custom_operator.h>
+                    int main() { return 0; }''',
+                  lib = libnames + cfg.env.LIB_PYEXT,
+                  libpath = libpath_torch,
+                  cxxflags = map(lambda x: '-isystem' + x, (includes_torch_csrc_api + includes_torch)),
+                  mandatory=False)
+
     cfg.check_cxx(fragment ='''
                     #include <torch/torch.h>
                     #include <torch/csrc/jit/runtime/custom_operator.h>
