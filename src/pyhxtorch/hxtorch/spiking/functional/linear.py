@@ -75,7 +75,7 @@ def linear_exponential_clamp(inputs: torch.Tensor,
 
 
 # Disable abstract-method because pylint does not check meta classes
-# pylint: disable=abstract-method, arguments-differ
+# pylint: disable=abstract-method, arguments-differ, unused-argument
 class WeightRounding(torch.autograd.Function):
     """
     A function that rounds the input to multiples of cap / 63 but uses a linear
