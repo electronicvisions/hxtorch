@@ -46,13 +46,24 @@ def configure(cfg):
     )
 
     site_packages = site.getsitepackages()
-    assert isinstance(site_packages, list) and len(site_packages) == 1
-    includes_torch = [os.path.join(x, 'torch/include') for x in site_packages]
-    includes_torch_csrc_api = [os.path.join(x, 'torch/include/torch/csrc/api/include') for x in site_packages]
-    libpath_torch = [os.path.join(x, 'torch/lib') for x in site_packages]
+    includes_torch = [
+        os.path.join(x, 'torch/include')
+        for x in site_packages
+        if os.path.exists(os.path.join(x, 'torch/include'))
+    ]
+    includes_torch_csrc_api = [
+        os.path.join(x, 'torch/include/torch/csrc/api/include')
+        for x in site_packages
+        if os.path.exists(os.path.join(x, 'torch/include/torch/csrc/api/include'))
+    ]
+    libpath_torch = [
+        os.path.join(x, 'torch/lib')
+        for x in site_packages
+        if os.path.exists(os.path.join(x, 'torch/lib'))
+    ]
     libnames = []
     # if torch isn't available via site-packages, try sys.path/PYTHONPATH
-    if not os.path.exists(libpath_torch[0]):
+    if not libpath_torch:
         # find other possible paths
         libpath_torch = [os.path.join(x, 'torch/lib') for x in sys.path if 'torch' in x]
         # filter on existance of path
@@ -66,8 +77,9 @@ def configure(cfg):
         includes_torch_csrc_api = [os.path.join(x, 'torch/include/torch/csrc/api/include') for x in sys.path if 'torch' in x]
 
     for fn in os.listdir(libpath_torch[0]):
-        res = re.match('^lib(.+)\.so$', fn)
-        libnames.append(res.group(1))
+        res = re.match(r'^lib(.+)\.so$', fn)
+        if res:
+            libnames.append(res.group(1))
 
     libnames_cpp = copy.copy(libnames)
     libnames_cpp.remove('torch_python')
