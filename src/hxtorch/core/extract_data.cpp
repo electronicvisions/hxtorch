@@ -24,7 +24,7 @@ extract_n_spikes(
 	std::map<PopulationOnNetwork, std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>> ret;
 
 	// TODO: SNIP: modified from extra "extract_spikes"
-	auto const grenade_spikes = extract_neuron_spikes(data, network_graph);
+	auto const grenade_spikes = extract_neuron_spikes(data.snippets.at(0), network_graph);
 
 	// get indices of events.
 	std::map<PopulationOnNetwork, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;

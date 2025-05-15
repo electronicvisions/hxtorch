@@ -95,9 +95,10 @@ class TestExtractNSpikes(unittest.TestCase):
                         hal.Timer.Value.fpga_clock_cycles_per_us)])
             times.append(b_times)
         input_generator.add(times, self.ext_pop_descr)
-        inputs = input_generator.done()
+        inputs = grenade.signal_flow.InputData()
+        inputs.snippets = [input_generator.done()]
         # Add runtime
-        inputs.runtime = [{
+        inputs.snippets[0].runtime = [{
             grenade.common.ExecutionInstanceID():
                 int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] \
             * self.batch_size

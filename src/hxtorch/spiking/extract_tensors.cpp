@@ -25,7 +25,7 @@ std::map<grenade::vx::network::PopulationOnNetwork, SpikeHandle> extract_spikes(
 	// return data
 	std::map<PopulationOnNetwork, SpikeHandle> ret;
 
-	auto const& grenade_spikes = extract_neuron_spikes(data, network_graph);
+	auto const& grenade_spikes = extract_neuron_spikes(data.snippets.at(0), network_graph);
 
 	// get indices of events.
 	// NOTE: Would be nicer to use here torch.Tensors right away. However, we do not know the number
@@ -89,7 +89,7 @@ std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> extract_madc(
 	// return data
 	std::map<grenade::vx::network::PopulationOnNetwork, MADCHandle> ret;
 
-	auto const& grenade_samples = extract_madc_samples(data, network_graph);
+	auto const& grenade_samples = extract_madc_samples(data.snippets.at(0), network_graph);
 
 	assert(network_graph.get_network());
 	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
@@ -142,7 +142,7 @@ std::map<grenade::vx::network::PopulationOnNetwork, CADCHandle> extract_cadc(
 	// return data
 	std::map<PopulationOnNetwork, CADCHandle> ret;
 
-	auto const& grenade_samples = extract_cadc_samples(data, network_graph);
+	auto const& grenade_samples = extract_cadc_samples(data.snippets.at(0), network_graph);
 
 	// get indices and values of events. NOTE: Would be nicer to use here torch.Tensors right away.
 	// However, we do not know the number of events per population trivially beforehand.

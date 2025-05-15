@@ -417,12 +417,13 @@ class Experiment(BaseExperiment):
                 + f"{max_runtime}")
 
         # generate external spike trains
-        inputs = self._generate_inputs(network)
-        inputs.runtime = [{
+        inputs = grenade.signal_flow.InputData()
+        inputs.snippets = [self._generate_inputs(network)]
+        inputs.snippets[0].runtime = [{
             execution_instance: runtime_in_clocks for execution_instance
             in network.network.topologically_sorted_execution_instance_ids
         }] * self._batch_size
-        log.TRACE(f"Registered runtimes: {inputs.runtime}")
+        log.TRACE(f"Registered runtimes: {inputs.snippets[0].runtime}")
 
         if self.inter_batch_entry_wait is not None:
             inputs.inter_batch_entry_wait = {
@@ -440,7 +441,7 @@ class Experiment(BaseExperiment):
 
         self.modules.reset_changed_since_last_run()
 
-        self._last_run_chip_configs = outputs.pre_execution_chips
+        self._last_run_chip_configs = outputs.snippets[0].pre_execution_chips
 
         return hw_data, ExecutionInfo(
             outputs.execution_time_info,
