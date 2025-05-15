@@ -2,8 +2,6 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "cereal/types/haldls/cereal.h"
-#include "grenade/vx/execution/backend/connection.h"
-#include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "hxtorch/core/detail/connection.h"
