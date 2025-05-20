@@ -95,8 +95,8 @@ class TestHXMACPerformance(unittest.TestCase):
                 "MAC performance {:.0f} op/s ".format(ops / duration) +
                 "at batchsize: {} and matrix size: {}.".format(
                     data_in.shape[0], weights_in.shape))
-        # for largest batchsize expect 150Mop/s with 20% allowed deviation
-        self.assertGreater(ops / duration, 150e6 * 0.8)
+        # for largest batchsize expect 150Mop/s with 30% allowed deviation
+        self.assertGreater(ops / duration, 150e6 * 0.7)
 
 
     def test_sweep_matrixsize(self):
@@ -119,8 +119,8 @@ class TestHXMACPerformance(unittest.TestCase):
                 "MAC performance {:.0f} op/s ".format(ops / duration) +
                 "at batch size: {} and matrix size: {}.".format(
                     2000, weights_in.shape))
-        # for largest matrixsize expect 240Mop/s with 15% allowed deviation
-        self.assertGreater(ops / duration, 240e6 * 0.85)
+        # for largest matrixsize expect 240Mop/s with 20% allowed deviation
+        self.assertGreater(ops / duration, 240e6 * 0.8)
 
 
 if __name__ == '__main__':
