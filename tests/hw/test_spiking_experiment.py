@@ -9,7 +9,7 @@ from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import HXModule, InputNeuron, LIF, Synapse
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.utils import calib_helper
-from dlens_vx_v3.halco import DLSGlobal
+import pygrenade_vx as grenade
 
 
 class TestExperiment(unittest.TestCase):
@@ -169,7 +169,7 @@ class TestExperiment(unittest.TestCase):
 
         _, execution_info = experiment.get_hw_results(10)
 
-        self.assertLess(int(inter_batch_entry_wait / 125), int(execution_info.time.execution_duration_per_hardware[DLSGlobal()].total_seconds()*1e6))
+        self.assertLess(int(inter_batch_entry_wait / 125), int(execution_info.time.execution_duration_per_hardware[grenade.common.ConnectionOnExecutor()][grenade.common.ChipOnConnection()].total_seconds()*1e6))
 
 if __name__ == "__main__":
     unittest.main()

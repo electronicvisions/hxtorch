@@ -37,12 +37,15 @@ class TestExecutionInstances(HXTestCase):
         chips = instances.chips
         self.assertEqual(len(chips), 3)
         self.assertListEqual(
-            list(chips.values()), [None, None, None])
+            list(chips.values()), [
+                {grenade.common.ChipOnConnection(): None},
+                {grenade.common.ChipOnConnection(): None},
+                {grenade.common.ChipOnConnection(): None}])
         self.assertTrue(
             all(inst in chips.keys()
                 for inst in [inst1.ID, inst2.ID, inst3.ID]))
         self.assertTrue(
-            all(inst in chips.values()
+            all({grenade.common.ChipOnConnection(): inst} in chips.values()
                 for inst in [inst1.chip, inst2.chip, inst3.chip]))
 
         # load chips
@@ -54,7 +57,7 @@ class TestExecutionInstances(HXTestCase):
             all(inst in chips.keys()
                 for inst in [inst1.ID, inst2.ID, inst3.ID]))
         self.assertTrue(
-            all(inst in chips.values()
+            all({grenade.common.ChipOnConnection(): inst} in chips.values()
                 for inst in [inst1.chip, inst2.chip, inst3.chip]))
         self.assertTrue(
             all(chip is not None

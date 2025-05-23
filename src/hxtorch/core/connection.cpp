@@ -84,7 +84,7 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
 		auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
 		                              detail::getExecutor()
 		                                  ->get_unique_identifier(hwdb_path_value)
-		                                  .at(halco::hicann_dls::vx::DLSGlobal()) +
+		                                  .at(grenade::common::ConnectionOnExecutor()) +
 		                              "/"s + version + "/" + "hagen_cocolist.pbin"s;
 
 		detail::getChip() = load_and_apply_calibration(calibration_path);
@@ -107,7 +107,7 @@ std::string get_unique_identifier(std::optional<HWDBPath> const& hwdb_path)
 	}
 	return detail::getExecutor()
 	    ->get_unique_identifier(hwdb_path_value)
-	    .at(halco::hicann_dls::vx::DLSGlobal());
+	    .at(grenade::common::ConnectionOnExecutor());
 }
 
 void release_hardware()

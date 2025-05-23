@@ -20,7 +20,6 @@ from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
-    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -40,7 +39,9 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:

@@ -12,7 +12,7 @@ import pylogging as logger
 import torch
 
 from dlens_vx_v3 import lola, halco
-import pygrenade_vx.network as grenade
+import pygrenade_vx as grenade
 from hxtorch.spiking.handle import TensorHandle, LIFObservables
 if TYPE_CHECKING:
     from hxtorch.spiking.execution_instance import ExecutionInstance
@@ -146,7 +146,9 @@ class HXTorchFunctionMixin:
 class HXHardwareEntityMixin:
 
     def __init__(self, execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[halco.DLSGlobal] = None) \
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None) \
             -> None:
         """
         :param execution_instance: Execution instance to place to.
@@ -159,13 +161,16 @@ class HXHardwareEntityMixin:
         self.execution_instance = execution_instance
 
         if chip_coordinate is None and not self.experiment.mock:
-            chip_coordinate = halco.DLSGlobal()
+            chip_coordinate = (
+                grenade.common.ChipOnConnection(),
+                grenade.common.ConnectionOnExecutor())
         self.chip_coordinate = chip_coordinate
 
         # Grenade descriptor
         self.descriptor: Optional[Union[
-            grenade.PopulationOnNetwork, grenade.ProjectionOnNetwork,
-            Tuple[grenade.ProjectionOnNetwork, ...]]] = None
+            grenade.network.PopulationOnNetwork,
+            grenade.network.ProjectionOnNetwork,
+            Tuple[grenade.network.ProjectionOnNetwork, ...]]] = None
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -243,7 +248,9 @@ class HXModule(
 
     def __init__(self, experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[halco.DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  ) -> None:
         """
         :param experiment: Experiment to append layer to.

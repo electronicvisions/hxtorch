@@ -124,7 +124,8 @@ class TestRun(unittest.TestCase):
         dumper = sta.DumperDone()
         sta.from_portablebinary(dumper, data)
         config = {grenade.common.ExecutionInstanceID():
-                  sta.convert_to_chip(dumper)}
+                  {grenade.common.ChipOnConnection():
+                   sta.convert_to_chip(dumper)}}
 
         # Execute a couple times like you would when training a model
         for i in range(10):

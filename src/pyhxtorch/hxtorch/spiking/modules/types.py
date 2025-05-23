@@ -2,7 +2,7 @@
 Define module types
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Dict, List, Union
+from typing import TYPE_CHECKING, Optional, Dict, List, Union, Tuple
 import numpy as np
 import quantities as pq
 import torch
@@ -14,10 +14,10 @@ from hxtorch.spiking.parameter import (
     HXBaseParameter, HXParameter, ParameterType)
 
 if TYPE_CHECKING:
+    import pygrenade_vx as grenade
     from calix.spiking.neuron import SpikingCalibTarget
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
-    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 
 class BasePopulation(HXModule):
@@ -27,7 +27,9 @@ class BasePopulation(HXModule):
 
     def __init__(self, size: int, experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[DLSGlobal] = None) \
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None) \
             -> None:
         """
         :param size: Number of input neurons.
@@ -85,7 +87,9 @@ class Population(BasePopulation):
 
     def __init__(self, size: int, experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  **hxparams: Dict[str, ModuleParameterType]) \
             -> None:
         """
@@ -355,7 +359,9 @@ class Projection(HXModule):
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  execution_instance: ExecutionInstance,
-                 chip_coordinate: Optional[DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  ) -> None:
         """
         :param experiment: Experiment to append layer to.

@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
     from hxtorch.spiking.execution_instance import ExecutionInstance
-    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -33,7 +32,9 @@ class InputNeuron(InputPopulation):
     def __init__(
             self, size: int, experiment: Experiment,
             execution_instance: Optional[ExecutionInstance] = None,
-            chip_coordinate: Optional[DLSGlobal] = None,
+            chip_coordinate: Optional[Tuple[
+                grenade.common.ChipOnConnection,
+                grenade.common.ConnectionOnExecutor]] = None,
     ) -> None:
         """
         Instantiate a InputNeuron. This module serves as an External

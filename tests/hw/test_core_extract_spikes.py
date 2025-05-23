@@ -43,9 +43,11 @@ class TestExtractNSpikes(unittest.TestCase):
         # configure neurons
         for coord in coords:
             morphology.implement_morphology(coord, config[
-                grenade.common.ExecutionInstanceID()].neuron_block)
+                grenade.common.ExecutionInstanceID()][
+                grenade.common.ChipOnConnection()].neuron_block)
             morphology.set_spike_recording(True, coord, config[
-                grenade.common.ExecutionInstanceID()].neuron_block)
+                grenade.common.ExecutionInstanceID()][
+                grenade.common.ChipOnConnection()].neuron_block)
         neurons = [
             Population.Neuron(
                 logical_neuron,
@@ -106,7 +108,8 @@ class TestExtractNSpikes(unittest.TestCase):
 
     def test_extract_n_spikes(self):
         config = {grenade.common.ExecutionInstanceID():
-                  lola.Chip.default_neuron_bypass}
+                  {grenade.common.ChipOnConnection():
+                   lola.Chip.default_neuron_bypass}}
         # Get graph
         network_graph, config = self.generate_network(config)
         # Get inputs

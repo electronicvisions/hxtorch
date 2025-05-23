@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
     from hxtorch.spiking.execution_instance import ExecutionInstance
-    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -76,7 +75,9 @@ class AELIF(Population):
                  spike_triggered_adaptation_increment: ModuleParameterType = 1,
                  tau_adap: ModuleParameterType = 100e-6,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,

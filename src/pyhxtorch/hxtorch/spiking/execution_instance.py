@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import numpy as np
 
-from dlens_vx_v3 import lola, sta, halco
+from dlens_vx_v3 import lola, sta
 import pygrenade_vx as grenade
 import pylogging as logger
 from _hxtorch_core import init_hardware, release_hardware
@@ -35,7 +35,8 @@ class ExecutionInstances(set):
         :return: The Chip objects for each instance in a
             dict[ExecutionInstanceID, Chip]
         """
-        return {inst.ID: inst.chip for inst in self}
+        return {inst.ID: {grenade.common.ChipOnConnection(): inst.chip}
+                for inst in self}
 
     @property
     def cadc_recordings(self) -> Dict[
@@ -261,7 +262,8 @@ class ExecutionInstance(BaseExecutionInstance):
         assert len(self.cadc_neurons)
 
         # all modules must run on the same chip coordinate -> any is fine
-        chip_coordinate = halco.DLSGlobal()
+        chip_coordinate = (grenade.common.ChipOnConnection(),
+                           grenade.common.ConnectionOnExecutor())
         if self.modules is not None and len(self.modules):
             chip_coordinate = self.modules[-1].chip_coordinate
 
@@ -307,5 +309,7 @@ class ExecutionInstance(BaseExecutionInstance):
             post_realtime.copy_back(self.injection_post_realtime)
 
         return grenade.signal_flow.ExecutionInstanceHooks(
-            pre_static_config, pre_realtime, inside_realtime_begin,
-            inside_realtime, inside_realtime_end, post_realtime)
+            grenade.common.ChipOnConnection(),
+            grenade.signal_flow.ExecutionInstanceHooks.Chip(
+                pre_static_config, pre_realtime, inside_realtime_begin,
+                inside_realtime, inside_realtime_end, post_realtime))

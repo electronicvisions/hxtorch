@@ -20,7 +20,6 @@ from hxtorch.spiking.modules.synapse import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
-    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -41,7 +40,9 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, connections: torch.SparseTensor,
                  experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[DLSGlobal] = None,
+                 chip_coordinate: Optional[
+                     Tuple[grenade.common.ChipOnConnection,
+                           grenade.common.ConnectionOnExecutor]] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
