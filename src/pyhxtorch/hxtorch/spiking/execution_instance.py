@@ -150,18 +150,17 @@ class ExecutionInstance(BaseExecutionInstance):
         self.injection_inside_realtime = None
         self.injection_inside_realtime_end = None
 
-    def load_calib(self, calib_path: Optional[Union[Path, str]] = None):
+    def load_calib(self, calib_path: Union[Path, str]):
         """
         Load a calibration from path ``calib_path`` and apply to the
-        experiment's chip object. If no path is specified a nightly calib is
-        applied.
+        experiment's chip object.
 
-        :param calib_path: The path to the calibration. It None, the nightly
-            calib is loaded.
+        :param calib_path: The path to the calibration
         :return: Returns the chip object for the given calibration.
         """
         assert calib_path is not None
-        self.log.INFO(f"Loading calibration from {calib_path}")
+        calib_path = Path(calib_path)
+        self.log.INFO(f"Loading calibration from {calib_path.resolve()}")
         if str(calib_path).endswith(".pkl"):
             self.calib = calib_helper.calib_from_calix_native(calib_path)
             self.chip = self.calib.to_chip()
