@@ -3,7 +3,7 @@ Definition of ExecutionInstance, wrapping grenade.common.ExecutionInstanceID,
 and providing functionality for chip instance configuration
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, ClassVar
 from abc import ABC, abstractmethod
 from pathlib import Path
 import numpy as np
@@ -66,9 +66,12 @@ class ExecutionInstances(set):
 class BaseExecutionInstance(ABC):
     """ ExecutionInstance base class """
 
+    _instance_counter: ClassVar[int] = 0
+
     def __init__(self) -> None:
         self.chip: Optional[lola.Chip] = None
-        self._id = grenade.common.ExecutionInstanceID(id(self))
+        self._id = grenade.common.ExecutionInstanceID(self._instance_counter)
+        BaseExecutionInstance._instance_counter += 1
         self.cadc_neurons: Optional[
             Dict[int, grenade.network.CADCRecording.Neuron]] = {}
         self.modules: List[HXModule] = None

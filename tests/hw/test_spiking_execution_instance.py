@@ -111,7 +111,6 @@ class TestExecutionInstance(HXTestCase):
         inst1 = ExecutionInstance()
         inst2 = ExecutionInstance()
         self.assertNotEqual(inst1.ID, inst2.ID)
-        self.assertEqual(id(inst1), int(inst1.ID))
 
     def test_str(self):
         """ Test string representation of execution instance """
