@@ -1,7 +1,7 @@
 """
 Leaky-integrate neurons
 """
-from typing import Optional
+from typing import Optional, Union, Tuple
 import torch
 
 from hxtorch.spiking.functional.unterjubel import Unterjubel
@@ -9,7 +9,7 @@ from hxtorch.spiking.functional.unterjubel import Unterjubel
 
 # Allow redefining builtin for PyTorch consistency
 # pylint: disable=redefined-builtin, invalid-name, too-many-locals, too-many-arguments
-def cuba_li_integration(input: torch.Tensor,
+def cuba_li_integration(input: Union[Tuple[torch.Tensor], torch.Tensor],
                         *,
                         leak: torch.Tensor,
                         tau_syn: torch.Tensor,
@@ -36,6 +36,9 @@ def cuba_li_integration(input: torch.Tensor,
 
     :return: Returns the membrane trace in shape (batch, time, neurons).
     """
+    # Merge graded spikes if neuron has inputs from multiple synapses
+    if isinstance(input, tuple):
+        input = torch.stack(input).sum(0)
     dev = input.device
     T, bs, ps = input.shape
     i = torch.tensor(0.).to(dev)

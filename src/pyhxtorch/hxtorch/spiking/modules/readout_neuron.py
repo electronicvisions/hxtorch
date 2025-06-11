@@ -226,11 +226,12 @@ class ReadoutNeuron(Neuron):
         return cadc, madc
 
     # pylint: disable=redefined-builtin
-    def forward_func(self, input: SynapseHandle,
+    def forward_func(self, *input: SynapseHandle,
                      hw_data: Optional[Tuple[torch.Tensor]] = None) \
             -> ReadoutNeuronHandle:
+        assert all(handle.graded_spikes is not None for handle in input)
         return ReadoutNeuronHandle(*F.cuba_li_integration(
-            input.graded_spikes,
+            tuple(handle.graded_spikes for handle in input),
             leak=self.leak.model_value,
             tau_syn=self.tau_syn.model_value,
             tau_mem=self.tau_mem.model_value,
