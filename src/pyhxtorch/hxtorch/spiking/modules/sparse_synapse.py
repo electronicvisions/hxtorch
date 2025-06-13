@@ -20,6 +20,7 @@ from hxtorch.spiking.modules.synapse import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
+    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -40,6 +41,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, connections: torch.SparseTensor,
                  experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[DLSGlobal] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
@@ -51,6 +53,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
             defining existing connections by one-entries. Can be sparse or
             non-sparse.
         :param experiment: Experiment to append layer to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         :param device: Device to execute on. Only considered in mock-mode.
         :param dtype: Data type of weight tensor.
         :param transform: A function taking the modules weight tensor and
@@ -68,6 +71,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
 
         super().__init__(
             self.mask.shape[1], self.mask.shape[0], experiment=experiment,
+            chip_coordinate=chip_coordinate,
             execution_instance=execution_instance)
 
         self.bias = None
@@ -154,7 +158,7 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
                 [grenade.network.ExternalSourcePopulation.Neuron(False)]
-                * self.in_features),
+                * self.in_features, self.chip_coordinate),
                 self.execution_instance)
 
             # [nrn on pop pre, compartment on nrn pre,
@@ -172,12 +176,12 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
             grenade.network.Receptor(
                 grenade.network.Receptor.ID(),
                 grenade.network.Receptor.Type.excitatory),
-            connections_exc, pre, post)
+            connections_exc, pre, post, self.chip_coordinate)
         projection_inh = grenade.network.Projection(
             grenade.network.Receptor(
                 grenade.network.Receptor.ID(),
                 grenade.network.Receptor.Type.inhibitory),
-            connections_inh, pre, post)
+            connections_inh, pre, post, self.chip_coordinate)
 
         exc_descriptor = builder.add(
             projection_exc, self.execution_instance.ID)

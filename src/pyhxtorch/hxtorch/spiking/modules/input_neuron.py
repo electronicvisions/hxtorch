@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
     from hxtorch.spiking.execution_instance import ExecutionInstance
+    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -31,7 +32,9 @@ class InputNeuron(InputPopulation):
 
     def __init__(
             self, size: int, experiment: Experiment,
-            execution_instance: Optional[ExecutionInstance] = None) -> None:
+            execution_instance: Optional[ExecutionInstance] = None,
+            chip_coordinate: Optional[DLSGlobal] = None,
+    ) -> None:
         """
         Instantiate a InputNeuron. This module serves as an External
         Population for input injection and is created within `experiment`
@@ -41,9 +44,14 @@ class InputNeuron(InputPopulation):
         :param size: Number of input neurons.
         :param experiment: Experiment to which this module is assigned.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
         super().__init__(
-            size, experiment, execution_instance=execution_instance)
+            size,
+            experiment,
+            execution_instance=execution_instance,
+            chip_coordinate=chip_coordinate,
+        )
 
     def register_hw_entity(self) -> None:
         """
@@ -52,7 +60,7 @@ class InputNeuron(InputPopulation):
         self.experiment.register_population(self)
 
     def add_to_network_graph(
-        self, builder: grenade.network.NetworkBuilder) \
+            self, builder: grenade.network.NetworkBuilder) \
             -> grenade.network.PopulationOnNetwork:
         """
         Adds instance to grenade's network builder.
@@ -63,7 +71,8 @@ class InputNeuron(InputPopulation):
         # create grenade population
         gpopulation = grenade.network.ExternalSourcePopulation(
             [grenade.network.ExternalSourcePopulation.Neuron(
-                self.execution_instance.input_loopback)] * self.size)
+                self.execution_instance.input_loopback)] * self.size,
+            self.chip_coordinate)
         # add to builder
         self.descriptor = builder.add(gpopulation, self.execution_instance.ID)
         log.TRACE(f"Added Input Population: {self}")

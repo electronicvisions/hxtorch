@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import numpy as np
 
-from dlens_vx_v3 import lola, sta
+from dlens_vx_v3 import lola, sta, halco
 import pygrenade_vx as grenade
 import pylogging as logger
 from _hxtorch_core import init_hardware, release_hardware
@@ -252,10 +252,17 @@ class ExecutionInstance(BaseExecutionInstance):
         :return: The ``grenade.network.CADCRecoding`` object
         """
         assert len(self.cadc_neurons)
-        cadc_recording = grenade.network.CADCRecording()
-        if self.record_cadc_into_dram:
-            cadc_recording.placement_on_dram = True
-        cadc_recording.neurons = [nrn[0] for nrn in self.cadc_neurons.values()]
+
+        # all modules must run on the same chip coordinate -> any is fine
+        chip_coordinate = halco.DLSGlobal()
+        if self.modules is not None and len(self.modules):
+            chip_coordinate = self.modules[-1].chip_coordinate
+
+        cadc_recording = grenade.network.CADCRecording(
+            [nrn[0] for nrn in self.cadc_neurons.values()],
+            self.record_cadc_into_dram,
+            chip_coordinate,
+        )
         return cadc_recording
 
     def generate_playback_hooks(self) \

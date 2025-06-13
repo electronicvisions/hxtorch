@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from calix.spiking.neuron import SpikingCalibTarget
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
+    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 
 class BasePopulation(HXModule):
@@ -25,14 +26,16 @@ class BasePopulation(HXModule):
     size: int
 
     def __init__(self, size: int, experiment: Experiment,
-                 execution_instance: Optional[ExecutionInstance] = None) \
+                 execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[DLSGlobal] = None) \
             -> None:
         """
         :param size: Number of input neurons.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
-        super().__init__(experiment, execution_instance)
+        super().__init__(experiment, execution_instance, chip_coordinate)
         self.size = size
 
     def extra_repr(self) -> str:
@@ -71,14 +74,21 @@ class Population(BasePopulation):
 
     def __init__(self, size: int, experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[DLSGlobal] = None,
                  **hxparams: Dict[str, ModuleParameterType]) \
             -> None:
         """
         :param size: Number of input neurons.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
-        super().__init__(size, experiment, execution_instance)
+        super().__init__(
+            size,
+            experiment,
+            execution_instance,
+            chip_coordinate,
+        )
         self.unit_ids = None
         self._generate_hxparameters(hxparams)
         self.read_params_from_calibration = True
@@ -320,15 +330,18 @@ class Projection(HXModule):
     # pylint: disable=too-many-arguments
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
-                 execution_instance: ExecutionInstance) -> None:
+                 execution_instance: ExecutionInstance,
+                 chip_coordinate: Optional[DLSGlobal] = None,
+                 ) -> None:
         """
         :param experiment: Experiment to append layer to.
         :param in_features: Size of input dimension.
         :param out_features: Size of output dimension.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
-        super().__init__(experiment, execution_instance)
+        super().__init__(experiment, execution_instance, chip_coordinate)
         self.in_features = in_features
         self.out_features = out_features
 

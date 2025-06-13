@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
     from hxtorch.spiking.execution_instance import ExecutionInstance
+    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -56,6 +57,7 @@ class Neuron(Population):
                  method: str = "superspike",
                  alpha: float = 50.,
                  execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[DLSGlobal] = None,
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,
@@ -98,6 +100,7 @@ class Neuron(Population):
         :param size: Size of the population.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         :param leak: The leak potential. Defaults to HXParameter(80).
         :param reset: The reset potential. Defaults to HXParameter(80).
         :param threshold: The threshold potential. Defaults to
@@ -178,6 +181,7 @@ class Neuron(Population):
         super().__init__(size,
                          experiment=experiment,
                          execution_instance=execution_instance,
+                         chip_coordinate=chip_coordinate,
                          leak=leak,
                          reset=reset,
                          threshold=threshold,
@@ -407,7 +411,8 @@ class Neuron(Population):
         ]
 
         # create grenade population
-        gpopulation = grenade.network.Population(neurons)
+        gpopulation = grenade.network.Population(neurons,
+                                                 self.chip_coordinate)
 
         # add to builder
         self.descriptor = builder.add(
@@ -450,8 +455,8 @@ class Neuron(Population):
         madc_recording_neuron.coordinate.compartment_on_neuron = \
             halco.CompartmentOnLogicalNeuron()
         madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
-        madc_recording = grenade.network.MADCRecording()
-        madc_recording.neurons = [madc_recording_neuron]
+        madc_recording = grenade.network.MADCRecording([madc_recording_neuron],
+                                                       self.chip_coordinate)
         builder.add(madc_recording, self.execution_instance.ID)
         log.TRACE(f"Added population '{self}' to grenade graph.")
 

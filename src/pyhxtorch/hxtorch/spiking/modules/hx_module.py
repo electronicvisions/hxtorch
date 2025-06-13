@@ -143,16 +143,22 @@ class HXTorchFunctionMixin:
 
 class HXHardwareEntityMixin:
 
-    def __init__(self, execution_instance: Optional[ExecutionInstance] = None)\
+    def __init__(self, execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[halco.DLSGlobal] = None) \
             -> None:
         """
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this entity is placed on.
         """
         self._changed_since_last_run = True
 
         if execution_instance is None and not self.experiment.mock:
             execution_instance = self.experiment.default_execution_instance
         self.execution_instance = execution_instance
+
+        if chip_coordinate is None and not self.experiment.mock:
+            chip_coordinate = halco.DLSGlobal()
+        self.chip_coordinate = chip_coordinate
 
         # Grenade descriptor
         self.descriptor: Optional[Union[
@@ -234,15 +240,21 @@ class HXModule(
     """
 
     def __init__(self, experiment: Experiment,
-                 execution_instance: Optional[ExecutionInstance] = None) \
-            -> None:
+                 execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[halco.DLSGlobal] = None,
+                 ) -> None:
         """
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
         HXBaseExperimentModule.__init__(self, experiment)
         HXTorchFunctionMixin.__init__(self)
-        HXHardwareEntityMixin.__init__(self, execution_instance)
+        HXHardwareEntityMixin.__init__(
+            self,
+            execution_instance,
+            chip_coordinate,
+        )
 
 
 class HXFunctionalModule(HXTorchFunctionMixin, HXBaseExperimentModule):

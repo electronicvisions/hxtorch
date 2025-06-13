@@ -20,6 +20,7 @@ from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.execution_instance import ExecutionInstance
+    from pyhalco_hicann_dls_vx_v3 import DLSGlobal
 
 log = logger.get("hxtorch.spiking.modules")
 
@@ -39,6 +40,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     def __init__(self, in_features: int, out_features: int,
                  experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
+                 chip_coordinate: Optional[DLSGlobal] = None,
                  device: str = None, dtype: Type = None,
                  transform: Callable = weight_transforms.linear_saturating) \
             -> None:
@@ -51,10 +53,13 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param dtype: Data type of weight tensor.
         :param experiment: Experiment to append layer to.
         :param execution_instance: Execution instance to place to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         """
         super().__init__(
             in_features, out_features, experiment=experiment,
-            execution_instance=execution_instance)
+            execution_instance=execution_instance,
+            chip_coordinate=chip_coordinate,
+        )
 
         self.weight = Parameter(
             torch.empty(
@@ -139,7 +144,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
             iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
                 [grenade.network.ExternalSourcePopulation.Neuron(False)]
-                * pre_size),
+                * pre_size, self.chip_coordinate),
                 self.execution_instance.ID)
 
             # [nrn on pop pre, compartment on nrn pre,
@@ -156,12 +161,12 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             grenade.network.Receptor(
                 grenade.network.Receptor.ID(),
                 grenade.network.Receptor.Type.excitatory),
-            connections_exc, pre, post)
+            connections_exc, pre, post, self.chip_coordinate)
         projection_inh = grenade.network.Projection(
             grenade.network.Receptor(
                 grenade.network.Receptor.ID(),
                 grenade.network.Receptor.Type.inhibitory),
-            connections_inh, pre, post)
+            connections_inh, pre, post, self.chip_coordinate)
 
         exc_descriptor = builder.add(
             projection_exc, self.execution_instance.ID)
