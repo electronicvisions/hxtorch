@@ -62,7 +62,7 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
         :returns: Returns a random boolean spike mask of size `self.size`.
         """
         if self.training:
-            self.mask = (torch.rand(self.size) > self._dropout)
+            self.mask = torch.rand(self.size) > self._dropout
         else:
             self.mask = torch.ones(self.size).bool()
         return self._mask
