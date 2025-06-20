@@ -12,3 +12,5 @@ from hxtorch.spiking.parameter import (
 from hxtorch.spiking.experiment import Experiment
 from hxtorch.spiking.execution_instance import ExecutionInstance
 from hxtorch.spiking.run import run
+from hxtorch.spiking.utils.from_nir import from_nir, ConversionConfig
+from hxtorch.spiking.utils.to_nir import to_nir

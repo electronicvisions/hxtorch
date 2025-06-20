@@ -19,6 +19,7 @@ class BaseModuleManager(ABC):
     def __init__(self):
         """ """
         self.graph: nx.DiGraph = nx.DiGraph()
+        self.prev_graph: nx.DiGraph = nx.DiGraph()
         self.nodes: Dict[Module, int] = {}
         self.wrappers: Dict[Wrapper, int] = {}
 
@@ -50,6 +51,7 @@ class BaseModuleManager(ABC):
         Clear the internal graph and remove the module -> node and
         wrapper -> node mapping
         """
+        self.prev_graph = self.graph.copy()
         self.graph = nx.DiGraph()
 
     @abstractmethod
