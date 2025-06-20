@@ -5,9 +5,11 @@ import torch
 
 import hxtorch.spiking as hxsnn
 from hxtorch.examples.spiking.yinyang_model import SNN
-from hxtorch.spiking.utils.from_nir import (_map_nir_to_hxtorch, 
+from hxtorch.spiking.utils.from_nir import (_map_nir_to_hxtorch,
     ConversionConfig)
 from hxtorch.spiking.utils.to_nir import _map_hxtorch_to_nir, to_nir
+from hxtorch.spiking.utils.from_nir_data import from_nir_data
+from hxtorch.spiking.utils.to_nir_data import to_nir_data
 
 
 class TestToNIRConversion(unittest.TestCase):
@@ -140,7 +142,6 @@ class TestFromNIRConversion(unittest.TestCase):
         self.assertTrue(np.array_equal(hxtorch_synapse.weight.detach().numpy(), weight))
 
     def test_network_from_nir(self):
-        exp = hxsnn.Experiment(mock=True)
         cfg = ConversionConfig()
 
         nir_graph = nir.NIRGraph(
@@ -169,6 +170,63 @@ class TestFromNIRConversion(unittest.TestCase):
         sample_input = {"input": torch.randint(0, 2, (10, 100, 5),
                                                dtype=torch.float32)}
         output = hxtorch_network(sample_input)
+
+
+class TestNIRDataConversion(unittest.TestCase):
+    nir_graph = nir.NIRGraph(
+        nodes={
+            "input": nir.Input(input_type=np.array([5])),
+            "linear": nir.Linear(weight=np.random.rand(10, 5)),
+            "lif": nir.CubaLIF(
+                tau_mem=np.array([0.02] * 10),
+                tau_syn=np.array([0.005] * 10),
+                r=np.array([1.0] * 10),
+                v_leak=np.array([0.1] * 10),
+                v_reset=np.array([0.0] * 10),
+                v_threshold=np.array([1.0] * 10)
+            ),
+            "output": nir.Output(output_type=np.array([10]))
+        },
+        edges=[
+            ("input", "linear"),
+            ("linear", "lif"),
+            ("lif", "output")
+        ]
+    )
+
+    def test_event_data_from_nir(self):
+        cfg = ConversionConfig(dt=0.001)
+        nir_data = nir.NIRGraphData(
+            nodes={
+                "lif": nir.NIRNodeData(
+                    observables={
+                        "spikes": nir.EventData(idx=np.random.randint(0, 10, (3, 5)),
+                                                time=np.random.rand(3, 5) * 0.1,
+                                                n_neurons=10,
+                                                t_max=0.1)
+                    }
+                )
+            }
+        )
+
+        hxtorch_model = hxsnn.from_nir(self.nir_graph, cfg)
+        hxtorch_dict = from_nir_data(nir_data, hxtorch_model)
+
+        self.assertIn("lif", hxtorch_dict)
+        self.assertEqual(hxtorch_dict["lif"].shape, (100, 3, 10))
+
+    def test_stable_conversion(self):
+        hxtorch_model = hxsnn.from_nir(self.nir_graph)
+
+        original_spikes = {
+            "lif": torch.randint(0, 2, (4, 10, 10), dtype=torch.float32)
+        }
+
+        nir_data = to_nir_data(original_spikes, hxtorch_model)
+        converted_spikes = from_nir_data(nir_data, hxtorch_model)
+
+        self.assertTrue(torch.equal(original_spikes["lif"], converted_spikes["lif"]),
+                        "Mismatch in spikes for node 'lif'")
 
 if __name__ == '__main__':
     unittest.main()
