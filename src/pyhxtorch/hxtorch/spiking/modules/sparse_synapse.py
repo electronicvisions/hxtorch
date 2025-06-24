@@ -15,7 +15,7 @@ import pygrenade_vx as grenade
 from _hxtorch_core import weight_to_connection
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.transforms import weight_transforms
-from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
+from hxtorch.spiking.handle import LIFObservables, SynapseHandle
 from hxtorch.spiking.modules.synapse import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
@@ -193,6 +193,6 @@ class SparseSynapse(Projection):  # pylint: disable=abstract-method
         return self.descriptor
 
     # pylint: disable=redefined-builtin, arguments-differ
-    def forward_func(self, input: NeuronHandle) -> SynapseHandle:
+    def forward_func(self, input: LIFObservables) -> SynapseHandle:
         return SynapseHandle(F.linear_sparse(
             input.spikes, self.weight, self.mask, None))

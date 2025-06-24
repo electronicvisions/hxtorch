@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 from typing import (
     TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, Optional, Union)
+from dataclasses import fields
 import inspect
 import pylogging as logger
 
@@ -12,7 +13,7 @@ import torch
 
 from dlens_vx_v3 import lola, halco
 import pygrenade_vx.network as grenade
-from hxtorch.spiking.handle import TensorHandle, NeuronHandle
+from hxtorch.spiking.handle import TensorHandle, LIFObservables
 if TYPE_CHECKING:
     from hxtorch.spiking.execution_instance import ExecutionInstance
     from hxtorch.spiking.observables import HardwareObservables
@@ -33,7 +34,8 @@ class HXBaseExperimentModule(torch.nn.Module):
         """
         super().__init__()
         self.experiment = experiment
-        self._output_handle = self.output_type()
+        self._output_handle = self.output_type(
+            *([None] * len(fields(self.output_type))))
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -187,7 +189,7 @@ class HXHardwareEntityMixin:
         self._changed_since_last_run = False
 
     def add_to_input_generator(  # pylint: disable=redefined-builtin
-            self, input: NeuronHandle,
+            self, input: LIFObservables,
             builder: grenade.network.InputGenerator) -> None:
         """
         Add the input to an input module to grenades input generator.

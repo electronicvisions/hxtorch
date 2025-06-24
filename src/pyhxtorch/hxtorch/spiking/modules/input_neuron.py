@@ -11,7 +11,7 @@ import pygrenade_vx as grenade
 
 from _hxtorch_spiking import tensor_to_spike_times  # pylint: disable=import-error
 import hxtorch.spiking.functional as F
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.modules.types import InputPopulation
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ class InputNeuron(InputPopulation):
     Spike source generating spikes at the times [ms] given in the spike_times
     array.
     """
-    output_type: Type = NeuronHandle
+    output_type: Type = LIFObservables
 
     def __init__(
             self, size: int, experiment: Experiment,
@@ -80,7 +80,7 @@ class InputNeuron(InputPopulation):
         return self.descriptor
 
     def add_to_input_generator(
-            self, input: NeuronHandle,  # pylint: disable=redefined-builtin
+            self, input: LIFObservables,  # pylint: disable=redefined-builtin
             builder: grenade.network.InputGenerator) -> None:
         """
         Add the neurons events represented by this instance to grenades input
@@ -109,8 +109,8 @@ class InputNeuron(InputPopulation):
         return None
 
     # pylint: disable=redefined-builtin
-    def forward_func(self, input: NeuronHandle,
+    def forward_func(self, input: LIFObservables,
                      hw_data: Optional[Tuple[torch.Tensor]] = None) \
-            -> NeuronHandle:
-        return NeuronHandle(
+            -> LIFObservables:
+        return LIFObservables(
             spikes=F.input_neuron(input.spikes, hw_data=hw_data))

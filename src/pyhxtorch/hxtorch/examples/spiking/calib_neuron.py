@@ -16,7 +16,7 @@ def main():
     # Modules
     synapse = hxsnn.Synapse(
         in_features=2, out_features=4, experiment=experiment)
-    neuron = hxsnn.Neuron(
+    neuron = hxsnn.LIF(
         size=4,
         experiment=experiment,
         tau_syn=hxsnn.HXParameter(6e-6),
@@ -34,7 +34,7 @@ def main():
     spikes[5] = 1.
 
     # Forward
-    spike_handle = hxsnn.NeuronHandle(spikes)
+    spike_handle = hxsnn.LIFObservables(spikes=spikes)
     output = neuron(synapse(spike_handle))
 
     # Execute
@@ -54,7 +54,7 @@ def main():
     spikes[:, :, :] = 0.
 
     # Forward
-    spike_handle = hxsnn.NeuronHandle(spikes)
+    spike_handle = hxsnn.LIFObservables(spikes=spikes)
     output = neuron(synapse(spike_handle))
     # Execute
     hxsnn.run(experiment=experiment, runtime=spikes.shape[0])

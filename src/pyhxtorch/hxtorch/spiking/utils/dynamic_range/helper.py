@@ -1,7 +1,7 @@
 """ Helper functions for dynamic ranges """
 from dlens_vx_v3 import lola, halco
 
-from hxtorch.spiking.modules import Neuron, ReadoutNeuron
+from hxtorch.spiking.modules import LIF, LI
 
 
 class ConstantCurrentMixin:
@@ -26,9 +26,9 @@ class ConstantCurrentMixin:
         return neuron_block
 
 
-class ConstantCurrentNeuron(ConstantCurrentMixin, Neuron):
+class ConstantCurrentNeuron(ConstantCurrentMixin, LIF):
     pass
 
 
-class ConstantCurrentReadoutNeuron(ConstantCurrentMixin, ReadoutNeuron):
+class ConstantCurrentReadoutNeuron(ConstantCurrentMixin, LI):
     pass

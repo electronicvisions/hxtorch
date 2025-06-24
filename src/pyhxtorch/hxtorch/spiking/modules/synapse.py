@@ -15,7 +15,7 @@ import pygrenade_vx as grenade
 import _hxtorch_core
 import hxtorch.spiking.functional as F
 from hxtorch.spiking.transforms import weight_transforms
-from hxtorch.spiking.handle import NeuronHandle, SynapseHandle
+from hxtorch.spiking.handle import LIFObservables, SynapseHandle
 from hxtorch.spiking.modules.types import Projection
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
@@ -178,12 +178,14 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         return self.descriptor
 
     # pylint: disable=redefined-builtin, arguments-differ
-    def forward_func(self, input: NeuronHandle) -> SynapseHandle:
-        return SynapseHandle(F.linear(input.spikes, self.weight, None))
+    def forward_func(self, input: LIFObservables) -> SynapseHandle:
+        return SynapseHandle(
+            graded_spikes=F.linear(input.spikes, self.weight, None))
 
 
 class EventPropSynapse(Synapse):
     # pylint: disable=redefined-builtin, arguments-differ
-    def forward_func(self, input: NeuronHandle) -> SynapseHandle:
+    def forward_func(self, input: LIFObservables) -> SynapseHandle:
         return SynapseHandle(
-            F.EventPropSynapseFunction.apply(input.spikes, self.weight))
+            graded_spikes=F.EventPropSynapseFunction.apply(
+                input.spikes, self.weight))

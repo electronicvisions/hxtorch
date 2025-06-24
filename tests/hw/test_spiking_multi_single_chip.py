@@ -6,8 +6,8 @@ import torch
 
 import hxtorch
 from hxtorch.spiking import Experiment, run
-from hxtorch.spiking.modules import Neuron, Synapse
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.modules import LIF, Synapse
+from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.utils import calib_helper
 from hxtorch.spiking.execution_instance import ExecutionInstance
 
@@ -31,7 +31,7 @@ class TestMultiSingleChip(unittest.TestCase):
         instance1 = ExecutionInstance(
             calib_path=calib_helper.nightly_calib_path())
         module1 = Synapse(10, 5, experiment, execution_instance=instance1)
-        module2 = Neuron(
+        module2 = LIF(
             5, experiment, execution_instance=instance1,
             enable_cadc_recording=True)
 
@@ -39,12 +39,12 @@ class TestMultiSingleChip(unittest.TestCase):
         instance2 = ExecutionInstance(
             calib_path=calib_helper.nightly_calib_path())
         module3 = Synapse(5, 15, experiment, execution_instance=instance2)
-        module4 = Neuron(
+        module4 = LIF(
             15, experiment, execution_instance=instance2,
             enable_cadc_recording=True)
 
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
+        input_handle = LIFObservables(spikes=torch.randn((20, 10, 10)))
         handle1 = module1(input_handle)
         handle2 = module2(handle1)
         handle3 = module3(handle2)
@@ -61,19 +61,19 @@ class TestMultiSingleChip(unittest.TestCase):
         inst2 = ExecutionInstance(calib_path=calib_helper.nightly_calib_path())
         synapse1 = Synapse(10, 8, experiment, execution_instance=inst1)
         synapse2 = Synapse(10, 8, experiment, execution_instance=inst2)
-        neuron1 = Neuron(8, experiment, execution_instance=inst1)
-        neuron2 = Neuron(8, experiment, execution_instance=inst2)
+        neuron1 = LIF(8, experiment, execution_instance=inst1)
+        neuron2 = LIF(8, experiment, execution_instance=inst2)
 
         # Forward 1
         inputs = torch.randn((10, 10, 10))
-        neuron1(synapse1(NeuronHandle(inputs)))
-        neuron2(synapse2(NeuronHandle(inputs)))
+        neuron1(synapse1(LIFObservables(spikes=inputs)))
+        neuron2(synapse2(LIFObservables(spikes=inputs)))
         run(experiment, 10)
 
         # Forward 2
         inputs = torch.randn((10, 10, 10))
-        neuron1(synapse1(NeuronHandle(inputs)))
-        neuron2(synapse2(NeuronHandle(inputs)))
+        neuron1(synapse1(LIFObservables(spikes=inputs)))
+        neuron2(synapse2(LIFObservables(spikes=inputs)))
         run(experiment, 10)
 
 
@@ -88,14 +88,14 @@ class TestMultiSingleChip(unittest.TestCase):
 
         # Modules
         module1 = Synapse(10, 10, experiment, execution_instance=inst1)
-        module2 = Neuron(10, experiment, execution_instance=inst1)
+        module2 = LIF(10, experiment, execution_instance=inst1)
         # switch execution instance
         module3 = Synapse(10, 10, experiment, execution_instance=inst2)
-        module4 = Neuron(10, experiment, execution_instance=inst2)
+        module4 = LIF(10, experiment, execution_instance=inst2)
 
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
-        input_handle2 = NeuronHandle(spikes=torch.randn((20, 10, 10)))
+        input_handle = LIFObservables(spikes=torch.randn((20, 10, 10)))
+        input_handle2 = LIFObservables(spikes=torch.randn((20, 10, 10)))
         handle1 = module1(input_handle)
         module2(handle1)
         handle3 = module3(input_handle2)

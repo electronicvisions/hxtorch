@@ -95,8 +95,8 @@ class TestHXModules(unittest.TestCase):
         module.param = "param1"
 
         # Input and output handles
-        input_handle = hxsnn.NeuronHandle(torch.zeros(10, 5))
-        output_handle = hxsnn.NeuronHandle()
+        input_handle = hxsnn.LIFObservables(spikes=torch.zeros(10, 5))
+        output_handle = hxsnn.LIFObservables()
 
         # Execute
         module.exec_forward(
@@ -114,7 +114,7 @@ class TestHXModuleWrapper(unittest.TestCase):
 
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(10, experiment=experiment)
+        lif = hxsnn.LIF(10, experiment=experiment)
 
         wrapper = hxsnn.HXModuleWrapper(experiment, linear=linear, lif=lif)
 
@@ -124,7 +124,7 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertTrue(wrapper.contains([linear, lif]))
 
         # Should not contain
-        lif2 = hxsnn.Neuron(10, experiment=experiment)
+        lif2 = hxsnn.LIF(10, experiment=experiment)
         self.assertFalse(wrapper.contains(lif2))
         self.assertFalse(wrapper.contains([lif2]))
         self.assertFalse(wrapper.contains([linear, lif2]))
@@ -133,7 +133,7 @@ class TestHXModuleWrapper(unittest.TestCase):
         """ Test module printing """
         experiment = hxsnn.Experiment()
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(10, experiment=experiment)
+        lif = hxsnn.LIF(10, experiment=experiment)
         module = hxsnn.HXModuleWrapper(experiment, linear=linear, lif=lif)
         logger.INFO(module)
 
@@ -144,12 +144,12 @@ class TestHXModuleWrapper(unittest.TestCase):
 
         # Modules
         linear1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif1 = hxsnn.Neuron(10, experiment=experiment)
+        lif1 = hxsnn.LIF(10, experiment=experiment)
         wrapper = hxsnn.HXModuleWrapper(experiment, linear1=linear1, lif1=lif1)
         self.assertEqual({"linear1": linear1, "lif1": lif1}, wrapper.modules)
 
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif2 = hxsnn.Neuron(10, experiment=experiment)
+        lif2 = hxsnn.LIF(10, experiment=experiment)
         wrapper.update(linear1=linear2, lif1=lif2)
         self.assertEqual({"linear1": linear2, "lif1": lif2}, wrapper.modules)
 
@@ -160,17 +160,19 @@ class TestHXModuleWrapper(unittest.TestCase):
         class Wrapper(hxsnn.HXModuleWrapper):
             def forward_func(selfw, input, hw_data=None):
                 return (
-                    hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
-                    hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
+                    hxsnn.SynapseHandle(graded_spikes="syn1"),
+                    hxsnn.LIFObservables(spikes="z1", membrane_cadc="v1"),
+                    hxsnn.SynapseHandle(graded_spikes="syn2"),
+                    hxsnn.LIFObservables(spikes="nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()
 
         # Modules
         linear1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif1 = hxsnn.Neuron(10, experiment=experiment)
+        lif1 = hxsnn.LIF(10, experiment=experiment)
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif2 = hxsnn.Neuron(10, experiment=experiment)
+        lif2 = hxsnn.LIF(10, experiment=experiment)
 
         wrapper = Wrapper(
             experiment, linear1=linear1, lif1=lif1, linear2=linear2, lif2=lif2)
@@ -182,7 +184,7 @@ class TestHXModuleWrapper(unittest.TestCase):
         lif2.descriptor = "lif2"
 
         # Forward
-        in_h = hxsnn.NeuronHandle(in_tensor)
+        in_h = hxsnn.LIFObservables(spikes=in_tensor)
         syn1 = linear1(in_h)
         nrn1 = lif1(syn1)
         syn2 = linear2(nrn1)
@@ -206,17 +208,19 @@ class TestHXModuleWrapper(unittest.TestCase):
                 self.assertEqual(
                     hw_data, (("syn1",), ("nrn1",), ("syn2",), ("nrn2",)))
                 return (
-                    hxsnn.SynapseHandle("syn1"), hxsnn.NeuronHandle("z1", "v1"),
-                    hxsnn.SynapseHandle("syn2"), hxsnn.NeuronHandle("nrn2"))
+                    hxsnn.SynapseHandle(graded_spikes="syn1"),
+                    hxsnn.LIFObservables(spikes="z1", membrane_cadc="v1"),
+                    hxsnn.SynapseHandle(graded_spikes="syn2"),
+                    hxsnn.LIFObservables(spikes="nrn2"))
 
         # Experiment
         experiment = hxsnn.Experiment()
 
         # Modules
         linear1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif1 = hxsnn.Neuron(10, experiment=experiment)
+        lif1 = hxsnn.LIF(10, experiment=experiment)
         linear2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif2 = hxsnn.Neuron(10, experiment=experiment)
+        lif2 = hxsnn.LIF(10, experiment=experiment)
 
         wrapper = HWDataWrapper(
             experiment, linear1=linear1, lif1=lif1, linear2=linear2, lif2=lif2)
@@ -228,7 +232,7 @@ class TestHXModuleWrapper(unittest.TestCase):
         lif2.descriptor = "lif2"
 
         # Forward
-        in_h = hxsnn.NeuronHandle(in_tensor)
+        in_h = hxsnn.LIFObservables(spikes=in_tensor)
         syn1 = linear1(in_h)
         nrn1 = lif1(syn1)
         syn2 = linear2(nrn1)
@@ -259,18 +263,19 @@ class TestHXModuleWrapper(unittest.TestCase):
             def forward_func(selfw, input, hw_data=None):
                 self.assertEqual((("syn",), ("nrn",)))
                 return (
-                    hxsnn.SynapseHandle("syn"), hxsnn.NeuronHandle("z1", "v1"))
+                    hxsnn.SynapseHandle(graded_spikes="syn"),
+                    hxsnn.LIFObservables(spikes="z1", membrane_cadc="v1"))
 
         # Experiment
         experiment = hxsnn.Experiment()
 
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(10, experiment=experiment)
+        lif = hxsnn.LIF(10, experiment=experiment)
         wrapper = Wrapper(experiment, linear=linear, lif=lif)
 
         # forward
-        inputs = hxsnn.NeuronHandle()
+        inputs = hxsnn.LIFObservables()
         syn = linear(inputs)
         nrn = lif(syn)
         wrapper()
@@ -279,7 +284,7 @@ class TestHXModuleWrapper(unittest.TestCase):
         self.assertEqual(experiment.modules.wrappers, {wrapper: "w_0"})
 
         # forward again
-        inputs = hxsnn.NeuronHandle(in_tensor)
+        inputs = hxsnn.LIFObservables(spikes=in_tensor)
         syn = linear(inputs)
         nrn = lif(syn)
         wrapper()
@@ -303,26 +308,31 @@ class HWTestCase(unittest.TestCase):
         hxtorch.release_hardware()
 
 
-class TestNeuron(HWTestCase):
-    """ Test hxtorch.hxsnn.modules.Neuron """
+class TestAELIF(HWTestCase):
+    """ Test hxtorch.hxsnn.modules.AELIF """
 
     def test_output_type(self):
         """
         Test neuron returns the expected handle
         """
         experiment = hxsnn.Experiment()
-        neuron = hxsnn.Neuron(44, experiment)
+        neuron = hxsnn.AELIF(44, experiment)
         # Test output handle
-        neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
-        self.assertTrue(isinstance(neuron_handle, hxsnn.NeuronHandle))
+        neuron_handle = neuron(
+            hxsnn.SynapseHandle(graded_spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(neuron_handle, type(hxsnn.Handle(
+            'membrane_cadc', 'membrane_madc', 'current', 'adaptation',
+            'spikes'))))
         self.assertIsNone(neuron_handle.spikes)
+        self.assertIsNone(neuron_handle.current)
+        self.assertIsNone(neuron_handle.adaptation)
         self.assertIsNone(neuron_handle.membrane_cadc)
         self.assertIsNone(neuron_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """
         experiment = hxsnn.Experiment()
-        module = hxsnn.Neuron(10, experiment=experiment)
+        module = hxsnn.AELIF(10, experiment=experiment)
         logger.INFO(module)
 
     def test_register_hw_entity(self):
@@ -333,7 +343,7 @@ class TestNeuron(HWTestCase):
         offsets = torch.rand(10)
 
         experiment = hxsnn.Experiment()
-        neuron = hxsnn.Neuron(10, experiment)
+        neuron = hxsnn.AELIF(10, experiment)
         neuron.register_hw_entity()
         self.assertEqual(
             experiment.default_execution_instance.id_counter, 10)
@@ -341,7 +351,7 @@ class TestNeuron(HWTestCase):
         self.assertEqual(experiment._populations[0], neuron)
 
         experiment = hxsnn.Experiment()
-        neuron = hxsnn.Neuron(
+        neuron = hxsnn.AELIF(
             10, experiment, trace_offset=offsets, trace_scale=scales)
         neuron.register_hw_entity()
         self.assertTrue(torch.equal(neuron.scale, scales))
@@ -364,7 +374,7 @@ class TestNeuron(HWTestCase):
                 ), halco.AtomicNeuronOnDLS(halco.EnumRanged_512_(i)))] \
                 = offsets[i]
         experiment = hxsnn.Experiment()
-        neuron = hxsnn.Neuron(
+        neuron = hxsnn.AELIF(
             10, experiment, trace_offset=offsets_dict, trace_scale=scales_dict)
         neuron.register_hw_entity()
         self.assertTrue(torch.equal(neuron.scale, scales))
@@ -384,7 +394,7 @@ class TestNeuron(HWTestCase):
 
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(
+        neuron = hxsnn.AELIF(
             10, enable_cadc_recording=True,  experiment=experiment)
 
         # Weights
@@ -398,7 +408,280 @@ class TestNeuron(HWTestCase):
             spikes[idx * 10 + 5, :, idx] = 1
 
         # Forward
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
+        s_handle = neuron(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.current is None)
+        self.assertTrue(s_handle.adaptation is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
+
+        # Execute
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(s_handle.current is not None)
+        self.assertTrue(s_handle.adaptation is not None)
+        self.assertTrue(s_handle.membrane_cadc is not None)
+        self.assertTrue(s_handle.membrane_madc is None)
+
+        # Assert data
+        spike_times = torch.nonzero(s_handle.spikes)
+        self.assertEqual(spike_times.shape[0], 10 * 10)
+
+        i = 0
+        for nrn in range(10):
+            for b in range(10):
+                self.assertEqual(b, spike_times[i, 1])
+                # EA 2024-02-28: Sometimes spikes of first batch-entry seem to
+                #                be delayed
+                self.assertAlmostEqual(
+                    5 + 10 * nrn, int(spike_times[i, 0]), delta=2)
+                self.assertEqual(nrn, spike_times[i, 2])
+                i += 1
+
+    def test_record_cadc(self):
+        """
+        Test CADC recording.
+
+        TODO:
+            - Ensure correct order.
+        """
+        experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
+        # Modules
+        linear = hxsnn.Synapse(10, 10, experiment=experiment)
+        neuron = hxsnn.AELIF(10, experiment=experiment)
+        # Weights
+        linear.weight.data.fill_(0.)
+        for idx in range(10):
+            linear.weight.data[idx, idx] = 63
+        # Inputs
+        spikes = torch.zeros(110, 10, 10)
+        for idx in range(10):
+            spikes[idx * 10 + 5, :, idx] = 1
+
+        # Forward
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
+        s_handle = neuron(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.current is None)
+        self.assertTrue(s_handle.adaptation is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
+
+        # Execute
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.current.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.adaptation.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.membrane_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(s_handle.membrane_madc is None)
+
+    def test_record_madc(self):
+        """
+        Test MADC recording.
+
+        TODO:
+            - Ensure correct neuron is recorded.
+        """
+        experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
+        linear = hxsnn.Synapse(10, 10, experiment=experiment)
+        neuron = hxsnn.AELIF(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            experiment=experiment)
+        spikes = torch.zeros(110, 10, 10)
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
+        s_handle = neuron(i_handle)
+
+        self.assertTrue(s_handle.spikes is None)
+        self.assertTrue(s_handle.current is None)
+        self.assertTrue(s_handle.adaptation is None)
+        self.assertTrue(s_handle.membrane_cadc is None)
+        self.assertTrue(s_handle.membrane_madc is None)
+
+        hxsnn.run(experiment, 110)
+
+        # Assert types and shapes
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.current.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.adaptation.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.membrane_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.membrane_madc.shape),
+                torch.tensor([2, 3235, 10])))
+        # Only one module can record
+        experiment = hxsnn.Experiment(dt=self.dt)
+        experiment.default_execution_instance.load_calib(  # avoid calibration
+            calib_path=calib_helper.nightly_calib_path())
+        linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
+        neuron_1 = hxsnn.AELIF(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            experiment=experiment)
+        linear_2 = hxsnn.Synapse(10, 10, experiment=experiment)
+        neuron_2 = hxsnn.AELIF(
+            10, enable_madc_recording=True, record_neuron_id=1,
+            experiment=experiment)
+
+        spikes = torch.zeros(110, 10, 10)
+        i_handle_1 = linear_1(hxsnn.LIFObservables(spikes=spikes))
+        s_handle_1 = neuron_1(i_handle_1)
+        i_handle_2 = linear_2(s_handle_1)
+        neuron_2(i_handle_2)
+
+        # Execute
+        with self.assertRaises(RuntimeError):  # Expect RuntimeError
+            hxsnn.run(experiment, 110)
+
+    def test_events_on_membrane(self):
+        """
+        Test whether events arrive at desired membrane.
+        """
+        pass
+
+    def test_neuron_spikes(self):
+        """
+        Test whether correct neuron does spike.
+        """
+        pass
+
+
+class TestLIF(HWTestCase):
+    """ Test hxtorch.hxsnn.modules.LIF """
+
+    def test_output_type(self):
+        """
+        Test neuron returns the expected handle
+        """
+        experiment = hxsnn.Experiment()
+        neuron = hxsnn.LIF(44, experiment)
+        # Test output handle
+        neuron_handle = neuron(
+            hxsnn.SynapseHandle(graded_spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(neuron_handle, hxsnn.LIFObservables))
+        self.assertIsNone(neuron_handle.spikes)
+        self.assertIsNone(neuron_handle.membrane_cadc)
+        self.assertIsNone(neuron_handle.membrane_madc)
+
+    def test_print(self):
+        """ Test module printing """
+        experiment = hxsnn.Experiment()
+        module = hxsnn.LIF(10, experiment=experiment)
+        logger.INFO(module)
+
+    def test_register_hw_entity(self):
+        """
+        Test hw entitiy is registered as expected
+        """
+        scales = torch.rand(10)
+        offsets = torch.rand(10)
+
+        experiment = hxsnn.Experiment()
+        neuron = hxsnn.LIF(10, experiment)
+        neuron.register_hw_entity()
+        self.assertEqual(
+            experiment.default_execution_instance.id_counter, 10)
+        self.assertEqual(len(experiment._populations), 1)
+        self.assertEqual(experiment._populations[0], neuron)
+
+        experiment = hxsnn.Experiment()
+        neuron = hxsnn.LIF(
+            10, experiment, trace_offset=offsets, trace_scale=scales)
+        neuron.register_hw_entity()
+        self.assertTrue(torch.equal(neuron.scale, scales))
+        self.assertTrue(torch.equal(neuron.offset, offsets))
+
+        scales_dict = {}
+        offsets_dict = {}
+        for i in range(scales.shape[0]):
+            scales_dict[halco.LogicalNeuronOnDLS(
+                halco.LogicalNeuronCompartments(
+                    {halco.CompartmentOnLogicalNeuron():
+                        [halco.AtomicNeuronOnLogicalNeuron()]}
+                ),
+                halco.AtomicNeuronOnDLS(halco.EnumRanged_512_(i)))] \
+                = scales[i]
+            offsets_dict[halco.LogicalNeuronOnDLS(
+                halco.LogicalNeuronCompartments(
+                    {halco.CompartmentOnLogicalNeuron():
+                        [halco.AtomicNeuronOnLogicalNeuron()]}
+                ), halco.AtomicNeuronOnDLS(halco.EnumRanged_512_(i)))] \
+                = offsets[i]
+        experiment = hxsnn.Experiment()
+        neuron = hxsnn.LIF(
+            10, experiment, trace_offset=offsets_dict, trace_scale=scales_dict)
+        neuron.register_hw_entity()
+        self.assertTrue(torch.equal(neuron.scale, scales))
+        self.assertTrue(torch.equal(neuron.offset, offsets))
+
+    def test_record_spikes(self):
+        """
+        Test spike recording with bypass mode.
+        """
+        # Enable bypass
+        experiment = hxsnn.Experiment(dt=self.dt)
+        execution_instance = ExecutionInstance(
+            # Hack that chip will not be overwritten
+            calib_path=calib_helper.nightly_calib_path())
+        execution_instance.chip = lola.Chip.default_neuron_bypass
+        experiment.default_execution_instance = execution_instance
+
+        # Modules
+        linear = hxsnn.Synapse(10, 10, experiment=experiment)
+        lif = hxsnn.LIF(
+            10, enable_cadc_recording=True,  experiment=experiment)
+
+        # Weights
+        linear.weight.data.fill_(0.)
+        for idx in range(10):
+            linear.weight.data[idx, idx] = 63
+
+        # Inputs
+        spikes = torch.zeros(110, 10, 10)
+        for idx in range(10):
+            spikes[idx * 10 + 5, :, idx] = 1
+
+        # Forward
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
@@ -444,7 +727,7 @@ class TestNeuron(HWTestCase):
             calib_path=calib_helper.nightly_calib_path())
         # Modules
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.Neuron(10, experiment=experiment)
+        lif = hxsnn.LIF(10, experiment=experiment)
         # Weights
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -455,7 +738,7 @@ class TestNeuron(HWTestCase):
             spikes[idx * 10 + 5, :, idx] = 1
 
         # Forward
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
@@ -488,11 +771,11 @@ class TestNeuron(HWTestCase):
         experiment.default_execution_instance.load_calib(  # avoid calibration
             calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.IAFNeuron(
+        lif = hxsnn.LIF(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
         spikes = torch.zeros(110, 10, 10)
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = lif(i_handle)
 
         self.assertTrue(s_handle.spikes is None)
@@ -520,16 +803,16 @@ class TestNeuron(HWTestCase):
         experiment.default_execution_instance.load_calib(  # avoid calibration
             calib_path=calib_helper.nightly_calib_path())
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif_1 = hxsnn.Neuron(
+        lif_1 = hxsnn.LIF(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
         linear_2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif_2 = hxsnn.Neuron(
+        lif_2 = hxsnn.LIF(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
-        i_handle_1 = linear_1(hxsnn.NeuronHandle(spikes))
+        i_handle_1 = linear_1(hxsnn.LIFObservables(spikes=spikes))
         s_handle_1 = lif_1(i_handle_1)
         i_handle_2 = linear_2(s_handle_1)
         lif_2(i_handle_2)
@@ -551,25 +834,26 @@ class TestNeuron(HWTestCase):
         pass
 
 
-class TestReadoutNeuron(HWTestCase):
-    """ Test hxtorch.spiking.modules.ReadoutNeuron """
+class TestLI(HWTestCase):
+    """ Test hxtorch.spiking.modules.LI """
 
     def test_output_type(self):
         """
-        Test ReadoutNeuron returns the expected handle
+        Test LI returns the expected handle
         """
         experiment = hxsnn.Experiment()
-        neuron = hxsnn.ReadoutNeuron(44, experiment)
+        neuron = hxsnn.LI(44, experiment)
         # Test output handle
-        neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
-        self.assertTrue(isinstance(neuron_handle, hxsnn.ReadoutNeuronHandle))
+        neuron_handle = neuron(
+            hxsnn.SynapseHandle(graded_spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(neuron_handle, hxsnn.LIObservables))
         self.assertIsNone(neuron_handle.membrane_cadc)
         self.assertIsNone(neuron_handle.membrane_madc)
 
     def test_print(self):
         """ Test module printing """
         experiment = hxsnn.Experiment()
-        module = hxsnn.ReadoutNeuron(10, experiment=experiment)
+        module = hxsnn.LI(10, experiment=experiment)
         logger.INFO(module)
 
     def test_record_cadc(self):
@@ -583,7 +867,7 @@ class TestReadoutNeuron(HWTestCase):
         experiment.default_execution_instance.load_calib(  # avoid calibration
             calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        li = hxsnn.ReadoutNeuron(10, experiment=experiment)
+        li = hxsnn.LI(10, experiment=experiment)
 
         linear.weight.data.fill_(0.)
         for idx in range(10):
@@ -593,7 +877,7 @@ class TestReadoutNeuron(HWTestCase):
         for idx in range(10):
             spikes[idx * 10 + 5, :, idx] = 1
 
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         v_handle = li(i_handle)
 
         self.assertTrue(v_handle.membrane_cadc is None)
@@ -620,12 +904,12 @@ class TestReadoutNeuron(HWTestCase):
         experiment.default_execution_instance.load_calib(  # avoid calibration
             calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        li = hxsnn.ReadoutNeuron(
+        li = hxsnn.LI(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         y_handle = li(i_handle)
 
         self.assertTrue(y_handle.membrane_cadc is None)
@@ -648,16 +932,16 @@ class TestReadoutNeuron(HWTestCase):
         experiment.default_execution_instance.load_calib(  # avoid calibration
             calib_path=calib_helper.nightly_calib_path())
         linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        li_1 = hxsnn.ReadoutNeuron(
+        li_1 = hxsnn.LI(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
         linear_2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        li_2 = hxsnn.ReadoutNeuron(
+        li_2 = hxsnn.LI(
             10, enable_madc_recording=True, record_neuron_id=1,
             experiment=experiment)
 
         spikes = torch.zeros(110, 10, 10)
-        i_handle_1 = linear_1(hxsnn.NeuronHandle(spikes))
+        i_handle_1 = linear_1(hxsnn.LIFObservables(spikes=spikes))
         v_handle_1 = li_1(i_handle_1)
         i_handle_2 = linear_2(v_handle_1)
         li_2(i_handle_2)
@@ -673,213 +957,6 @@ class TestReadoutNeuron(HWTestCase):
         pass
 
 
-class TestIAFNeuron(HWTestCase):
-    """ Test hxtorch.snn.modules.IAFNeuron """
-
-    def test_output_type(self):
-        """
-        Test neuron returns the expected handle
-        """
-        experiment = hxsnn.Experiment()
-        neuron = hxsnn.IAFNeuron(44, experiment)
-        # Test output handle
-        neuron_handle = neuron(hxsnn.SynapseHandle(torch.zeros(10, 44)))
-        self.assertTrue(isinstance(neuron_handle, hxsnn.NeuronHandle))
-        self.assertIsNone(neuron_handle.spikes)
-        self.assertIsNone(neuron_handle.membrane_cadc)
-        self.assertIsNone(neuron_handle.membrane_madc)
-
-    def test_print(self):
-        """ Test module printing """
-        experiment = hxsnn.Experiment()
-        module = hxsnn.IAFNeuron(10, experiment=experiment)
-        logger.INFO(module)
-
-    def test_record_spikes(self):
-        """
-        Test spike recording with bypass mode.
-        """
-        # Enable bypass
-        experiment = hxsnn.Experiment(dt=self.dt)
-        execution_instance = ExecutionInstance(
-            # Hack that chip will not be overwritten
-            calib_path=calib_helper.nightly_calib_path())
-        execution_instance.chip = lola.Chip.default_neuron_bypass
-        experiment.default_execution_instance = execution_instance
-        # Modules
-        linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.IAFNeuron(
-            10, enable_cadc_recording=True, experiment=experiment)
-        # Weights
-        linear.weight.data.fill_(0.)
-        for idx in range(10):
-            linear.weight.data[idx, idx] = 63
-        # Inputs
-        spikes = torch.zeros(110, 10, 10)
-        for idx in range(10):
-            spikes[idx * 10 + 5, :, idx] = 1
-        # Forward
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
-        s_handle = lif(i_handle)
-
-        self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.membrane_cadc is None)
-        self.assertTrue(s_handle.membrane_madc is None)
-
-        # Execute
-        hxsnn.run(experiment, 110)
-
-        # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(s_handle.membrane_cadc is not None)
-        self.assertTrue(s_handle.membrane_madc is None)
-
-        # Assert data
-        spike_times = torch.nonzero(s_handle.spikes)
-        self.assertEqual(spike_times.shape[0], 10 * 10)
-
-        i = 0
-        for nrn in range(10):
-            for b in range(10):
-                self.assertEqual(b, spike_times[i, 1])
-                # EA 2024-02-28: Sometimes spikes of first batch-entry seem to
-                #                be delayed
-                self.assertAlmostEqual(
-                    5 + 10 * nrn, int(spike_times[i, 0]), delta=2)
-                self.assertEqual(nrn, spike_times[i, 2])
-                i += 1
-
-    def test_record_cadc(self):
-        """
-        Test CADC recording.
-        TODO:
-            - Ensure correct order.
-        """
-        for use_dram in [False, True]:
-            experiment = hxsnn.Experiment(dt=self.dt)
-            experiment.default_execution_instance.load_calib(  # avoid calibration
-                calib_path=calib_helper.nightly_calib_path())
-            # Modules
-            linear = hxsnn.Synapse(10, 10, experiment=experiment)
-            lif = hxsnn.IAFNeuron(
-                10, enable_cadc_recording=True,
-                enable_cadc_recording_placement_in_dram=use_dram,
-                experiment=experiment)
-            # Weights
-            linear.weight.data.fill_(0.)
-            for idx in range(10):
-                linear.weight.data[idx, idx] = 50
-            # Inputs
-            spikes = torch.zeros(110, 10, 10)
-            for idx in range(10):
-                spikes[idx * 10 + 5, :, idx] = 1
-            # Forward
-            i_handle = linear(hxsnn.NeuronHandle(spikes))
-            s_handle = lif(i_handle)
-
-            self.assertTrue(s_handle.spikes is None)
-            self.assertTrue(s_handle.membrane_cadc is None)
-            self.assertTrue(s_handle.membrane_madc is None)
-
-            # Execute
-            hxsnn.run(experiment, 110)
-            # Assert types and shapes
-            self.assertIsInstance(s_handle.spikes, torch.Tensor)
-            self.assertTrue(
-                torch.equal(
-                    torch.tensor(s_handle.spikes.shape),
-                    torch.tensor([110, 10, 10])))
-            self.assertTrue(
-                torch.equal(
-                    torch.tensor(s_handle.membrane_cadc.shape),
-                    torch.tensor([110, 10, 10])))
-            self.assertTrue(s_handle.membrane_madc is None)
-
-            # plot
-            self.plot_path.mkdir(exist_ok=True)
-            trace = s_handle.membrane_cadc[:, 0].detach().numpy()
-            fig, ax = plt.subplots()
-            ax.plot(
-                np.arange(0., trace.shape[0]), trace)
-            plt.savefig(self.plot_path.joinpath(
-                f"./cuba_iaf_dynamics_{int(use_dram)}.png"))
-
-    def test_record_madc(self):
-        """
-        Test MADC recording.
-
-        TODO:
-            - Ensure correct neuron is recorded.
-        """
-        experiment = hxsnn.Experiment(dt=self.dt)
-        experiment.default_execution_instance.load_calib(  # avoid calibration
-            calib_path=calib_helper.nightly_calib_path())
-        linear = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif = hxsnn.IAFNeuron(
-            10, enable_madc_recording=True, record_neuron_id=1,
-            experiment=experiment)
-        spikes = torch.zeros(110, 10, 10)
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
-        s_handle = lif(i_handle)
-
-        self.assertTrue(s_handle.spikes is None)
-        self.assertTrue(s_handle.membrane_cadc is None)
-        self.assertTrue(s_handle.membrane_madc is None)
-
-        hxsnn.run(experiment, 110)
-
-        # Assert types and shapes
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.membrane_cadc.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.membrane_madc.shape),
-                torch.tensor([2, 3235, 10])))
-
-        # Only one module can record
-        experiment = hxsnn.Experiment(dt=self.dt)
-        experiment.default_execution_instance.load_calib(  # avoid calibration
-            calib_path=calib_helper.nightly_calib_path())
-        linear_1 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif_1 = hxsnn.IAFNeuron(
-            10, enable_madc_recording=True, record_neuron_id=1,
-            experiment=experiment)
-        linear_2 = hxsnn.Synapse(10, 10, experiment=experiment)
-        lif_2 = hxsnn.IAFNeuron(
-            10, enable_madc_recording=True, record_neuron_id=1,
-            experiment=experiment)
-        spikes = torch.zeros(110, 10, 10)
-        i_handle_1 = linear_1(hxsnn.NeuronHandle(spikes))
-        s_handle_1 = lif_1(i_handle_1)
-        i_handle_2 = linear_2(s_handle_1)
-        lif_2(i_handle_2)
-        # Execute
-        with self.assertRaises(RuntimeError):  # Expect RuntimeError
-            hxsnn.run(experiment, 110)
-
-    def test_events_on_membrane(self):
-        """
-        Test whether events arrive at desired membrane.
-        """
-        pass
-
-    def test_neuron_spikes(self):
-        """
-        Test whether correct neuron does spike.
-        """
-        pass
-
-
 class TestSynapse(HWTestCase):
     """ Test hxtorch.snn.modules.Synapse """
 
@@ -890,7 +967,8 @@ class TestSynapse(HWTestCase):
         experiment = hxsnn.Experiment()
         synapse = hxsnn.Synapse(44, 33, experiment)
         # Test output handle
-        synapse_handle = synapse(hxsnn.NeuronHandle(spikes=torch.zeros(10, 44)))
+        synapse_handle = \
+            synapse(hxsnn.LIFObservables(spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(synapse_handle, hxsnn.SynapseHandle))
         self.assertIsNone(synapse_handle.graded_spikes)
 
@@ -939,7 +1017,7 @@ class TestSparseSynapse(HWTestCase):
         synapse = hxsnn.SparseSynapse(connections.to_sparse(), experiment)
         # Test output handle
         synapse_handle = synapse(
-            hxsnn.NeuronHandle(spikes=torch.zeros(10, 44)))
+            hxsnn.LIFObservables(spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(synapse_handle, hxsnn.SynapseHandle))
         self.assertIsNone(synapse_handle.graded_spikes)
 
@@ -976,9 +1054,9 @@ class TestSparseSynapse(HWTestCase):
             calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.SparseSynapse(
             connections.to_sparse(), experiment=experiment)
-        lif = hxsnn.ReadoutNeuron(44, experiment=experiment)
+        lif = hxsnn.LI(44, experiment=experiment)
         spikes = torch.zeros(50, 1, 30)
-        i_handle = linear(hxsnn.NeuronHandle(spikes))
+        i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         lif(i_handle)
         hxsnn.run(experiment, 110)
 
@@ -991,8 +1069,9 @@ class TestBatchDropout(HWTestCase):
         experiment = hxsnn.Experiment()
         dropout = hxsnn.BatchDropout(33, 0.5, experiment)
         # Test output handle
-        dropout_handle = dropout(hxsnn.NeuronHandle(spikes=torch.zeros(10, 44)))
-        self.assertTrue(isinstance(dropout_handle, hxsnn.NeuronHandle))
+        dropout_handle = \
+            dropout(hxsnn.LIFObservables(spikes=torch.zeros(10, 44)))
+        self.assertTrue(isinstance(dropout_handle, hxsnn.LIFObservables))
         self.assertIsNone(dropout_handle.spikes)
         self.assertIsNone(dropout_handle.current)
         self.assertIsNone(dropout_handle.membrane_cadc)

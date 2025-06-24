@@ -28,7 +28,7 @@ class SNN(torch.nn.Module):
                  weight_scale: float = 1., trace_scale: float = 1.,
                  input_repetitions: int = 1,
                  synapse_type: hxsnn.HXModule = hxsnn.Synapse,
-                 neuron_type: hxsnn.HXModule = hxsnn.Neuron,
+                 neuron_type: hxsnn.HXModule = hxsnn.LIF,
                  hidden_cadc_recording: bool = False,
                  device: torch.device = torch.device("cpu")) -> None:
         """
@@ -82,6 +82,9 @@ class SNN(torch.nn.Module):
             n_hidden,
             experiment=self.exp,
             tau_mem=tau_mem,
+            membrane_capacitance=(
+                hxsnn.HXTransformedModelParameter(
+                    tau_mem, lambda model_value: model_value / tau_mem * 63)),
             tau_syn=tau_syn,
             leak=hxsnn.MixedHXModelParameter(0., 80),
             reset=hxsnn.MixedHXModelParameter(0., 80),
@@ -100,7 +103,7 @@ class SNN(torch.nn.Module):
                 weight_transforms.linear_saturating, scale=weight_scale))
 
         # Readout layer
-        self.li_readout = hxsnn.ReadoutNeuron(
+        self.li_readout = hxsnn.LI(
             n_out,
             experiment=self.exp,
             tau_mem=tau_mem,
@@ -131,7 +134,7 @@ class SNN(torch.nn.Module):
         """
         Perform a forward pass.
 
-        :param spikes: NeuronHandle holding spikes as input.
+        :param spikes: torch.Tensor holding spikes as input.
 
         :return: Returns the output of the network, i.e. membrane traces of the
             readout neurons.
@@ -140,7 +143,7 @@ class SNN(torch.nn.Module):
         spikes = spikes.repeat(1, 1, self.input_repetitions)
 
         # Spike input handle
-        spikes_handle = hxsnn.NeuronHandle(spikes)
+        spikes_handle = hxsnn.LIFObservables(spikes=spikes)
 
         # Forward
         c_h = self.linear_h(spikes_handle)

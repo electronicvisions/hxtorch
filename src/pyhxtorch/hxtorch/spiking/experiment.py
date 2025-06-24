@@ -225,7 +225,7 @@ class Experiment(BaseExperiment):
             return
 
         for module in self._populations:
-            if not isinstance(module, spiking_modules.Neuron):
+            if not isinstance(module, spiking_modules.AELIF):
                 continue
             log.TRACE(f"Configure population '{module}'.")
             for in_pop_id, unit_id in enumerate(module.unit_ids):

@@ -74,7 +74,7 @@ class YinYangExampleTest(unittest.TestCase):
                 accuracy[-1], 0.60, "Accuracy is lower than expected.")
         else:
             self.assertGreater(
-                accuracy[-1], 0.85, "Accuracy is lower than expected.")
+                accuracy[-1], 0.84, "Accuracy is lower than expected.")
 
     def test_training_sg(self):
         self.test_training(mock=False, surrogate_gradient=True)

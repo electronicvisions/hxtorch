@@ -56,7 +56,7 @@ class Boundaries:
         self.neuron.current_type = current_type
 
         # forward
-        inputs = hxsnn.NeuronHandle(spikes=inputs)
+        inputs = hxsnn.LIFObservables(spikes=inputs)
         currents = synapse(inputs)
         traces = self.neuron(currents)
         return traces

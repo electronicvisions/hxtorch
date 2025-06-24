@@ -62,7 +62,7 @@ class WeightScaling:
         self.synapse.weight.data.fill_(weight)
 
         # forward
-        spikes = hxsnn.NeuronHandle(spikes=inputs)
+        spikes = hxsnn.LIFObservables(spikes=inputs)
         currents = self.synapse(spikes)
         traces = self.neuron(currents)
 
@@ -98,7 +98,7 @@ class WeightScaling:
         self.exp = hxsnn.Experiment(mock=False, dt=1e-6)
         self.synapse = hxsnn.Synapse(
             1, self.output_size, experiment=self.exp)
-        self.neuron = hxsnn.ReadoutNeuron(
+        self.neuron = hxsnn.LI(
             self.output_size, **self.params, experiment=self.exp,
             neuron_structure=self.neuron_structure,
             trace_scale=self.trace_scale,
@@ -136,7 +136,7 @@ class WeightScaling:
         self.exp = hxsnn.Experiment(mock=True, dt=1e-6)
         self.synapse = hxsnn.Synapse(
             1, self.output_size, experiment=self.exp)
-        self.neuron = hxsnn.ReadoutNeuron(
+        self.neuron = hxsnn.LI(
             self.output_size, **self.params, experiment=self.exp,
             trace_scale=self.trace_scale,
             shift_cadc_to_first=False)

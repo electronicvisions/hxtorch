@@ -57,7 +57,7 @@ class Threshold:
         self.neuron.enable_current = enable_current
 
         # forward
-        inputs = hxsnn.NeuronHandle(spikes=inputs)
+        inputs = hxsnn.LIFObservables(spikes=inputs)
         currents = synapse(inputs)
         traces = self.neuron(currents)
         return traces

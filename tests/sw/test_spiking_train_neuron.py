@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import hxtorch
 from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import ReadoutNeuronExp
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.parameter import ModelParameter
 
@@ -78,7 +78,7 @@ class TestTranslation_Capacitance(unittest.TestCase):
         # Forward
         input_spikes = torch.bernoulli(
             torch.ones((150, 150, 1)) * 0.05)
-        input_handle = NeuronHandle(spikes=input_spikes)
+        input_handle = LIFObservables(spikes=input_spikes)
 
         loss_fn = torch.nn.MSELoss()
 

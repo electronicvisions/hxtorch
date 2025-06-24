@@ -2,185 +2,101 @@
 Defining tensor handles able to hold references to tensors for lazy assignment
 after hardware data acquisition
 """
-from typing import List, Optional
-from collections import OrderedDict
+from abc import ABC
+from typing import Type, Optional
+from dataclasses import make_dataclass, is_dataclass, astuple, field, fields
 import torch
 
-
-class HandleMeta(type):
-
-    """ Meta class to create Handle types with properties """
-
-    def __new__(mcs, clsname, bases, dict_) -> None:
-        """
-        Create a new instance of the given class.
-        """
-        for item in dict_["_carries"]:
-
-            def getter(self, name: str = item) -> torch.Tensor:
-                return self.data[name]
-
-            def setter(self, data: torch.Tensor, name: str = item) -> None:
-                self.data[name] = data
-
-            dict_.update({item: property(fget=getter, fset=setter)})
-
-        return super().__new__(mcs, clsname, bases, dict_)
+handle_register = {}
 
 
-class Handle(metaclass=HandleMeta):
-
+class Handle(ABC):
     """
-    Base class for HX tensor handles. New tensor handles have to be derived
-    from this class. The name of tensors the tensor handle 'carries' has to be
-    indicated in the class member '_carries'. For all elements in this list a
-    property is created implicitly.
+    Factory for classes which are to be used as custom handles for observable
+    data, depending on the specific observables a module deals with.
     """
 
-    _carries: List[str] = []
-
-    def __init__(self) -> None:
+    # pylint: disable=invalid-name
+    def __new__(cls, *args, **kwargs):
         """
         Instantiate a new HX handle holding references to torch tensors.
+        Can be used to directly initialize custom HandleClass with values
+        via `kwargs` or pass attribute keys only via `args` as strings
+        for construction of a dummy object.
+        The latter is only to be used for type generation.
         """
-        self.data = OrderedDict()
+        if args and kwargs and set(args).difference(set(kwargs.keys())):
+            raise Exception("Ambiguous Handle construction mode",
+                            set(args), set(kwargs.keys()))
+        if args:
+            args_sorted = tuple(sorted(args))
+            attributes = [(key, Optional[torch.Tensor], field(default=None))
+                          for key in args_sorted]
+        else:
+            kwargs = dict(sorted(kwargs.items()))
+            attributes = [(key, Optional[torch.Tensor], field(default=value))
+                          for key, value in kwargs.items()]
 
-    def holds(self, name: str) -> bool:
-        """
-        Checks whether the tensor handle already holds a tensor with key
-        `name`.
+        handle_name = cls.__name__ + "_" \
+            + "_".join([str(attr[0]) for attr in attributes])
+        doc = "Handle for " + ", ".join([str(attr[0]) for attr in attributes])
 
-        :param name: Key of reference to tensor.
-        :return: Returns a bool indicating whether the data present at key
-            `name` is not None.
-        """
-        return self.data.get(name) is not None
+        def __eq__(this, other):
+            return (is_dataclass(this) and is_dataclass(other)
+                    and all(torch.equal(this_element, other_element) if
+                            isinstance(this_element, torch.Tensor)
+                            and isinstance(other_element, torch.Tensor) else
+                            this_element == other_element for
+                            (this_element, other_element) in
+                            zip(astuple(this), astuple(other))))
 
-    def put(self, *tensors, **kwargs) -> None:
-        """
-        Fill the tensor handle with actual data given by tensors or kwargs. If
-        tensors are given as positional arguments the tensors are assigned in
-        the order given by class member '_carries'. Keyword arguments are
-        assigned to the corresponding key. Therefore, the key has to be in
-        '_carries.'
+        def holds(self, name: str) -> bool:
+            """
+            Checks whether the tensor handle already holds a tensor with key
+            `name`.
 
-        :param tensors: Tensors which are assigned to the tensor handle. The
-            given tensors are associated with the elements in '_carries' in
-            successive order.
+            :param name: Key of reference to tensor.
+            :return: Returns a bool indicating whether the data present at key
+                `name` is not None.
+            """
+            return (name in [f.name for f in fields(self)]
+                    and getattr(self, name) is not None)
 
-        :keyword param kwargs: Assigns the items in kwargs to the elements in
-            the tensor handle associated with the corresponding kwargs keys.
-        """
-        keys = list(self.data.keys())
-        assert len(keys) >= len(tensors), \
-            "Encountered more 'tensors' than keys in the handle."
+        def clone(self, handle) -> None:
+            """
+            Overwrite contents from `this` with contents from `handle`.
 
-        for i, tensor in enumerate(tensors):
-            self.data[keys[i]] = tensor
+            :param handle: The handle to clone.
+            """
+            assert ([f.name for f in fields(self)]
+                    == [f.name for f in fields(handle)])
+            for f in fields(handle):
+                setattr(self, f.name, getattr(handle, f.name))
 
-        for key, value in kwargs.items():
-            assert key in keys, "Encountered unknown key."
-            self.data[key] = value
+        HandleClass = make_dataclass(
+            handle_name, attributes, eq=True, namespace={
+                "__eq__": __eq__, "holds": holds, "clone": clone})
+        HandleClass.__doc__ = doc
+        HandleClass.__str__ = lambda self: HandleClass.__name__ + ": \n\t" \
+            + "\n\t".join([str(key) + " = " + str(value)
+                          for (key, value) in kwargs.items()])
 
-    def clone(self, handle: "Handle") -> None:
-        """
-        Copy contents for `handle` to `this` handle. `This` handle must contain
-        a data field for each data field in `handle`.
+        # Check if handle class is already existing
+        if handle_name in handle_register and args:
+            return handle_register[handle_name](*((None,) * len(args)))
+        if handle_name in handle_register and kwargs:
+            return handle_register[handle_name](**kwargs)
+        if handle_name not in handle_register:
+            handle_register[handle_name] = HandleClass
 
-        :param handle: The handle to clone.
-        """
-        for key, value in handle.data.items():
-            self.data[key] = value
-
-    def clear(self) -> None:
-        """
-        Set all data in handle to 'None'.
-        """
-        for key in self.data.keys():
-            self.data[key] = None
-
-
-class TensorHandle(Handle):
-
-    """ Specialization for single tensor, mostly for testing """
-
-    _carries = ["tensor"]
-
-    def __init__(self, tensor: Optional[torch.Tensor] = None) -> None:
-        """
-        Instantiate a tensor handle to hold a single tensor.
-
-        :param tensor: torch.Tensor holding data.
-        """
-        super().__init__()
-        self.tensor = tensor
+        if args and not kwargs:
+            return HandleClass(*((None,) * len(args)))
+        return HandleClass(**kwargs)
 
 
-class NeuronHandle(Handle):
-
-    """ Specialization for HX neuron observables """
-
-    _carries = ["spikes", "membrane_cadc", "current", "membrane_madc"]
-
-    def __init__(self, spikes: Optional[torch.Tensor] = None,
-                 membrane_cadc: Optional[torch.Tensor] = None,
-                 current: Optional[torch.Tensor] = None,
-                 membrane_madc: Optional[torch.Tensor] = None) -> None:
-        """
-        Instantiate a neuron handle able to hold spike and membrane tensors.
-
-        :param spikes: Optional spike tensor.
-        :param membrane_cadc: Optional membrane tensor, holding CADC
-            recordings.
-        :param current: Optional current tensor, holding synaptic current.
-        :param membrane_madc: Optional membrane tensor, holding MADC
-            recordings.
-        """
-        super().__init__()
-        self.spikes = spikes
-        self.membrane_cadc = membrane_cadc
-        self.current = current
-        self.membrane_madc = membrane_madc
-
-
-class ReadoutNeuronHandle(Handle):
-
-    """ Specialization for HX neuron observables """
-
-    _carries = ["membrane_cadc", "current", "membrane_madc"]
-
-    def __init__(self, membrane_cadc: Optional[torch.Tensor] = None,
-                 current: Optional[torch.Tensor] = None,
-                 membrane_madc: Optional[torch.Tensor] = None) -> None:
-        """
-        Instantiate a readout neuron handle able to hold MADC, current, and
-        CADC data. This handle defines the CADC values as the observable state,
-        this can be changed by deriving this class.
-
-        :param membrane_cadc: Optional membrane tensor, holding CADC
-            recordings.
-        :param current: Optional current tensor, holding synaptic current.
-        :param membrane_madc: Optional membrane tensor, holding MADC
-            recordings.
-        """
-        super().__init__()
-        self.membrane_cadc = membrane_cadc
-        self.current = current
-        self.membrane_madc = membrane_madc
-
-
-class SynapseHandle(Handle):
-
-    """ Specialization for HX synapses """
-
-    _carries = ["graded_spikes"]
-
-    def __init__(self, graded_spikes: Optional[torch.Tensor] = None) -> None:
-        """
-        Instantiate a synapse handle able to hold a graded spikes tensors as
-        input to neurons.
-
-        :param graded_spikes: Optional tensor holding graded spikes.
-        """
-        super().__init__()
-        self.graded_spikes = graded_spikes
+TensorHandle: Type = type(Handle('tensor'))
+LIFObservables: Type = type(Handle('spikes', 'membrane_cadc', 'current',
+                                   'membrane_madc'))
+LIObservables: Type = type(Handle('membrane_cadc', 'current',
+                                  'membrane_madc'))
+SynapseHandle: Type = type(Handle('graded_spikes'))

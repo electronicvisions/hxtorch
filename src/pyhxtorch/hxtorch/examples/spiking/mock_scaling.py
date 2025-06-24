@@ -71,7 +71,7 @@ def run(inputs: torch.Tensor, nrn_params: Dict[str, hxsnn.parameter.HXBaseParame
             out_features=1,
             experiment=exp,
             transform=partial(linear_saturating, scale=weight_scale))
-        lif = hxsnn.Neuron(
+        lif = hxsnn.LIF(
             size=1,
             **nrn_params,
             experiment=exp,
@@ -84,7 +84,7 @@ def run(inputs: torch.Tensor, nrn_params: Dict[str, hxsnn.parameter.HXBaseParame
             exp.default_execution_instance.load_calib(calib_path)
 
         # Forward
-        g = syn(hxsnn.NeuronHandle(inputs))
+        g = syn(hxsnn.LIFObservables(spikes=inputs))
         z = lif(g)
         hxsnn.run(exp, 50)  # dt
         traces.append(z.membrane_cadc.detach().numpy().reshape(-1))

@@ -4,8 +4,8 @@ Test snn run function
 import unittest
 import torch
 from hxtorch.spiking import run, Experiment
-from hxtorch.spiking.modules import HXModule, Neuron, Synapse
-from hxtorch.spiking.handle import TensorHandle, NeuronHandle
+from hxtorch.spiking.modules import HXModule, LIF, Synapse
+from hxtorch.spiking.handle import TensorHandle, LIFObservables
 from hxtorch.spiking.parameter import ModelParameter
 
 
@@ -24,7 +24,7 @@ class TestSNNRun(unittest.TestCase):
         module3 = HXModule(experiment)
 
         # Input handle
-        input_handle = TensorHandle(torch.zeros(10, 1, 12))
+        input_handle = TensorHandle(tensor=torch.zeros(10, 1, 12))
         h1 = module1(input_handle)
         h2 = module2(h1)
         h3 = module3(h2)
@@ -49,17 +49,18 @@ class TestSNNRun(unittest.TestCase):
 
         # Modules
         l1 = Synapse(5, 10, experiment)
-        n1 = Neuron(10, experiment, tau_syn=ModelParameter(1),
+        n1 = LIF(10, experiment, tau_syn=ModelParameter(1),
                     tau_mem=ModelParameter(1))
         l2 = Synapse(10, 20, experiment)
-        n2 = Neuron(20, experiment, tau_syn=ModelParameter(1),
+        n2 = LIF(20, experiment, tau_syn=ModelParameter(1),
                     tau_mem=ModelParameter(1))
         l3 = Synapse(20, 1, experiment)
-        n3 = Neuron(1, experiment, tau_syn=ModelParameter(1),
+        n3 = LIF(1, experiment, tau_syn=ModelParameter(1),
                     tau_mem=ModelParameter(1))
 
         # Input handle
-        input_handle = NeuronHandle(torch.zeros(10, 1, 5))
+        input_handle = LIFObservables(spikes=torch.zeros(10, 1, 5),
+            current=None, membrane_cadc=None, membrane_madc=None)
         h1 = l1(input_handle)
         h2 = n1(h1)
         h3 = l2(h2)

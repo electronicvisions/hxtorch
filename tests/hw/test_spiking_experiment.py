@@ -6,8 +6,8 @@ import torch
 
 import hxtorch
 from hxtorch.spiking import Experiment
-from hxtorch.spiking.modules import HXModule, InputNeuron, Neuron, Synapse
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.modules import HXModule, InputNeuron, LIF, Synapse
+from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.utils import calib_helper
 from dlens_vx_v3.halco import DLSGlobal
 
@@ -29,8 +29,8 @@ class TestExperiment(unittest.TestCase):
 
         # Add one connection
         module1 = HXModule(experiment, None)
-        handle1 = NeuronHandle()
-        handle2 = NeuronHandle()
+        handle1 = LIFObservables()
+        handle2 = LIFObservables()
         experiment.connect(module1, handle1, handle2)
 
         # Check connection is registered
@@ -47,8 +47,8 @@ class TestExperiment(unittest.TestCase):
 
         # Add another one
         module2 = HXModule(experiment, None)
-        handle3 = NeuronHandle()
-        handle4 = NeuronHandle()
+        handle3 = LIFObservables()
+        handle4 = LIFObservables()
         experiment.connect(module2, handle3, handle4)
         # Check connection is registered
         sources = [
@@ -71,9 +71,9 @@ class TestExperiment(unittest.TestCase):
         experiment = Experiment(mock=True)
         # Modules
         module1 = Synapse(10, 10, experiment, lambda x: x)
-        module2 = Neuron(10, experiment, lambda x: x)
+        module2 = LIF(10, experiment, lambda x: x)
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((10, 10, 10)))
+        input_handle = LIFObservables(spikes=torch.randn((10, 10, 10)))
         handle1 = module1(input_handle)
         module2(handle1)
         # Two modules should now be registered
@@ -95,9 +95,9 @@ class TestExperiment(unittest.TestCase):
 
         # Modules
         module1 = Synapse(10, 10, experiment)
-        module2 = Neuron(10, experiment)
+        module2 = LIF(10, experiment)
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((10, 10, 10)))
+        input_handle = LIFObservables(spikes=torch.randn((10, 10, 10)))
         handle1 = module1(input_handle)
         module2(handle1)
         self.assertEqual(len(experiment.modules.nodes), 2)
@@ -127,14 +127,14 @@ class TestExperiment(unittest.TestCase):
 
         # Modules
         module1 = Synapse(10, 10, experiment)
-        module2 = Neuron(10, experiment)
+        module2 = LIF(10, experiment)
         module3 = Synapse(10, 10, experiment)
-        module4 = Neuron(10, experiment)
+        module4 = LIF(10, experiment)
         module5 = Synapse(10, 10, experiment)
-        module6 = Neuron(10, experiment)
+        module6 = LIF(10, experiment)
 
         # Forward
-        input_handle = NeuronHandle(spikes=torch.randn((20, 10, 10)))
+        input_handle = LIFObservables(spikes=torch.randn((20, 10, 10)))
         handle1 = module1(input_handle)
         handle2 = module2(handle1)
         handle3 = module3(handle2)
@@ -159,8 +159,8 @@ class TestExperiment(unittest.TestCase):
             calib_path=calib_helper.nightly_calib_path())
 
         module1 = Synapse(10, 10, experiment)
-        module2 = Neuron(10, experiment)
-        input_handle = NeuronHandle(spikes=torch.randn((2, 10, 10)))
+        module2 = LIF(10, experiment)
+        input_handle = LIFObservables(spikes=torch.randn((2, 10, 10)))
         handle1 = module1(input_handle)
         module2(handle1)
 

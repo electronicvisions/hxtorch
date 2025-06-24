@@ -249,17 +249,17 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
         experiment.default_execution_instance.load_calib(
             calib_path=calib_helper.nightly_calib_path())
         self.execution_instance = experiment.default_execution_instance.ID
-        
+
         synapse_ih = hxsnn.Synapse(256, 246, experiment=experiment)
         synapse_ih.weight.data = (torch.rand(synapse_ih.weight.shape) - 0.5) * 126.
-        neuron_h = hxsnn.Neuron(
+        neuron_h = hxsnn.LIF(
             246, experiment, neuron_structure=SingleCompartmentNeuron(2))
         synapse_ho = hxsnn.Synapse(246, 10, experiment=experiment)
         synapse_ho.weight.data = (torch.rand(synapse_ho.weight.shape) - 0.5) * 126.
-        neuron_o = hxsnn.ReadoutNeuron(
+        neuron_o = hxsnn.LI(
             10, experiment, neuron_structure=SingleCompartmentNeuron(2))
         # Test output handle
-        input = hxsnn.NeuronHandle(
+        input = hxsnn.LIFObservables(
             spikes=torch.bernoulli(torch.ones((10, 10, 256)) * 0.5))
 
         synapse_ih_handle = synapse_ih(input)
@@ -274,4 +274,4 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    Funittest.main()

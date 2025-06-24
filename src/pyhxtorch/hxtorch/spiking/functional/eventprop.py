@@ -3,7 +3,7 @@ from typing import Tuple, Optional
 import torch
 
 
-class EventPropNeuronFunction(torch.autograd.Function):
+class EventPropLIFFunction(torch.autograd.Function):
     """
     Define gradient using adjoint code (EventProp) from norse
     """
@@ -157,7 +157,7 @@ class EventPropNeuronFunction(torch.autograd.Function):
 
 class EventPropSynapseFunction(torch.autograd.Function):
     """
-    Synapse function for proper gradient transport when using EventPropNeuron.
+    Synapse function for proper gradient transport when using EventPropLIF.
     """
 
     # pylint: disable=arguments-differ, redefined-builtin
@@ -165,7 +165,7 @@ class EventPropSynapseFunction(torch.autograd.Function):
     def forward(ctx, input: torch.Tensor, weight: torch.Tensor,
                 _: torch.Tensor = None) -> torch.Tensor:
         r"""
-        This should be used in combination with EventPropNeuron. Apply linear
+        This should be used in combination with EventPropLIF. Apply linear
         to input using weight and use a stacked output in order to be able to
         return correct terms according to EventProp to previous layer and
         weights.
@@ -186,7 +186,7 @@ class EventPropSynapseFunction(torch.autograd.Function):
     def backward(ctx, grad_output: torch.Tensor) \
             -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
         r"""
-        Split gradient_output coming from EventPropNeuron and return
+        Split gradient_output coming from EventPropLIF and return
         Input gradient and weight gradient (adjoint at spike times):
             W (\lambda_{v} - \lambda_{i})
             - \tau_{s} \lambda_{i} z

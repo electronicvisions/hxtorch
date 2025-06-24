@@ -135,7 +135,7 @@ class TestExecutionInstance(HXTestCase):
             calib_path=calib_helper.nightly_calix_native_path())
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.Neuron(10, exp, leak=0., execution_instance=inst)
+        nrn = hxsnn.LIF(10, exp, leak=0., execution_instance=inst)
         old_params = deepcopy(nrn.params_dict())
         # Ensure modules get placed
         syn.register_hw_entity()
@@ -153,7 +153,7 @@ class TestExecutionInstance(HXTestCase):
             calib_path=calib_helper.nightly_calib_path())
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
+        nrn = hxsnn.LIF(10, exp, execution_instance=inst)
         nrn.register_hw_entity()
         old_params = deepcopy(nrn.params_dict())
         # Ensure modules get placed
@@ -172,7 +172,7 @@ class TestExecutionInstance(HXTestCase):
         inst = ExecutionInstance()
         exp = hxsnn.Experiment()
         syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.Neuron(10, exp, execution_instance=inst)
+        nrn = hxsnn.LIF(10, exp, execution_instance=inst)
         # Ensure modules get placed
         syn.register_hw_entity()
         nrn.register_hw_entity()

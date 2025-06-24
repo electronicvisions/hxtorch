@@ -222,7 +222,7 @@ class ModuleManager(BaseModuleManager):
         """
         return [
             (u, v) for u, v, e in self.graph.edges(data=True)
-            if e['handle'] == handle]
+            if id(e['handle']) == id(handle)]
 
     def input_data(self) -> List[Any]:
         """
@@ -386,7 +386,7 @@ class ModuleManager(BaseModuleManager):
                         "The BatchDropout module is only allowed to "
                         "preceed one module.")
                 pre_module = self.get_module_by_id(pre_nodes.pop())
-                if not isinstance(pre_module, spiking_module.Neuron):
+                if not isinstance(pre_module, spiking_module.AELIF):
                     raise TypeError(
                         "The BatchDropout module is only allowed to "
                         "succeed a Neuron module.")
@@ -414,7 +414,8 @@ class ModuleManager(BaseModuleManager):
                 for _, v, e in self.graph.out_edges(n_id, data=True):
                     if v not in ids:
                         self.graph.add_edge(w_id, v, **e)
-                    if e["handle"] not in targets:
+                    if (id(e["handle"]) not in
+                            [id(target) for target in targets]):
                         targets.append(e["handle"])
             self.graph.remove_nodes_from(ids)
             self.graph.nodes[w_id]["sources"] = sources
@@ -454,7 +455,7 @@ class ModuleManager(BaseModuleManager):
                     source.append(e["handle"])
                 for _, _, e in self.graph.out_edges(n, data=True):
                     handle = e["handle"]
-                    if handle not in target:
+                    if id(handle) not in [id(trgt) for trgt in target]:
                         target.append(handle)
                 assert len(target) == 1
                 target = target.pop()

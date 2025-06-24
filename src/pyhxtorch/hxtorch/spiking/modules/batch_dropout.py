@@ -8,7 +8,7 @@ import pylogging as logger
 import torch
 
 import hxtorch.spiking.functional as F
-from hxtorch.spiking.handle import NeuronHandle
+from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.modules.hx_module import HXFunctionalModule
 if TYPE_CHECKING:
     from hxtorch.spiking.modules.hx_module import HXBaseModule
@@ -23,10 +23,10 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
 
     Caveat:
     In-place operations on TensorHandles are not supported. Must be placed
-    after a neuron layer, i.e. Neuron.
+    after a neuron layer, i.e. AELIF.
     """
 
-    output_type: Type = NeuronHandle
+    output_type: Type = LIFObservables
 
     # pylint: disable=too-many-arguments
     def __init__(self, size: int, dropout: float, experiment: Experiment) \
@@ -88,5 +88,5 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
         self._mask = mask
 
     # pylint: disable=redefined-builtin, arguments-differ
-    def forward_func(self, input: NeuronHandle) -> NeuronHandle:
-        return NeuronHandle(F.batch_dropout(input.spikes, self.mask))
+    def forward_func(self, input: LIFObservables) -> LIFObservables:
+        return LIFObservables(F.batch_dropout(input.spikes, self.mask))

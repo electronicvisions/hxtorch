@@ -1,11 +1,11 @@
 # pylint: disable: unused-import
 from hxtorch.spiking import datasets
 from hxtorch.spiking.modules import (
-    HXBaseExperimentModule, HXModule, HXModuleWrapper, Neuron, NeuronExp,
-    InputNeuron, ReadoutNeuron, ReadoutNeuronExp, IAFNeuron, Synapse,
-    SparseSynapse, BatchDropout)
+    HXBaseExperimentModule, HXModule, HXModuleWrapper, InputNeuron, AELIF,
+    LIF, LI, NeuronExp, ReadoutNeuronExp, Synapse, SparseSynapse,
+    BatchDropout)
 from hxtorch.spiking.handle import (
-    Handle, TensorHandle, SynapseHandle, NeuronHandle, ReadoutNeuronHandle)
+    Handle, TensorHandle, LIFObservables, LIObservables, SynapseHandle)
 from hxtorch.spiking.parameter import (
     HXParameter, MixedHXModelParameter, HXTransformedModelParameter,
     ModelParameter)

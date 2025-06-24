@@ -74,6 +74,11 @@ class Population(BasePopulation):
         "refractory_time": 2e-6,
         "synapse_dac_bias": 600,
         "holdoff_time": 0,
+        "exponential_slope": 50e-3,
+        "exponential_threshold": 110,
+        "subthreshold_adaptation_strength": 1,
+        "spike_triggered_adaptation_increment": 1,
+        "tau_adap": 100e-6,
         "e_coba_reversal": None,
         "e_coba_reference": None
     }
