@@ -57,8 +57,8 @@ def plot_scaled_trace(args, inputs, bss2_traces, mock_trace):
 
 
 def run(inputs: torch.Tensor, nrn_params: Dict[str, hxsnn.parameter.HXBaseParameter],
-        mock=False, weight_scale=63., trace_offset=0., trace_scale=1.,
-        n_runs=10):
+        calib_path: str = None, mock=False, weight_scale=63., trace_offset=0.,
+        trace_scale=1., n_runs=10):
     traces = []
 
     hxtorch.init_hardware()
@@ -79,6 +79,10 @@ def run(inputs: torch.Tensor, nrn_params: Dict[str, hxsnn.parameter.HXBaseParame
             trace_offset=trace_offset,
             trace_scale=trace_scale)
         syn.weight.data.fill_(1.)
+
+        if calib_path is not None and not mock:
+            exp.default_execution_instance.load_calib(calib_path)
+
         # Forward
         g = syn(hxsnn.NeuronHandle(inputs))
         z = lif(g)
@@ -94,33 +98,39 @@ def main(args: argparse.Namespace):
     and software settings
     """
     lif_params = {
-        "tau_mem": hxsnn.HXParameter(args.tau_mem),
-        "tau_syn": hxsnn.HXParameter(args.tau_syn),
+        "tau_mem": hxsnn.MixedHXModelParameter(args.tau_mem, args.tau_mem),
+        "tau_syn": hxsnn.MixedHXModelParameter(args.tau_syn, args.tau_syn),
         "leak": hxsnn.MixedHXModelParameter(args.model_leak, args.bss2_leak),
         "reset": hxsnn.MixedHXModelParameter(args.model_reset, args.bss2_reset),
         "threshold": hxsnn.MixedHXModelParameter(
             args.model_threshold, args.bss2_threshold)}
 
     # Measure baseline
-    baselines, _, _ = get_dynamic_range(params=lif_params)
+    baselines, _, _ = get_dynamic_range(calib_path=args.calibration_path,
+                                        params=lif_params)
     log.INFO(f"CADC membrane baseline: {baselines}")
 
     # Measure hardware <-> model trace scaling
-    trace_scale = get_trace_scaling(params=lif_params)
+    trace_scale = get_trace_scaling(calib_path=args.calibration_path,
+                                    params=lif_params)
     log.INFO(f"CADC trace scaling: {trace_scale}")
 
     # Next we tune the weight_scaling such that the PSP in the software model
     # and on hardware look the same
     weight_scaling = get_weight_scaling(
-        params=lif_params, weight_step=args.weight_step)
+        params=lif_params,
+        calib_path=args.calibration_path,
+        weight_step=args.weight_step)
 
     # Measure some traces for comparison
     inputs = torch.zeros((50, 1, 1))
     inputs[10] = 1
-    mock_trace = run(inputs, lif_params, mock=True, n_runs=1)[0]
+    mock_trace = run(inputs, lif_params,
+                     calib_path=args.calibration_path, mock=True, n_runs=1)[0]
     bss2_traces = run(
-        inputs, lif_params, trace_offset=baselines.item(),
-        trace_scale=trace_scale.item(), weight_scale=weight_scaling.item())
+        inputs, lif_params, calib_path=args.calibration_path,
+        trace_offset=baselines.item(), trace_scale=trace_scale.item(),
+        weight_scale=weight_scaling.item())
 
     # Display
     plot_scaled_trace(args, inputs, bss2_traces, mock_trace)
