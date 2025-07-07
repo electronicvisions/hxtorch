@@ -263,7 +263,8 @@ class TestPopulation(unittest.TestCase):
 
         for key in ["e_coba_reversal", "e_coba_reference"]:
             if getattr(target, key) is None:
-                self.assertIsNone(params[key])
+                self.assertIsNone(params[key].model_value)
+                self.assertIsNone(params[key].hardware_value)
             else:
                 self.assertTrue(
                     torch.equal(

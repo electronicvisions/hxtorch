@@ -200,7 +200,7 @@ class Population(BasePopulation):
         for key in ["e_coba_reversal", "e_coba_reference"]:
             value = getattr(targets, key)
             if value is None:
-                setattr(self, key, value)
+                setattr(self, key, HXParameter(value))
             elif value.shape == (halco.SynapticInputOnNeuron.size,):
                 setattr(self, key, torch.tensor(value).repeat(
                         (1, halco.AtomicNeuronOnDLS.size))[:, selector])
