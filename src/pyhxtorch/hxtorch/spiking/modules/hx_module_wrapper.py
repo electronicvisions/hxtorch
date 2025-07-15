@@ -20,7 +20,7 @@ log = logger.get("hxtorch.spiking.modules")
 class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
     """ Class to wrap HXModules """
 
-    def __init__(self, experiment: Experiment, **modules: List[HXModule]) \
+    def __init__(self, experiment: Experiment, **modules: HXModule) \
             -> None:
         """
         A module which wraps a number of HXModules defined in `modules` for
@@ -80,7 +80,7 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
                 return False
         return True
 
-    def update(self, **modules: Dict[HXModule]):
+    def update(self, **modules: HXModule):
         """
         Update the modules and the function in the wrapper.
         :param modules: The new modules to assign to the wrapper.
