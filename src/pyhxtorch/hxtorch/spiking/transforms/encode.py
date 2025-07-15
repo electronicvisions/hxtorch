@@ -156,12 +156,12 @@ class CoordinatesToSpikes(torch.nn.Module):
 
     def forward(self, coordinate_values: torch.Tensor) -> torch.Tensor:
         """
-        Convert coordinate values of to dense spike tensor of zeros and ones.
+        Convert coordinate values to dense spike tensor of zeros and ones.
 
         :param coordinate_values: Tensor with values in [0, 1], shaped
             (batch_size, num_channels)
 
-        :returns: Returns a dense tensor of shape (batch_size, seq_length,
+        :returns: Returns a dense tensor of shape (seq_length, batch_size,
             num_channels)
         """
         device = coordinate_values.device

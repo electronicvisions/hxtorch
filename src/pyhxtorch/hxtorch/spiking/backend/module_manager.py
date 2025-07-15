@@ -56,7 +56,7 @@ class BaseModuleManager(ABC):
     def add_node(self, module: Module, sources: Source, target: Target):
         """
         Adds a new module to the manager. This method adds a node to the
-        internal graph to represent the module. It assigned edges to this node
+        internal graph to represent the module. It assigns edges to this node
         holding the data in `sources`, resp. `target`.
         :param module: Module to represented in to the graph.
         :param sources: The sources to the node representing `module`.

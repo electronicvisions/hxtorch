@@ -103,7 +103,7 @@ class AELIF(Population):
         allows to disable the event output and spike recordings of specific
         neurons within the layer. This is particularly useful for dropout.
 
-        The neuron is parameterized by the `ModuleParameterType`d parameters:
+        The neuron is parameterized by the `ModuleParameterType` parameters:
             leak, reset, threshold, tau_syn, tau_mem, i_synin_gm,
             membrane_capacitance, refractory_time, synapse_dac_bias,
             holdoff_time, exponential_slope, exponential_threshold, a, b,
@@ -116,7 +116,7 @@ class AELIF(Population):
         the numerical model (`param.model_value`) defined in `forward_func`.
         `MixedHXModelParameter` and `HXTransformedModelParameter` allow using
         different values on BSS-2 and in the numerics. This is useful if the
-        dynamic range on hardware and in the numerical model  differ. If so,
+        dynamic range on hardware and in the numerical model differ. If so,
         the trace and weight scaling parameters need to be set accordingly in
         order to translate the weights to their corresponding hardware value
         and the hardware measurements into the dynamic range used in the
@@ -170,8 +170,8 @@ class AELIF(Population):
             recording data into DRAM (period ~6us) or SRAM (period ~2us).
         :param enable_madc_recording: Enables or disables the recording of the
             neurons `record_neuron_id` membrane trace via the MADC. Only a
-            single neuron can be recorded. This membrane traces is samples with
-            a significant higher resolution as with the CADC.
+            single neuron can be recorded. This membrane trace is sampled with
+            a significantly higher resolution as with the CADC.
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
@@ -247,7 +247,7 @@ class AELIF(Population):
                 and len(placement_constraint) != size:
             raise ValueError(
                 "The number of neurons in logical neurons in "
-                + "`hardware_constraints` does not equal the `size` of the "
+                + "`placement_constraint` does not equal the `size` of the "
                 + "module.")
 
         self.alpha = alpha
@@ -405,7 +405,7 @@ class AELIF(Population):
             -> lola.NeuronBlock:
         """
         Configures a neuron in the given layer with its specific properties.
-        The neurons digital event outputs are enabled according to the given
+        The neuron's digital event outputs are enabled according to the given
         spiking mask.
 
         TODO: Additional parameterization should happen here, i.e. with
@@ -439,7 +439,7 @@ class AELIF(Population):
         If `enable_cadc_recording` is enabled the populations neuron's are
         registered for CADC membrane recording.
         If `enable_madc_recording` is enabled the neuron with in-population
-        index `record_neuron_id` will be recording via the MADC. Note, since
+        index `record_neuron_id` will be recorded via the MADC. Note, since
         the MADC can only record a single neuron on hardware, other Neuron
         layers registering also MADC recording might overwrite the setting
         here.
@@ -458,11 +458,11 @@ class AELIF(Population):
         else:
             enable_record_spikes = np.zeros_like(self.unit_ids, dtype=bool)
 
-        # get neuron coordinates
+        # Get neuron coordinates
         coords: List[halco.LogicalNeuronOnDLS] = self.execution_instance \
             .neuron_placement.id2logicalneuron(self.unit_ids)
 
-        # create receptors
+        # Create receptors
         receptors = set([
             grenade.network.Receptor(
                 grenade.network.Receptor.ID(),
@@ -484,11 +484,11 @@ class AELIF(Population):
             for i, logical_neuron in enumerate(coords)
         ]
 
-        # create grenade population
+        # Create grenade population
         gpopulation = grenade.network.Population(neurons,
                                                  self.chip_coordinate)
 
-        # add to builder
+        # Add to builder
         self.descriptor = builder.add(
             gpopulation, self.execution_instance.ID)
 
@@ -518,7 +518,7 @@ class AELIF(Population):
         if not self._enable_madc_recording:
             return self.descriptor
 
-        # add MADC recording
+        # Add MADC recording
         # NOTE: If two populations register MADC recordings grenade should
         #       throw in the following
         madc_recording_neuron = grenade.network.MADCRecording.Neuron()
@@ -610,12 +610,12 @@ class AELIF(Population):
         Execute forward function of the neuron layer according to the dynamics
         specified upon construction.
 
-        :param input: SynapseHandle from preceeding Synapse Module containing
+        :param input: SynapseHandle from preceding Synapse Module containing
             graded spikes which are used as input for the neuron layer.
-        :param hw_data: Can contain result data form hardware run which is
+        :param hw_data: Can contain result data from hardware run which is
             injected into the calculations.
         :returns: Returns dynamically constructed handle which contains the
-            observable data resulting from the calculatons.
+            observable data resulting from the calculations.
             Depending on the neuron dynamics specified upon construction,
             it contains voltage, voltage_madc, current, adaptation (if
             adaptation is enabled) and spikes (if firing behaviour is
@@ -742,8 +742,8 @@ class LIF(AELIF):
         layer. This is particularly useful for dropout.
 
 
-        The readout neuron is parameterized by the `ModuleParameterType`d
-        parameters:
+        The leaky integrate-and-fire neuron is parameterized by the
+        `ModuleParameterType` parameters:
             leak, reset, threshold, tau_mem, tau_syn, i_synin_gm,
             membrane_capacitance, refractory_time, synapse_dac_bias,
             holdoff_time.
@@ -755,7 +755,7 @@ class LIF(AELIF):
         the numerical model (`param.model_value`) defined in `forward_func`.
         `MixedHXModelParameter` and `HXTransformedModelParameter` allow using
         different values on BSS-2 and in the numerics. This is useful if the
-        dynamic range on hardware and in the numerical model  differ. If so,
+        dynamic range on hardware and in the numerical model differ. If so,
         the trace and weight scaling parameters need to be set accordingly in
         order to translate the weights to their corresponding hardware value
         and the hardware measurements into the dynamic range used in the
@@ -798,8 +798,8 @@ class LIF(AELIF):
             recording data into DRAM (period ~6us) or SRAM (period ~2us).
         :param enable_madc_recording: Enables or disables the recording of the
             neurons `record_neuron_id` membrane trace via the MADC. Only a
-            single neuron can be recorded. This membrane traces is samples with
-            a significant higher resolution as with the CADC.
+            single neuron can be recorded. This membrane trace is sampled with
+            a significantly higher resolution as with the CADC.
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
@@ -905,8 +905,8 @@ class EventPropLIF(LIF):
 # WARNING: THIS CLASS IS DEPRECATED
 class NeuronExp(LIF):
     """
-    Neuron layer with exponential Euler intergration scheme.
-    Synaptic and memebrane time constant are required to be provided
+    Neuron layer with exponential Euler integration scheme.
+    Synaptic and membrane time constant are required to be provided
     as HXTransformedModelParameter(exp(-dt/tau), -dt/ln(tau)).
     This ensures that the correct model and hardware values are being used.
     """
@@ -971,8 +971,8 @@ class LI(AELIF):
         population of non-spiking neurons of size `size` and is equivalent to
         LIF when its spiking mask is disabled for all neurons.
 
-        The readout neuron is parameterized by the `ModuleParameterType`d
-        parameters:
+        The leaky integrator neuron is parameterized by the
+        `ModuleParameterType` parameters:
             leak, tau_mem, tau_syn, i_synin_gm, membrane_capacitance,
             synapse_dac_bias
         More infos to the respective parameters on BSS-2 can be found in
@@ -983,7 +983,7 @@ class LI(AELIF):
         the numerical model (`param.model_value`) defined in `forward_func`.
         `MixedHXModelParameter` and `HXTransformedModelParameter` allow using
         different values on BSS-2 and in the numerics. This is useful if the
-        dynamic range on hardware and in the numerical model  differ. If so,
+        dynamic range on hardware and in the numerical model differ. If so,
         the trace and weight scaling parameters need to be set accordingly in
         order to translate the weights to their corresponding hardware value
         and the hardware measurements into the dynamic range used in the
@@ -1014,8 +1014,8 @@ class LI(AELIF):
             recording data into DRAM (period ~6us) or SRAM (period ~2us).
         :param enable_madc_recording: Enables or disables the recording of the
             neurons `record_neuron_id` membrane trace via the MADC. Only a
-            single neuron can be recorded. This membrane traces is samples with
-            a significant higher resolution as with the CADC.
+            single neuron can be recorded. This membrane trace is sampled with
+            a significantly higher resolution as with the CADC.
         :param record_neuron_id: The in-population neuron index of the neuron
             to be recorded with the MADC. This has only an effect when
             `enable_madc_recording` is enabled.
@@ -1092,8 +1092,8 @@ class LI(AELIF):
 # WARNING: THIS CLASS IS DEPRECATED
 class ReadoutNeuronExp(LI):
     """
-    Neuron layer with exponential Euler intergration scheme.
-    Synaptic and memebrane time constant are required to be provided
+    Neuron layer with exponential Euler integration scheme.
+    Synaptic and membrane time constant are required to be provided
     as HXTransformedModelParameter(exp(-dt/tau), -dt/ln(tau)).
     This ensures that the correct model and hardware values are being used.
     """
