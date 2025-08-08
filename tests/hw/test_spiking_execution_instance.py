@@ -103,7 +103,7 @@ class TestExecutionInstances(HXTestCase):
         for _id, hook in hooks.items():
             self.assertIsInstance(
                 hook,
-                grenade.signal_flow.ExecutionInstanceHooks)
+                grenade.execution.ExecutionInstanceHooks)
             self.assertTrue(_id in [inst1.ID, inst2.ID, inst3.ID])
 
 
@@ -208,7 +208,7 @@ class TestExecutionInstance(HXTestCase):
         """ Test generate playback hooks """
         inst = ExecutionInstance()
         hooks = inst.generate_playback_hooks()
-        self.assertIsInstance(hooks, grenade.signal_flow.ExecutionInstanceHooks)
+        self.assertIsInstance(hooks, grenade.execution.ExecutionInstanceHooks)
 
 
 if __name__ == "__main__":

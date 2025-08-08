@@ -132,7 +132,7 @@ class TestRun(unittest.TestCase):
             output = _hxtorch_spiking.run(
                 config, network, inputs,
                 {grenade.common.ExecutionInstanceID():
-                 grenade.signal_flow.ExecutionInstanceHooks()})
+                 grenade.execution.ExecutionInstanceHooks()})
             print(output)
 
 

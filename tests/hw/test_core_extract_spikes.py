@@ -118,7 +118,7 @@ class TestExtractNSpikes(unittest.TestCase):
         data = _hxtorch_spiking.run(
             config, network_graph, inputs, {
                 grenade.common.ExecutionInstanceID():
-                grenade.signal_flow.ExecutionInstanceHooks()})
+                grenade.execution.ExecutionInstanceHooks()})
         spikes = _hxtorch_core.extract_n_spikes(
             data, network_graph,
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100,

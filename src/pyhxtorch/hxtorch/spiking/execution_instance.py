@@ -54,7 +54,7 @@ class ExecutionInstances(set):
     @property
     def playback_hooks(self) -> Dict[
             grenade.common.ExecutionInstanceID,
-            grenade.signal_flow.ExecutionInstanceHooks]:
+            grenade.execution.ExecutionInstanceHooks]:
         """
         Getter for all playback hooks assigned to each execution instance ID.
 
@@ -105,7 +105,7 @@ class BaseExecutionInstance(ABC):
 
     @abstractmethod
     def generate_playback_hooks(self) \
-            -> grenade.signal_flow.ExecutionInstanceHooks:
+            -> grenade.execution.ExecutionInstanceHooks:
         """
         Generate a ``ExecutionInstanceHooks`` object for the given
         execution instance, injected in ``grenade.run``.
@@ -275,7 +275,7 @@ class ExecutionInstance(BaseExecutionInstance):
         return cadc_recording
 
     def generate_playback_hooks(self) \
-            -> grenade.signal_flow.ExecutionInstanceHooks:
+            -> grenade.execution.ExecutionInstanceHooks:
         """
         Handle config injected into grenade (not supported yet).
 
@@ -308,8 +308,8 @@ class ExecutionInstance(BaseExecutionInstance):
         if self.injection_post_realtime is not None:
             post_realtime.copy_back(self.injection_post_realtime)
 
-        return grenade.signal_flow.ExecutionInstanceHooks(
+        return grenade.execution.ExecutionInstanceHooks(
             grenade.common.ChipOnConnection(),
-            grenade.signal_flow.ExecutionInstanceHooks.Chip(
+            grenade.execution.ExecutionInstanceHooks.Chip(
                 pre_static_config, pre_realtime, inside_realtime_begin,
                 inside_realtime, inside_realtime_end, post_realtime))
