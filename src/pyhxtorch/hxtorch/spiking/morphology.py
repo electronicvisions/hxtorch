@@ -2,10 +2,14 @@
 User defined neuron morphologies.
 '''
 from abc import ABC, abstractmethod
+from typing import Tuple, Union
+import pylogging as logger
 
 import numpy as np
 
 from dlens_vx_v3 import lola, hal, halco
+
+log = logger.get("hxtorch.spiking.morphology")
 
 
 class Morphology(ABC):
@@ -56,6 +60,35 @@ class Morphology(ABC):
             for an_coord, an_config in zip(an_coords, ln_config[comp]):
                 neuron_block.atomic_neurons[an_coord].multicompartment = \
                     an_config.multicompartment
+
+    # pylint: disable=invalid-name
+    @staticmethod
+    def format_to_CapMemCell_value(**kwargs) -> Tuple[hal.CapMemCell.Value]:
+        '''
+        Helper function that can convert numbers (float or int) into
+        hal.CapMemCell.Value type while issuing warnings, if bonds of the
+        assignable value range are tried to surpass.
+
+        :param kwargs: Dictionary that holds the values that are to be
+            converted and their respective variable names (used for warnings)
+        :returns: Tuple that holds the according hal.CapMemCell.Value for each
+            passed value via kwargs
+        '''
+
+        return_values = []
+        for param_name, param in kwargs.items():
+            if param > 1022:
+                log.WARN(f"Hardware value of model parameter {param_name} "
+                         + f"({param}) exceeded maximal applicable value "
+                         + "of 1022. Changing to 1022...")
+                param = 1022
+            if param < 0:
+                log.WARN(f"Hardware value of model parameter {param_name} "
+                         + f"({param}) undercuts minimal applicable value "
+                         + "of 0. Changing to 0...")
+                param = 0
+            return_values.append(hal.CapMemCell.Value(int(param)))
+        return tuple(return_values)
 
     @staticmethod
     def enable_madc_recording(coord: halco.LogicalNeuronOnDLS,
@@ -128,6 +161,133 @@ class Morphology(ABC):
             config.leak.i_bias = 0
             config.leak.enable_division = True
             config.leak.enable_multiplication = False
+
+    @staticmethod
+    def set_exponential_params(coord: halco.LogicalNeuronOnDLS,
+                               neuron_block: lola.NeuronBlock,
+                               exponential_threshold: Union[float, int],
+                               exponential_slope: Union[float, int]) -> None:
+        '''
+        Set all parameters related to the exponential term of the adaptive
+        exponential leaky integrate-and-fire model on the given hardware
+        neuron.
+
+        :param coord: Coordinate of the logical neuron for which the parameters
+            are to be set.
+        :param neuron_block: Neuron block in which the configuration of the
+            atomic neurons is changed.
+        :param exponential_threshold: Parameter value to be set for the
+            exponential threshold.
+        :param exponential_slope: Parameter value to be set for the
+            exponential slope.
+        '''
+
+        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
+        exponential_threshold, exponential_slope = \
+            Morphology.format_to_CapMemCell_value(
+                exponential_threshold=exponential_threshold,
+                exponential_slope=exponential_slope)
+
+        config.exponential.enable = True
+        config.exponential.v_exp = exponential_threshold
+        config.exponential.i_bias = exponential_slope
+
+    @staticmethod
+    def set_adaptation_base_params(coord: halco.LogicalNeuronOnDLS,
+                                   neuron_block: lola.NeuronBlock,
+                                   tau_adap: Union[float, int]) -> None:
+        '''
+        Set all parameters related to the base of the adaptation term of the
+        adaptive exponential leaky integrate-and-fire model (without
+        subthreshold- or spike-triggered adaptation) on the given hw neuron.
+
+        :param coord: Coordinate of the logical neuron for which the parameters
+            are to be set.
+        :param neuron_block: Neuron block in which the configuration of the
+            atomic neurons is changed.
+        :param tau_adap: Parameter value to be set for the adaptation time
+            constant.
+        '''
+
+        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
+        tau_adap, = Morphology.format_to_CapMemCell_value(tau_adap=tau_adap)
+
+        config.adaptation.enable = True
+        config.adaptation.enable_pulse = False
+        config.adaptation.v_ref = hal.CapMemCell.Value(int(511))
+        config.adaptation.i_bias_tau = tau_adap
+
+    # pylint: disable=invalid-name
+    @staticmethod
+    def set_subthreshold_adaptation_strength(
+            coord: halco.LogicalNeuronOnDLS,
+            neuron_block: lola.NeuronBlock,
+            subthreshold_adaptation_strength: Union[float, int],
+            leak_adaptation: Union[float, int, None]) -> None:
+        '''
+        Set the hardware parameter for the subthreshold adaptation strength
+        on the given hw neuron.
+
+        :param coord: Coordinate of the logical neuron for which the parameters
+            are to be set.
+        :param neuron_block: Neuron block in which the configuration of the
+            atomic neurons is changed.
+        :param subthreshold_adaptation_strength: Parameter value to be set for
+            the subthreshold adaptation strength.
+        :param leak_adaptation: Parameter value to be set for the leak
+            potential from the membrane taken into account by the
+            subthreshold adaptation mechanism on hardware.
+        '''
+
+        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
+        a_is_negative = subthreshold_adaptation_strength < 0.
+        subthreshold_adaptation_strength, = \
+            Morphology.format_to_CapMemCell_value(
+                subthreshold_adaptation_strength=abs(
+                    subthreshold_adaptation_strength))
+        leak_adaptation, = (config.leak.v_leak,) if leak_adaptation is None \
+            else Morphology.format_to_CapMemCell_value(
+                leak_adaptation=leak_adaptation)
+
+        config.adaptation.i_bias_a = subthreshold_adaptation_strength
+        config.adaptation.invert_a = a_is_negative
+        config.adaptation.v_leak = leak_adaptation
+
+    # pylint: disable=invalid-name
+    @staticmethod
+    def set_spike_triggered_adaptation_increment(
+            coord: halco.LogicalNeuronOnDLS,
+            neuron_block: lola.NeuronBlock,
+            spike_triggered_adaptation_increment: Union[float, int],
+            clock_scale_adaptation_pulse: Tuple[int] = (5, 5)) -> None:
+        '''
+        Set the hardware parameter for the spike-triggered adaptation increment
+        on the given hw neuron.
+
+        :param coord: Coordinate of the logical neuron for which the parameters
+            are to be set.
+        :param neuron_block: Neuron block in which the configuration of the
+            atomic neurons is changed.
+        :param spike_triggered_adaptation_increment: Parameter value to be set
+            for the spike-triggered adaptation increment.
+        '''
+
+        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
+        b_is_negative = spike_triggered_adaptation_increment < 0.
+        spike_triggered_adaptation_increment, = \
+            Morphology.format_to_CapMemCell_value(
+                spike_triggered_adaptation_increment=abs(
+                    spike_triggered_adaptation_increment))
+
+        config.adaptation.enable_pulse = True
+        neuron_block.backends[0].enable_clocks = True
+        neuron_block.backends[0].clock_scale_adaptation_pulse = \
+            clock_scale_adaptation_pulse[0]
+        neuron_block.backends[1].enable_clocks = True
+        neuron_block.backends[1].clock_scale_adaptation_pulse = \
+            clock_scale_adaptation_pulse[1]
+        config.adaptation.i_bias_b = spike_triggered_adaptation_increment
+        config.adaptation.invert_b = b_is_negative
 
 
 class SingleCompartmentNeuron(Morphology):

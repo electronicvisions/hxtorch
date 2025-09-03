@@ -73,7 +73,9 @@ class AELIF(Population):
                  exponential_threshold: ModuleParameterType = 110,
                  subthreshold_adaptation_strength: ModuleParameterType = 1,
                  spike_triggered_adaptation_increment: ModuleParameterType = 1,
+                 clock_scale_adaptation_pulse: Tuple[int] = (5, 5),
                  tau_adap: ModuleParameterType = 100e-6,
+                 leak_adaptation: Optional[ModuleParameterType] = None,
                  execution_instance: Optional[ExecutionInstance] = None,
                  chip_coordinate: Optional[
                      Tuple[grenade.common.ChipOnConnection,
@@ -157,8 +159,23 @@ class AELIF(Population):
             strength. Defaults to HxParameter(1).
         :param spike_triggered_adaptation_increment: The spike-triggered
             adaptation offset. Defaults to HxParameter(1).
+        :param clock_scale_adaptation_pulse: This parameter controls the
+            duration of the current pulse on hardware, that flows onto the
+            capacitance of the adaptation. The set duration equals
+            2^(`clock_scale_adaptation_pulse` + 1) / 250e6 seconds.
+            The magnitude of the spike-triggered adaptation increment on
+            hardware corresponds to the product of this duration and the
+            hardware-value set for `spike_triggered_adaptation_increment`.
+            This value can be set per hemisphere individually. Defaults to
+            (5, 5).
         :param tau_adap: The adaptation time constant in s. Defaults to
             HxParameter(100e-6).
+        :param leak_adaptation: A value for the leak potential of the membrane,
+            which is taken into account by the subthreshold adaptation
+            mechanism on hardware. It may distinguish from the setting of the
+            actual leak potential. If value is `None`, the value of the actual
+            leak potential is taken. Only applicable on hardware, not in
+            simulation.
         :param execution_instance: Execution instance to place to.
         :param chip_coordinate: Chip coordinate this module is placed on.
         :param enable_spike_recording: Boolean flag to enable or disable spike
@@ -239,6 +256,7 @@ class AELIF(Population):
                          exponential_threshold=exponential_threshold,
                          subthreshold_adaptation_strength=(
                              subthreshold_adaptation_strength),
+                         leak_adaptation=leak_adaptation,
                          spike_triggered_adaptation_increment=(
                              spike_triggered_adaptation_increment),
                          tau_adap=tau_adap,
@@ -253,6 +271,7 @@ class AELIF(Population):
 
         self.alpha = alpha
         self.method = method
+        self.clock_scale_adaptation_pulse = clock_scale_adaptation_pulse
 
         self._enable_spike_recording = enable_spike_recording
         self._enable_cadc_recording = enable_cadc_recording
@@ -426,6 +445,55 @@ class AELIF(Population):
         if neuron_id == self._record_neuron_id:
             self._neuron_structure.enable_madc_recording(
                 coord, neuron_block, self._madc_readout_source)
+
+        # Set all parameters of the exponential term and the adaptation term.
+
+        # Get user-defined hardware parameters
+        exponential_threshold = self.exponential_threshold.\
+            hardware_value[neuron_id] if isinstance(
+                self.exponential_threshold.hardware_value, torch.Tensor) \
+            else self.exponential_threshold.hardware_value
+        exponential_slope = self.exponential_slope.\
+            hardware_value[neuron_id] if isinstance(
+                self.exponential_slope.hardware_value, torch.Tensor) \
+            else self.exponential_slope.hardware_value
+        tau_adap = self.tau_adap.hardware_value[neuron_id] \
+            if isinstance(self.tau_adap.hardware_value, torch.Tensor) \
+            else self.tau_adap.hardware_value
+        subthreshold_adaptation_strength = self.\
+            subthreshold_adaptation_strength.hardware_value[neuron_id] \
+            if isinstance(self.subthreshold_adaptation_strength.hardware_value,
+                          torch.Tensor) \
+            else self.subthreshold_adaptation_strength.hardware_value
+        leak_adaptation = None
+        if self.leak_adaptation is not None:
+            leak_adaptation = self.leak_adaptation.hardware_value[neuron_id] \
+                if isinstance(
+                    self.leak_adaptation.hardware_value, torch.Tensor) \
+                else self.leak_adaptation.hardware_value
+        spike_triggered_adaptation_increment = self.\
+            spike_triggered_adaptation_increment.hardware_value[neuron_id] \
+            if isinstance(
+                self.spike_triggered_adaptation_increment.hardware_value,
+                torch.Tensor) \
+            else self.spike_triggered_adaptation_increment.hardware_value
+
+        # Inject values into chip object
+        if self.exponential:
+            self._neuron_structure.set_exponential_params(
+                coord, neuron_block, exponential_threshold, exponential_slope)
+        if self.adaptation:
+            self._neuron_structure.set_adaptation_base_params(
+                coord, neuron_block, tau_adap)
+        if self.subthreshold_adaptation:
+            self._neuron_structure.set_subthreshold_adaptation_strength(
+                coord, neuron_block, subthreshold_adaptation_strength,
+                leak_adaptation)
+        if self.spike_triggered_adaptation:
+            self._neuron_structure.set_spike_triggered_adaptation_increment(
+                coord, neuron_block, spike_triggered_adaptation_increment,
+                self.clock_scale_adaptation_pulse)
+
         return neuron_block
 
     def add_to_network_graph(self,

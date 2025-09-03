@@ -79,6 +79,7 @@ class Population(BasePopulation):
         "exponential_slope": 50e-3,
         "exponential_threshold": 110,
         "subthreshold_adaptation_strength": 1,
+        "leak_adaptation": None,
         "spike_triggered_adaptation_increment": 1,
         "tau_adap": 100e-6,
         "e_coba_reversal": None,
