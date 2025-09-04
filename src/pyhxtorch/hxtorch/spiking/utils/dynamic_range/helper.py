@@ -14,15 +14,17 @@ class ConstantCurrentMixin:
                             neuron_block: lola.NeuronBlock,
                             coord: halco.LogicalNeuronOnDLS) \
             -> lola.NeuronBlock:
-        super().configure_hw_entity(neuron_id, neuron_block, coord)
+        neuron_block = super().configure_hw_entity(
+            neuron_id, neuron_block, coord)
+        # Only enable constant current for the first atomic neuron
         if self.enable_current:
-            for nrn in halco.iter_all(halco.AtomicNeuronOnDLS):
-                neuron_block.atomic_neurons[nrn] \
-                    .constant_current.i_offset = 1000
-                neuron_block.atomic_neurons[nrn] \
-                    .constant_current.enable = True
-                neuron_block.atomic_neurons[nrn] \
-                    .constant_current.type = self.current_type
+            nrn = coord.get_atomic_neurons()[0]
+            neuron_block.atomic_neurons[nrn] \
+                .constant_current.i_offset = 1000
+            neuron_block.atomic_neurons[nrn] \
+                .constant_current.enable = True
+            neuron_block.atomic_neurons[nrn] \
+                .constant_current.type = self.current_type
         return neuron_block
 
 
