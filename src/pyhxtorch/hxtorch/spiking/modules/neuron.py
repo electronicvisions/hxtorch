@@ -19,6 +19,7 @@ from hxtorch.spiking.handle import (
     Handle, SynapseHandle, LIFObservables, LIObservables)
 from hxtorch.spiking.parameter import HXTransformedModelParameter
 from hxtorch.spiking.modules.types import Population, ModuleParameterType
+from hxtorch.spiking.utils.readout_source import ReadoutSource
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
@@ -42,14 +43,6 @@ class AELIF(Population):
     For execution on hardware, this module can only be used in conjunction with
     a preceding Synapse module.
     """
-
-    # TODO: Integrate into API
-    _madc_readout_source: hal.NeuronConfig.ReadoutSource = \
-        hal.NeuronConfig.ReadoutSource.membrane
-    _cadc_readout_source: lola.AtomicNeuron.Readout.Source \
-        = lola.AtomicNeuron.Readout.Source.membrane
-    _adaptation_readout_source: lola.AtomicNeuron.Readout.Source \
-        = lola.AtomicNeuron.Readout.Source.adaptation
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-branches,
     # pylint: disable=too-many-statements, invalid-name
@@ -83,8 +76,12 @@ class AELIF(Population):
                  enable_spike_recording: bool = True,
                  enable_cadc_recording: bool = True,
                  enable_cadc_recording_placement_in_dram: bool = False,
+                 cadc_readout_source: hal.NeuronConfig.ReadoutSource = (
+                     ReadoutSource.VOLTAGE),
                  enable_madc_recording: bool = False,
                  record_neuron_id: Optional[int] = None,
+                 madc_readout_source: hal.NeuronConfig.ReadoutSource = (
+                     ReadoutSource.VOLTAGE),
                  placement_constraint: Optional[
                      List[halco.LogicalNeuronOnDLS]] = None,
                  trace_offset: Union[Dict[halco.LogicalNeuronOnDLS, float],
@@ -299,6 +296,9 @@ class AELIF(Population):
                                  'compartment are supported.')
             self._neuron_structure = neuron_structure
 
+        self.cadc_readout_source = cadc_readout_source
+        self.madc_readout_source = madc_readout_source
+
         self.leaky = leaky
         self.fire = fire
         self.exponential = exponential
@@ -444,7 +444,7 @@ class AELIF(Population):
             self._neuron_structure.disable_spiking(coord, neuron_block)
         if neuron_id == self._record_neuron_id:
             self._neuron_structure.enable_madc_recording(
-                coord, neuron_block, self._madc_readout_source)
+                coord, neuron_block, self.madc_readout_source)
 
         # Set all parameters of the exponential term and the adaptation term.
 
@@ -565,7 +565,7 @@ class AELIF(Population):
             for in_pop_id, unit_id in enumerate(self.unit_ids):
                 neuron = grenade.network.CADCRecording.Neuron()
                 neuron.coordinate.population = self.descriptor
-                neuron.source = self._cadc_readout_source
+                neuron.source = self.cadc_readout_source
                 neuron.coordinate.neuron_on_population = in_pop_id
                 neuron.coordinate.compartment_on_neuron = 0
                 neuron.coordinate.atomic_neuron_on_compartment = 0
@@ -592,7 +592,7 @@ class AELIF(Population):
         #       throw in the following
         madc_recording_neuron = grenade.network.MADCRecording.Neuron()
         madc_recording_neuron.coordinate.population = self.descriptor
-        madc_recording_neuron.source = self._madc_readout_source
+        madc_recording_neuron.source = self.madc_readout_source
         madc_recording_neuron.coordinate.neuron_on_population = int(
             self._record_neuron_id)
         madc_recording_neuron.coordinate.compartment_on_neuron = \
