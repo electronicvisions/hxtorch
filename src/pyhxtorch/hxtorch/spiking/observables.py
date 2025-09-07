@@ -1,6 +1,7 @@
 """ Hardware observables object """
 from typing import Optional, Union, Tuple, Dict
 from dataclasses import dataclass
+import torch
 
 import _hxtorch_spiking
 from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
@@ -8,7 +9,20 @@ import pygrenade_vx as grenade
 
 
 @dataclass
+class AnalogObservable:
+    """
+    Dataclass that can hold CADC and MADC data of an analog observable.
+    """
+    cadc: Optional[torch.Tensor] = None
+    madc: Optional[torch.Tensor] = None
+
+
+@dataclass
 class HardwareObservables:
+    """
+    Dataclass that holds the observable data measured on hardware, before
+    it is fed into post processing.
+    """
     spikes: Optional[SpikeHandle] = None
     cadc: Optional[CADCHandle] = None
     madc: Optional[MADCHandle] = None
