@@ -9,8 +9,9 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-import hxtorch.snn as hxsnn
 from hxtorch.spiking.functional import exp_cuba_lif_integration
+from hxtorch.spiking import Handle
+from hxtorch.spiking.observables import AnalogObservable
 
 
 # DEPRECATED
@@ -110,6 +111,9 @@ class TestLIFIntegration(unittest.TestCase):
         spikes[
             torch.randint(100, (1,)), torch.randint(10, (1,)),
             torch.randint(15, (1,))] = 1
+        hw_data = Handle(voltage=AnalogObservable(
+            cadc=membrane_cadc, madc=membrane_cadc),
+            adaptation=None, spikes=spikes)
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
@@ -117,7 +121,7 @@ class TestLIFIntegration(unittest.TestCase):
             exp_cuba_lif_integration(
                 graded_spikes, leak=leak, reset=reset, tau_mem_exp=tau_mem,
                 tau_syn_exp=tau_syn, threshold=threshold, method=method,
-                alpha=alpha, hw_data=(spikes, membrane_cadc, membrane_cadc))
+                alpha=alpha, hw_data=hw_data)
 
         # Shapes
         self.assertTrue(

@@ -3,9 +3,11 @@ Defining tensor handles able to hold references to tensors for lazy assignment
 after hardware data acquisition
 """
 from abc import ABC
-from typing import Type, Optional
+from typing import Type, Union
 from dataclasses import make_dataclass, is_dataclass, astuple, field, fields
 import torch
+
+from hxtorch.spiking.observables import AnalogObservable
 
 handle_register = {}
 
@@ -30,12 +32,12 @@ class Handle(ABC):
                             set(args), set(kwargs.keys()))
         if args:
             args_sorted = tuple(sorted(args))
-            attributes = [(key, Optional[torch.Tensor], field(default=None))
-                          for key in args_sorted]
+            attributes = [(key, Union[None, torch.Tensor, AnalogObservable],
+                           field(default=None)) for key in args_sorted]
         else:
             kwargs = dict(sorted(kwargs.items()))
-            attributes = [(key, Optional[torch.Tensor], field(default=value))
-                          for key, value in kwargs.items()]
+            attributes = [(key, Union[None, torch.Tensor, AnalogObservable],
+                           field(default=None)) for key in kwargs.keys()]
 
         handle_name = cls.__name__ + "_" \
             + "_".join([str(attr[0]) for attr in attributes])

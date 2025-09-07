@@ -7,6 +7,7 @@ from warnings import warn
 import torch
 
 from hxtorch.spiking.functional.unterjubel import Unterjubel
+from hxtorch.spiking.handle import Handle
 
 
 # DEPRECATED
@@ -17,7 +18,8 @@ def exp_cuba_li_integration(input: torch.Tensor,
                             leak: torch.Tensor,
                             tau_syn_exp: torch.Tensor,
                             tau_mem_exp: torch.Tensor,
-                            hw_data: Optional[torch.Tensor] = None
+                            hw_data: Optional[type(Handle(
+                                'voltage', 'adaptation', 'spikes'))] = None
                             ) -> torch.Tensor:
     warn("The exp_cuba_li_integration function is deprecated!",
          category=DeprecationWarning)
@@ -54,8 +56,10 @@ def exp_cuba_li_integration(input: torch.Tensor,
 
     membrane_cadc, membrane_madc = None, None
     if hw_data is not None:
-        membrane_cadc, membrane_madc = (
-            data.to(dev) if data is not None else None for data in hw_data)
+        membrane_cadc = hw_data.voltage.cadc.to(dev) if hw_data.voltage.cadc \
+            is not None else None
+        membrane_madc = hw_data.voltage.madc.to(dev) if hw_data.voltage.madc \
+            is not None else None
         T = min(membrane_cadc.shape[0], T)
 
     for ts in range(T):

@@ -20,6 +20,7 @@ from hxtorch.spiking.handle import (
 from hxtorch.spiking.parameter import HXTransformedModelParameter
 from hxtorch.spiking.modules.types import Population, ModuleParameterType
 from hxtorch.spiking.utils.readout_source import ReadoutSource
+from hxtorch.spiking.observables import AnalogObservable
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
     from hxtorch.spiking.observables import HardwareObservables
@@ -313,13 +314,15 @@ class AELIF(Population):
                                          'current')
         elif not self.fire:
             self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current', 'adaptation')
+                                         'current', 'adaptation_cadc',
+                                         'adaptation_madc')
         elif not self.adaptation:
             self._output_handle = Handle('membrane_cadc', 'membrane_madc',
                                          'current', 'spikes')
         else:
             self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current', 'adaptation', 'spikes')
+                                         'current', 'adaptation_cadc',
+                                         'adaptation_madc', 'spikes')
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -606,7 +609,7 @@ class AELIF(Population):
         return self.descriptor
 
     def post_process(self, hw_data: HardwareObservables, runtime: float) \
-            -> Tuple[Optional[torch.Tensor], ...]:
+            -> type(Handle('voltage', 'adaptation', 'spikes')):
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -622,8 +625,7 @@ class AELIF(Population):
         :param runtime: The requested runtime of the experiment on hardware in
             s.
 
-        :return: Returns a tuple of optional torch.Tensors holding the hardware
-            data (spikes, cadc or madc)
+        :return: Returns a handle containing the post processed data.
         """
         if not self.fire:
             assert not self._enable_spike_recording
@@ -666,15 +668,29 @@ class AELIF(Population):
         if self._enable_madc_recording:
             madc = hw_data.madc.to_raw()
 
-        # TODO: Issue #4058: Switch data format of post-processed HW data from
-        #                    tuple to Handle
-        if not self.fire:
-            return cadc, madc
-        return spikes, cadc, madc
+        voltage = AnalogObservable()
+        adaptation = AnalogObservable()
+        if self.cadc_readout_source == ReadoutSource.VOLTAGE:
+            voltage.cadc = cadc
+        elif self.cadc_readout_source == ReadoutSource.ADAPTATION:
+            adaptation.cadc = cadc
+        else:
+            log.ERROR("Post processing for CADC readout source "
+                      + f"{self.cadc_readout_source} is not implemented yet.")
+        if self.madc_readout_source == ReadoutSource.VOLTAGE:
+            voltage.madc = madc
+        elif self.madc_readout_source == ReadoutSource.ADAPTATION:
+            adaptation.madc = madc
+        else:
+            log.ERROR("Post processing for MADC readout source "
+                      + f"{self.madc_readout_source} is not implemented yet.")
+
+        return Handle(voltage=voltage, adaptation=adaptation, spikes=spikes)
 
     # pylint: disable=redefined-builtin, invalid-name
     def forward_func(self, *input: SynapseHandle,
-                     hw_data: Optional[Tuple[Optional[torch.Tensor]]] = None):
+                     hw_data: Optional[type(Handle(
+                         'voltage', 'adaptation', 'spikes'))] = None):
         """
         Execute forward function of the neuron layer according to the dynamics
         specified upon construction.
@@ -707,17 +723,14 @@ class AELIF(Population):
                  "specified non-spiking behaviour.",
                  category=UserWarning)
             refractory = False
-        hw_voltage_trace_available = False
+        hw_voltage_cadc_trace_available = False
+        hw_adaptation_cadc_trace_available = False
         hw_spikes_available = False
-        if hw_data is not None:
-            assert len(hw_data) <= 3
-            if len(hw_data) == 3 and hw_data[0] is not None:
-                # Spikes were recorded and are available
-                hw_spikes_available = True
-            if len(hw_data) == 2 and hw_data[0] is not None \
-                    or len(hw_data) == 3 and hw_data[1] is not None:
-                # CADC data was recorded and is available
-                hw_voltage_trace_available = True
+        if hw_data:
+            hw_voltage_cadc_trace_available = hw_data.voltage.cadc is not None
+            hw_adaptation_cadc_trace_available = \
+                hw_data.adaptation.cadc is not None
+            hw_spikes_available = hw_data.spikes is not None
         integration_step_code = F.CuBaStepCode(
             leaky=self.leaky,
             fire=self.fire,
@@ -725,7 +738,8 @@ class AELIF(Population):
             exponential=self.exponential,
             subthreshold_adaptation=self.subthreshold_adaptation,
             spike_triggered_adaptation=self.spike_triggered_adaptation,
-            hw_voltage_trace_available=hw_voltage_trace_available,
+            hw_voltage_trace_available=hw_voltage_cadc_trace_available,
+            hw_adaptation_trace_available=hw_adaptation_cadc_trace_available,
             hw_spikes_available=hw_spikes_available).generate()
         assert all(synapse_handle.graded_spikes is not None for
                    synapse_handle in input)

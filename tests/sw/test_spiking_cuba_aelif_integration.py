@@ -9,6 +9,8 @@ import torch
 import matplotlib.pyplot as plt
 
 from hxtorch.spiking.functional import cuba_aelif_integration, CuBaStepCode
+from hxtorch.spiking import Handle
+from hxtorch.spiking.observables import AnalogObservable
 
 class TestAELIFIntegration(unittest.TestCase):
     """
@@ -66,7 +68,8 @@ class TestAELIFIntegration(unittest.TestCase):
         integration_step_code = CuBaStepCode(
             leaky=True, fire=True, refractory=True, exponential=True,
             subthreshold_adaptation=True, spike_triggered_adaptation=True,
-            hw_voltage_trace_available=False, hw_spikes_available=False).\
+            hw_voltage_trace_available=False,
+            hw_adaptation_trace_available=False, hw_spikes_available=False).\
             generate()
         self.assertTrue(type(integration_step_code) == str)
         aelif_data = cuba_aelif_integration(
@@ -94,12 +97,13 @@ class TestAELIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
-                torch.tensor(aelif_data.adaptation.shape)))
+                torch.tensor(aelif_data.adaptation_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
                 torch.tensor(aelif_data.spikes.shape)))
         self.assertIsNone(aelif_data.membrane_madc)
+        self.assertIsNone(aelif_data.adaptation_madc)
 
         # No backpropagation error
         loss = aelif_data.spikes.sum()
@@ -116,7 +120,7 @@ class TestAELIFIntegration(unittest.TestCase):
             aelif_data.current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.adaptation[:, 0, 0].detach().numpy(),
+            aelif_data.adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
         ax.axhline(exp_threshold[0], label='exp_threshold', linestyle='--',
                    color='red')
@@ -183,22 +187,28 @@ class TestAELIFIntegration(unittest.TestCase):
             spike_triggered_adaptation=True,
             integration_step_code=integration_step_code)
         self.assertIsNone(hw_data.membrane_madc)
+        self.assertIsNone(hw_data.adaptation_madc)
 
         # Add jitter
         hw_voltage = hw_data.membrane_cadc + \
             torch.rand(hw_data.membrane_cadc.shape) * 0.05
-        hw_adaptation = hw_data.adaptation + \
-            torch.rand(hw_data.adaptation.shape) * 0.05
+        hw_adaptation = hw_data.adaptation_cadc + \
+            torch.rand(hw_data.adaptation_cadc.shape) * 0.05
         hw_spikes = hw_data.spikes
         hw_spikes[
             torch.randint(time_steps, (1,)), torch.randint(batch_size, (1,)),
             torch.randint(population_size, (1,))] = 1
+        injected_hw_data = Handle(
+            voltage=AnalogObservable(cadc=hw_voltage, madc=hw_adaptation),
+            adaptation=AnalogObservable(cadc=hw_adaptation, madc=None),
+            spikes=hw_spikes)
 
         # Inject hw_data into new integration process
         integration_step_code_hw = CuBaStepCode(
             leaky=True, fire=True, refractory=True, exponential=True,
             subthreshold_adaptation=True, spike_triggered_adaptation=True,
-            hw_voltage_trace_available=True, hw_spikes_available=True).\
+            hw_voltage_trace_available=True,
+            hw_adaptation_trace_available=True, hw_spikes_available=True).\
             generate()
         aelif_data = cuba_aelif_integration(
             graded_spikes, leak=leak, reset=reset, threshold=threshold,
@@ -208,18 +218,18 @@ class TestAELIFIntegration(unittest.TestCase):
             subthreshold_adaptation_strength=subthreshold_adaptation_strength,
             spike_triggered_adaptation_increment=(
                 spike_triggered_adaptation_increment),
-            tau_adap=tau_adap, hw_data=[hw_spikes, hw_voltage, hw_adaptation],
+            tau_adap=tau_adap, hw_data=injected_hw_data,
             dt=dt, leaky=True, fire=True, refractory=True, exponential=True,
             subthreshold_adaptation=True, spike_triggered_adaptation=True,
             integration_step_code=integration_step_code_hw)
 
         # Check if injected hardware data is still the same
+        self.assertTrue(torch.equal(hw_voltage, aelif_data.membrane_cadc))
+        self.assertTrue(torch.equal(hw_adaptation, aelif_data.membrane_madc))
         self.assertTrue(
-            torch.equal(hw_voltage, aelif_data.membrane_cadc))
-        self.assertTrue(
-            torch.equal(hw_adaptation, aelif_data.membrane_madc))
-        self.assertTrue(
-            torch.equal(hw_spikes, aelif_data.spikes))
+            torch.equal(hw_adaptation, aelif_data.adaptation_cadc))
+        self.assertIsNone(aelif_data.adaptation_madc)
+        self.assertTrue(torch.equal(hw_spikes, aelif_data.spikes))
 
         # Shapes of remaining observables
         self.assertTrue(
@@ -229,7 +239,7 @@ class TestAELIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(hw_voltage.shape),
-                torch.tensor(aelif_data.adaptation.shape)))
+                torch.tensor(aelif_data.adaptation_cadc.shape)))
 
         # No backpropagation error
         loss = aelif_data.spikes.sum()
@@ -246,7 +256,7 @@ class TestAELIFIntegration(unittest.TestCase):
             aelif_data.current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.adaptation[:, 0, 0].detach().numpy(),
+            aelif_data.adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
         ax.legend()
 

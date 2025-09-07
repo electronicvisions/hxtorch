@@ -9,6 +9,7 @@ import torch
 from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
+from hxtorch.spiking.handle import Handle
 
 
 # DEPRECATED
@@ -23,7 +24,8 @@ def exp_cuba_lif_integration(input: torch.Tensor,
                              tau_mem_exp: torch.Tensor,
                              method: torch.Tensor,
                              alpha: torch.Tensor,
-                             hw_data: Optional[torch.Tensor] = None
+                             hw_data: Optional[type(Handle(
+                                 'voltage', 'adaptation', 'spikes'))] = None
                              ) -> Tuple[torch.Tensor, ...]:
     warn("The exp_cuba_lif_integration function is deprecated!",
          category=DeprecationWarning)
@@ -70,8 +72,13 @@ def exp_cuba_lif_integration(input: torch.Tensor,
 
     spikes_hw, membrane_cadc, membrane_madc = None, None, None
     if hw_data is not None:
-        spikes_hw, membrane_cadc, membrane_madc = (
-            data.to(dev) if data is not None else None for data in hw_data)
+        spikes_hw = hw_data.spikes.to(dev) if hw_data.spikes is not None else \
+            None
+        membrane_cadc = hw_data.voltage.cadc.to(dev) if hw_data.voltage.cadc \
+            is not None else None
+        membrane_madc = hw_data.voltage.madc.to(dev) if hw_data.voltage.madc \
+            is not None else None
+
         T = min(T, *(data.shape[0] for data in (
             spikes_hw, membrane_cadc) if data is not None))
 

@@ -9,8 +9,9 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-import hxtorch.snn as hxsnn
 from hxtorch.spiking.functional import exp_cuba_li_integration
+from hxtorch.spiking import Handle
+from hxtorch.spiking.observables import AnalogObservable
 
 
 # DEPRECATED
@@ -91,12 +92,15 @@ class TestLIIntegration(unittest.TestCase):
 
         # Add jitter
         membrane_cadc += torch.rand(membrane_cadc.shape) * 0.05
+        hw_data = Handle(
+            voltage=AnalogObservable(cadc=membrane_cadc, madc=membrane_cadc),
+            adaptation=None, spikes=None)
 
         # Inject
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         membrane_cadc_hw, current_hw, membrane_madc_hw = exp_cuba_li_integration(
             graded_spikes, leak=leak, tau_syn_exp=tau_syn, tau_mem_exp=tau_mem,
-            hw_data=(membrane_cadc, membrane_cadc))
+            hw_data=hw_data)
 
         # Shapes
         self.assertTrue(

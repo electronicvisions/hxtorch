@@ -21,6 +21,7 @@ class CuBaStepCode():
         # Adaptation
         {adaptation_adaptation_dgl}{subthreshold_adaptation}\
         {spike_triggered_adaptation}
+        {unterjubel_adaptation}
 
         # Reset
         {non_unterjubel_reset}
@@ -54,6 +55,9 @@ class CuBaStepCode():
 
     spike_triggered_adaptation_code = " + b * z"
 
+    unterjubel_adaptation_code = \
+        "adaptation = Unterjubel.apply(adaptation, adaptation_hw[ts])"
+
     non_unterjubel_reset_code = "v = (1 - z.detach()) * v + z.detach() * reset"
 
     refractory_update = \
@@ -69,6 +73,7 @@ class CuBaStepCode():
                  subthreshold_adaptation: bool = False,
                  spike_triggered_adaptation: bool = False,
                  hw_voltage_trace_available: bool = False,
+                 hw_adaptation_trace_available: bool = False,
                  hw_spikes_available: bool = False) -> None:
         """
         Initialize a code factory that can generate the necessary
@@ -108,6 +113,7 @@ class CuBaStepCode():
         self.adaptation = self.subthreshold_adaptation \
             or self.spike_triggered_adaptation
         self.hw_voltage_trace_available = hw_voltage_trace_available
+        self.hw_adaptation_trace_available = hw_adaptation_trace_available
         self.hw_spikes_available = hw_spikes_available
 
     def generate(self) -> str:
@@ -128,6 +134,8 @@ class CuBaStepCode():
             self.subthreshold_adaptation else ""
         spike_triggered_adaptation = self.spike_triggered_adaptation_code if \
             self.spike_triggered_adaptation else ""
+        unterjubel_adaptation = self.unterjubel_adaptation_code if \
+            self.hw_adaptation_trace_available else ""
         non_unterjubel_reset = self.non_unterjubel_reset_code if \
             self.fire and not self.hw_voltage_trace_available else ""
         refractory_update = self.refractory_update if self.refractory else ""
@@ -142,6 +150,7 @@ class CuBaStepCode():
             adaptation_adaptation_dgl=adaptation_adaptation_dgl,
             subthreshold_adaptation=subthreshold_adaptation,
             spike_triggered_adaptation=spike_triggered_adaptation,
+            unterjubel_adaptation=unterjubel_adaptation,
             non_unterjubel_reset=non_unterjubel_reset,
             refractory_update=refractory_update)
 

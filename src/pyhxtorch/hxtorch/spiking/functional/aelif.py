@@ -30,7 +30,8 @@ def cuba_aelif_integration(
         subthreshold_adaptation_strength: Union[torch.Tensor, float, int],
         spike_triggered_adaptation_increment: Union[torch.Tensor, float, int],
         tau_adap: Union[torch.Tensor, float, int],
-        hw_data: Optional[Tuple[Optional[torch.Tensor]]] = None,
+        hw_data: Optional[type(Handle(
+            'voltage', 'adaptation', 'spikes'))] = None,
         dt: float = 1e-6,
         leaky: bool = True,
         fire: bool = True,
@@ -110,18 +111,26 @@ def cuba_aelif_integration(
     z = torch.zeros(bs, ps).to(dev)
     adaptation = torch.zeros(bs, ps).to(dev)
     v = torch.empty(bs, ps, device=dev)
-    spikes_hw, membrane_cadc, membrane_madc = None, None, None
+    membrane_cadc_hw = None
+    membrane_madc_hw = None
+    adaptation_cadc_hw = None
+    adaptation_madc_hw = None
+    spikes_hw = None
 
     if hw_data:
-        if fire:
-            spikes_hw, membrane_cadc, membrane_madc = (
-                data.to(dev) if data is not None else None for data in hw_data)
-            T = min(T, *(data.shape[0] for data in (
-                    spikes_hw, membrane_cadc) if data is not None))
-        else:
-            membrane_cadc, membrane_madc = (
-                data.to(dev) if data is not None else None for data in hw_data)
-            T = min(T, membrane_cadc.shape[0])
+        membrane_cadc_hw = hw_data.voltage.cadc.to(dev) \
+            if hw_data.voltage.cadc is not None else None
+        membrane_madc_hw = hw_data.voltage.madc.to(dev) \
+            if hw_data.voltage.madc is not None else None
+        adaptation_cadc_hw = hw_data.adaptation.cadc.to(dev) \
+            if hw_data.adaptation.cadc is not None else None
+        adaptation_madc_hw = hw_data.adaptation.madc.to(dev) \
+            if hw_data.adaptation.madc is not None else None
+        spikes_hw = hw_data.spikes.to(dev) if hw_data.spikes is not None \
+            else None
+        T = min(T, *(data.shape[0] for data in (
+            membrane_cadc_hw, adaptation_cadc_hw, spikes_hw)
+            if data is not None))
 
     current = torch.empty_like(input, device=dev)
     spikes = torch.empty_like(input, device=dev)
@@ -131,7 +140,7 @@ def cuba_aelif_integration(
     # Initialize dictionary to match locals with code variables
     variables = {'i': i, 'z': z, 'adaptation': adaptation,
                  'tau_syn': tau_syn, 'c': c_mem, 'dt': dt,
-                 'exp': torch.exp}
+                 'exp': torch.exp, 'Unterjubel': Unterjubel}
 
     if leaky:
         v[:] = leak
@@ -165,8 +174,6 @@ def cuba_aelif_integration(
     if spike_triggered_adaptation:
         variables['b'] = spike_triggered_adaptation_increment
         variables['z'] = z
-    if membrane_cadc is not None or spikes_hw is not None:
-        variables['Unterjubel'] = Unterjubel
     if refractory:
         # Counter for neurons in refractory period
         ref_state = torch.zeros(ps, dtype=int, device=dev)
@@ -175,8 +182,10 @@ def cuba_aelif_integration(
         variables['refractory_update'] = refractory_update
         variables['membrane_hw'] = [None] * T
         variables['spikes_hw'] = [None] * T
-    if membrane_cadc is not None:
-        variables['membrane_hw'] = membrane_cadc
+    if membrane_cadc_hw is not None:
+        variables['membrane_hw'] = membrane_cadc_hw
+    if adaptation_cadc_hw is not None:
+        variables['adaptation_hw'] = adaptation_cadc_hw
     if spikes_hw is not None:
         variables['spikes_hw'] = spikes_hw
     variables['v'] = v
@@ -213,19 +222,18 @@ def cuba_aelif_integration(
     # Return calculated values
     if not fire and not adaptation_flag:
         return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc,
+            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
             current=current)
     if not fire:
         return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc,
-            current=current,
-            adaptation=adaptation_storage)
+            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
+            current=current, adaptation_cadc=adaptation_storage,
+            adaptation_madc=adaptation_madc_hw)
     if not adaptation_flag:
         return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc,
+            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
             current=current, spikes=spikes)
     return Handle(
-        membrane_cadc=membrane, membrane_madc=membrane_madc,
-        current=current,
-        adaptation=adaptation_storage,
-        spikes=spikes)
+        membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
+        current=current, adaptation_cadc=adaptation_storage,
+        adaptation_madc=adaptation_madc_hw, spikes=spikes)

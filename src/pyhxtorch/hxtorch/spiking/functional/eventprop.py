@@ -2,6 +2,8 @@
 from typing import Tuple, Optional
 import torch
 
+from hxtorch.spiking.handle import Handle
+
 
 class EventPropLIFFunction(torch.autograd.Function):
     """
@@ -21,7 +23,8 @@ class EventPropLIFFunction(torch.autograd.Function):
                 threshold: torch.Tensor,
                 tau_syn: torch.Tensor,
                 tau_mem: torch.Tensor,
-                hw_data: Optional[torch.Tensor] = None,
+                hw_data: Optional[type(Handle(
+                    'voltage', 'adaptation', 'spikes'))] = None,
                 dt: float = 1e-6) -> Tuple[torch.Tensor]:
         r"""
         Forward function returning hardware data if given or otherwise
@@ -51,10 +54,12 @@ class EventPropLIFFunction(torch.autograd.Function):
         if hw_data is not None:
             ctx.extra_kwargs = {
                 "params": (leak, reset, threshold, tau_syn, tau_mem), "dt": dt}
-            hw_data = tuple(data.to(dev) if data is not None
-                            else None for data in hw_data)
-            ctx.save_for_backward(input, *hw_data)
-            return hw_data
+            cadc = hw_data.voltage.cadc.to(dev) if hw_data.voltage.cadc is \
+                not None else None
+            spikes = hw_data.spikes.to(dev) if hw_data.spikes is not None \
+                else None
+            ctx.save_for_backward(input, spikes, cadc, None)
+            return spikes, cadc, None
 
         # Otherwise integrate the neuron dynamics in software
         T, bs, ps = input[0].shape
