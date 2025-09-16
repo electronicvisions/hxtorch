@@ -412,7 +412,7 @@ class AELIF(Population):
         self._madc_readout_source = source
 
     @property
-    def mask(self) -> None:
+    def mask(self) -> Optional[torch.Tensor]:
         """
         Getter for spike mask.
 
