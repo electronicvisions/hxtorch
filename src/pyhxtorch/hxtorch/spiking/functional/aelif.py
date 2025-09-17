@@ -182,6 +182,11 @@ def cuba_aelif_integration(
     variables['v'] = v
     variables['input'] = input
 
+    # Assert that all tensors are on the right device
+    for var in variables.values():
+        if isinstance(var, torch.Tensor):
+            var = var.to(dev)
+
     # Integrate
     for ts in range(T):
         variables['ts'] = ts
