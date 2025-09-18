@@ -132,6 +132,7 @@ class TestPopulation(unittest.TestCase):
         nrn.e_coba_reference=HXParameter(None)
         nrn.membrane_capacitance=HXParameter(55)
         nrn.refractory_time=HXParameter(3e-6)
+        nrn.fire = True
         nrn.synapse_dac_bias=HXParameter(700)
         nrn.holdoff_time=HXParameter(1e-6)
     
@@ -155,6 +156,7 @@ class TestPopulation(unittest.TestCase):
         nrn.e_coba_reference=HXParameter(None)
         nrn.membrane_capacitance=HXParameter(torch.tensor(55))
         nrn.refractory_time=HXParameter(torch.tensor(3e-6))
+        nrn.fire = True
         nrn.synapse_dac_bias=HXParameter(torch.tensor(700))
         nrn.holdoff_time=HXParameter(torch.tensor(1))
 
@@ -177,6 +179,7 @@ class TestPopulation(unittest.TestCase):
         nrn.e_coba_reference=HXParameter(None)
         nrn.membrane_capacitance=HXParameter(torch.full((size,), 55))
         nrn.refractory_time=HXParameter(torch.full((size,), 3e-6))
+        nrn.fire = True
         nrn.synapse_dac_bias=HXParameter(torch.tensor(700))
         nrn.holdoff_time=HXParameter(torch.full((size,), 1))
 

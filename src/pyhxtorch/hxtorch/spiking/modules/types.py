@@ -301,10 +301,16 @@ class Population(BasePopulation):
                 self.e_coba_reference.hardware_value, size,
                 rows=2).numpy()[:, mapping]
 
-        # tau_mem, refractory_time, holdoff_time
-        for key in ["tau_mem", "refractory_time", "holdoff_time"]:
+        # tau_mem, holdoff_time
+        for key in ["tau_mem", "holdoff_time"]:
             getattr(targets, key)[coords] = (
                 self._resize(getattr(self, key).hardware_value, size).numpy()
+                * pq.s).rescale(pq.us)[mapping]
+
+        # refractory_time
+        if hasattr(self, "fire") and self.fire:
+            targets.refractory_time[coords] = (
+                self._resize(self.refractory_time.hardware_value, size).numpy()
                 * pq.s).rescale(pq.us)[mapping]
 
         # leak, reset, threshold, membrane_capacitance
