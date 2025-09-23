@@ -128,9 +128,9 @@ def cuba_aelif_integration(
             if hw_data.adaptation.madc is not None else None
         spikes_hw = hw_data.spikes.to(dev) if hw_data.spikes is not None \
             else None
-        T = min(T, *(data.shape[0] for data in (
+        T = min((T, *(data.shape[0] for data in (
             membrane_cadc_hw, adaptation_cadc_hw, spikes_hw)
-            if data is not None))
+            if data is not None)))
 
     current = torch.empty_like(input, device=dev)
     spikes = torch.empty_like(input, device=dev)
