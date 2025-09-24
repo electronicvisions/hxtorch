@@ -190,8 +190,20 @@ def cuba_aelif_integration(
     # Integrate
     for ts in range(T):
         variables['ts'] = ts
-        exec(integration_step_code, variables)
-
+        # Execute step
+        try:
+            exec(integration_step_code, variables)
+        except Exception as e:
+            tb = e.__traceback__
+            while tb.tb_next:
+                tb = tb.tb_next
+            lineno = tb.tb_lineno
+            raise RuntimeError(
+                "An error occured while executing the code of the integration "
+                + f"step.\nIn line {lineno} "
+                + f"(\"{integration_step_code.splitlines()[lineno-1]}\") in "
+                + f"integration_step_code, following error occured:\n{e}") \
+                from e
         # Save data
         current[ts, :, :] = variables['i']
         membrane[ts, :, :] = variables['v']
