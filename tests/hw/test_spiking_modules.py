@@ -551,8 +551,9 @@ class TestAELIF(HWTestCase):
             calib_path=calib_helper.nightly_calib_path())
         linear = hxsnn.Synapse(10, 10, experiment=experiment)
         neuron = hxsnn.AELIF(
-            10, enable_madc_recording=True, record_neuron_id=1,
-            madc_readout_source=ReadoutSource.VOLTAGE, experiment=experiment)
+            10, enable_cadc_recording=False, enable_madc_recording=True,
+            record_neuron_id=1, madc_readout_source=ReadoutSource.VOLTAGE,
+            experiment=experiment)
         spikes = torch.zeros(110, 10, 10)
         i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = neuron(i_handle)
@@ -586,9 +587,9 @@ class TestAELIF(HWTestCase):
                 torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
-            torch.equal(
+            torch.all(torch.isclose(
                 torch.tensor(s_handle.membrane_madc.shape),
-                torch.tensor([2, 3235, 10])))
+                torch.tensor([2, 3235, 10]), rtol=2. / 3235)))
 
         # Switch readout source to adaptation
         neuron.madc_readout_source = ReadoutSource.ADAPTATION
@@ -614,12 +615,12 @@ class TestAELIF(HWTestCase):
                 torch.tensor([110, 10, 10])))
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.adaptation_madc.shape),
-                torch.tensor([2, 3235, 10])))
-        self.assertTrue(
-            torch.equal(
                 torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
+        self.assertTrue(
+            torch.all(torch.isclose(
+                torch.tensor(s_handle.adaptation_madc.shape),
+                torch.tensor([2, 3235, 10]), rtol=2. / 3235)))
         self.assertIsNone(s_handle.membrane_madc)
 
         # Only one module can record

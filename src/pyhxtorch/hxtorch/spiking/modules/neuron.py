@@ -297,8 +297,8 @@ class AELIF(Population):
                                  'compartment are supported.')
             self._neuron_structure = neuron_structure
 
-        self.cadc_readout_source = cadc_readout_source
-        self.madc_readout_source = madc_readout_source
+        self._cadc_readout_source = cadc_readout_source
+        self._madc_readout_source = madc_readout_source
 
         self.leaky = leaky
         self.fire = fire
@@ -390,6 +390,28 @@ class AELIF(Population):
         log.TRACE(f"Registered hardware  entity '{self}'.")
 
     @property
+    def cadc_readout_source(self) -> hal.NeuronConfig.ReadoutSource:
+        return self._cadc_readout_source
+
+    @cadc_readout_source.setter
+    def cadc_readout_source(self,
+                            source: hal.NeuronConfig.ReadoutSource) -> None:
+        self._changed_since_last_run = True
+        for key in self.execution_instance.cadc_neurons:
+            self.execution_instance.cadc_neurons[key] = []
+        self._cadc_readout_source = source
+
+    @property
+    def madc_readout_source(self) -> hal.NeuronConfig.ReadoutSource:
+        return self._madc_readout_source
+
+    @madc_readout_source.setter
+    def madc_readout_source(self,
+                            source: hal.NeuronConfig.ReadoutSource) -> None:
+        self._changed_since_last_run = True
+        self._madc_readout_source = source
+
+    @property
     def mask(self) -> None:
         """
         Getter for spike mask.
@@ -447,7 +469,7 @@ class AELIF(Population):
             self._neuron_structure.disable_spiking(coord, neuron_block)
         if neuron_id == self._record_neuron_id:
             self._neuron_structure.enable_madc_recording(
-                coord, neuron_block, self.madc_readout_source)
+                coord, neuron_block, self._madc_readout_source)
 
         # Set all parameters of the exponential term and the adaptation term.
 
@@ -568,7 +590,7 @@ class AELIF(Population):
             for in_pop_id, unit_id in enumerate(self.unit_ids):
                 neuron = grenade.network.CADCRecording.Neuron()
                 neuron.coordinate.population = self.descriptor
-                neuron.source = self.cadc_readout_source
+                neuron.source = self._cadc_readout_source
                 neuron.coordinate.neuron_on_population = in_pop_id
                 neuron.coordinate.compartment_on_neuron = 0
                 neuron.coordinate.atomic_neuron_on_compartment = 0
@@ -595,7 +617,7 @@ class AELIF(Population):
         #       throw in the following
         madc_recording_neuron = grenade.network.MADCRecording.Neuron()
         madc_recording_neuron.coordinate.population = self.descriptor
-        madc_recording_neuron.source = self.madc_readout_source
+        madc_recording_neuron.source = self._madc_readout_source
         madc_recording_neuron.coordinate.neuron_on_population = int(
             self._record_neuron_id)
         madc_recording_neuron.coordinate.compartment_on_neuron = \
@@ -670,20 +692,20 @@ class AELIF(Population):
 
         voltage = AnalogObservable()
         adaptation = AnalogObservable()
-        if self.cadc_readout_source == ReadoutSource.VOLTAGE:
+        if self._cadc_readout_source == ReadoutSource.VOLTAGE:
             voltage.cadc = cadc
-        elif self.cadc_readout_source == ReadoutSource.ADAPTATION:
+        elif self._cadc_readout_source == ReadoutSource.ADAPTATION:
             adaptation.cadc = cadc
         else:
             log.ERROR("Post processing for CADC readout source "
-                      + f"{self.cadc_readout_source} is not implemented yet.")
-        if self.madc_readout_source == ReadoutSource.VOLTAGE:
+                      + f"{self._cadc_readout_source} is not implemented yet.")
+        if self._madc_readout_source == ReadoutSource.VOLTAGE:
             voltage.madc = madc
-        elif self.madc_readout_source == ReadoutSource.ADAPTATION:
+        elif self._madc_readout_source == ReadoutSource.ADAPTATION:
             adaptation.madc = madc
         else:
             log.ERROR("Post processing for MADC readout source "
-                      + f"{self.madc_readout_source} is not implemented yet.")
+                      + f"{self._madc_readout_source} is not implemented yet.")
 
         return Handle(voltage=voltage, adaptation=adaptation, spikes=spikes)
 
