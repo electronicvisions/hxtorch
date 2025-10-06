@@ -219,21 +219,5 @@ def cuba_aelif_integration(
         spikes[ts, :, :] = variables['z']
         adaptation_storage[ts, :, :] = variables['adaptation']
 
-    # Return calculated values
-    if not fire and not adaptation_flag:
-        return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
-            current=current)
-    if not fire:
-        return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
-            current=current, adaptation_cadc=adaptation_storage,
-            adaptation_madc=adaptation_madc_hw)
-    if not adaptation_flag:
-        return Handle(
-            membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
-            current=current, spikes=spikes)
-    return Handle(
-        membrane_cadc=membrane, membrane_madc=membrane_madc_hw,
-        current=current, adaptation_cadc=adaptation_storage,
-        adaptation_madc=adaptation_madc_hw, spikes=spikes)
+    return (membrane, membrane_madc_hw, current, adaptation_storage,
+            adaptation_madc_hw, spikes)

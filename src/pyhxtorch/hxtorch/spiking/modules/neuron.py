@@ -743,34 +743,53 @@ class AELIF(Population):
             hw_spikes_available=hw_spikes_available).generate()
         assert all(synapse_handle.graded_spikes is not None for
                    synapse_handle in input)
-        return F.cuba_aelif_integration(
-            tuple(synapse_handle.graded_spikes for synapse_handle in input),
-            leak=self.leak.model_value,
-            reset=self.reset.model_value,
-            threshold=self.threshold.model_value,
-            tau_syn=self.tau_syn.model_value,
-            c_mem=self.membrane_capacitance.model_value,
-            g_l=(self.membrane_capacitance.model_value
-                 / self.tau_mem.model_value),
-            refractory_time=self.refractory_time.model_value,
-            method=self.method,
-            alpha=self.alpha,
-            exp_slope=self.exponential_slope.model_value,
-            exp_threshold=self.exponential_threshold.model_value,
-            subthreshold_adaptation_strength=(
-                self.subthreshold_adaptation_strength.model_value),
-            spike_triggered_adaptation_increment=(
-                self.spike_triggered_adaptation_increment.model_value),
-            tau_adap=self.tau_adap.model_value,
-            hw_data=hw_data,
-            dt=self.experiment.dt,
-            leaky=self.leaky,
-            fire=self.fire,
-            refractory=refractory,
-            exponential=self.exponential,
-            subthreshold_adaptation=self.subthreshold_adaptation,
-            spike_triggered_adaptation=self.spike_triggered_adaptation,
-            integration_step_code=integration_step_code)
+        (membrane_cadc, membrane_madc, current, adaptation_cadc,
+            adaptation_madc, spikes) = F.cuba_aelif_integration(
+                tuple(
+                    synapse_handle.graded_spikes for synapse_handle in input),
+                leak=self.leak.model_value,
+                reset=self.reset.model_value,
+                threshold=self.threshold.model_value,
+                tau_syn=self.tau_syn.model_value,
+                c_mem=self.membrane_capacitance.model_value,
+                g_l=(self.membrane_capacitance.model_value
+                     / self.tau_mem.model_value),
+                refractory_time=self.refractory_time.model_value,
+                method=self.method,
+                alpha=self.alpha,
+                exp_slope=self.exponential_slope.model_value,
+                exp_threshold=self.exponential_threshold.model_value,
+                subthreshold_adaptation_strength=(
+                    self.subthreshold_adaptation_strength.model_value),
+                spike_triggered_adaptation_increment=(
+                    self.spike_triggered_adaptation_increment.model_value),
+                tau_adap=self.tau_adap.model_value,
+                hw_data=hw_data,
+                dt=self.experiment.dt,
+                leaky=self.leaky,
+                fire=self.fire,
+                refractory=refractory,
+                exponential=self.exponential,
+                subthreshold_adaptation=self.subthreshold_adaptation,
+                spike_triggered_adaptation=self.spike_triggered_adaptation,
+                integration_step_code=integration_step_code)
+        if not self.fire and not self.adaptation:
+            return Handle(
+                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
+                current=current)
+        if not self.fire:
+            return Handle(
+                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
+                current=current, adaptation_cadc=adaptation_cadc,
+                adaptation_madc=adaptation_madc)
+        if not self.adaptation:
+            return Handle(
+                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
+                current=current, spikes=spikes)
+        return Handle(
+            membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
+            current=current, adaptation_cadc=adaptation_cadc,
+            adaptation_madc=adaptation_madc, spikes=spikes)
 
 
 class LIF(AELIF):

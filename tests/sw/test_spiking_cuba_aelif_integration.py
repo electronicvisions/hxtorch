@@ -72,55 +72,57 @@ class TestAELIFIntegration(unittest.TestCase):
             hw_adaptation_trace_available=False, hw_spikes_available=False).\
             generate()
         self.assertTrue(type(integration_step_code) == str)
-        aelif_data = cuba_aelif_integration(
-            graded_spikes, leak=leak, reset=reset, threshold=threshold,
-            tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-            refractory_time=refractory_time, method=method, alpha=alpha,
-            exp_slope=exp_slope, exp_threshold=exp_threshold,
-            subthreshold_adaptation_strength=subthreshold_adaptation_strength,
-            spike_triggered_adaptation_increment=(
-                spike_triggered_adaptation_increment),
-            tau_adap=tau_adap, dt=dt, leaky=True, fire=True, refractory=True,
-            exponential=True, subthreshold_adaptation=True,
-            spike_triggered_adaptation=True,
-            integration_step_code=integration_step_code)
+        (membrane_cadc, membrane_madc, current, adaptation_cadc,
+            adaptation_madc, spikes) = cuba_aelif_integration(
+                graded_spikes, leak=leak, reset=reset, threshold=threshold,
+                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
+                refractory_time=refractory_time, method=method, alpha=alpha,
+                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                subthreshold_adaptation_strength=(
+                    subthreshold_adaptation_strength),
+                spike_triggered_adaptation_increment=(
+                    spike_triggered_adaptation_increment),
+                tau_adap=tau_adap, dt=dt, leaky=True, fire=True,
+                refractory=True, exponential=True,
+                subthreshold_adaptation=True, spike_triggered_adaptation=True,
+                integration_step_code=integration_step_code)
 
         # Shapes
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
-                torch.tensor(aelif_data.membrane_cadc.shape)))
+                torch.tensor(membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
-                torch.tensor(aelif_data.current.shape)))
+                torch.tensor(current.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
-                torch.tensor(aelif_data.adaptation_cadc.shape)))
+                torch.tensor(adaptation_cadc.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([time_steps, batch_size, population_size]),
-                torch.tensor(aelif_data.spikes.shape)))
-        self.assertIsNone(aelif_data.membrane_madc)
-        self.assertIsNone(aelif_data.adaptation_madc)
+                torch.tensor(spikes.shape)))
+        self.assertIsNone(membrane_madc)
+        self.assertIsNone(adaptation_madc)
 
         # No backpropagation error
-        loss = aelif_data.spikes.sum()
+        loss = spikes.sum()
         loss.backward()
 
         # Plot voltage, current and adaptation of first neuron
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.membrane_cadc[:, 0, 0].detach().numpy(),
+            membrane_cadc[:, 0, 0].detach().numpy(),
             label='membrane')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.current[:, 0, 0].detach().numpy(), label='current')
+            current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.adaptation_cadc[:, 0, 0].detach().numpy(),
+            adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
         ax.axhline(exp_threshold[0], label='exp_threshold', linestyle='--',
                    color='red')
@@ -174,27 +176,29 @@ class TestAELIFIntegration(unittest.TestCase):
             subthreshold_adaptation=True, spike_triggered_adaptation=True,
             hw_voltage_trace_available=False, hw_spikes_available=False).\
             generate()
-        hw_data = cuba_aelif_integration(
-            graded_spikes, leak=leak, reset=reset, threshold=threshold,
-            tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-            refractory_time=refractory_time, method=method, alpha=alpha,
-            exp_slope=exp_slope, exp_threshold=exp_threshold,
-            subthreshold_adaptation_strength=subthreshold_adaptation_strength,
-            spike_triggered_adaptation_increment=(
-                spike_triggered_adaptation_increment),
-            tau_adap=tau_adap, dt=dt, leaky=True, fire=True, refractory=True,
-            exponential=True, subthreshold_adaptation=True,
-            spike_triggered_adaptation=True,
-            integration_step_code=integration_step_code)
-        self.assertIsNone(hw_data.membrane_madc)
-        self.assertIsNone(hw_data.adaptation_madc)
+        (membrane_cadc_hw, membrane_madc_hw, current_hw, adaptation_cadc_hw,
+            adaptation_madc_hw, spikes_hw) = cuba_aelif_integration(
+                graded_spikes, leak=leak, reset=reset, threshold=threshold,
+                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
+                refractory_time=refractory_time, method=method, alpha=alpha,
+                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                subthreshold_adaptation_strength=(
+                    subthreshold_adaptation_strength),
+                spike_triggered_adaptation_increment=(
+                    spike_triggered_adaptation_increment),
+                tau_adap=tau_adap, dt=dt, leaky=True, fire=True,
+                refractory=True, exponential=True,
+                subthreshold_adaptation=True, spike_triggered_adaptation=True,
+                integration_step_code=integration_step_code)
+        self.assertIsNone(membrane_madc_hw)
+        self.assertIsNone(adaptation_madc_hw)
 
         # Add jitter
-        hw_voltage = hw_data.membrane_cadc + \
-            torch.rand(hw_data.membrane_cadc.shape) * 0.05
-        hw_adaptation = hw_data.adaptation_cadc + \
-            torch.rand(hw_data.adaptation_cadc.shape) * 0.05
-        hw_spikes = hw_data.spikes
+        hw_voltage = membrane_cadc_hw + \
+            torch.rand(membrane_cadc_hw.shape) * 0.05
+        hw_adaptation = adaptation_cadc_hw + \
+            torch.rand(adaptation_cadc_hw.shape) * 0.05
+        hw_spikes = spikes_hw
         hw_spikes[
             torch.randint(time_steps, (1,)), torch.randint(batch_size, (1,)),
             torch.randint(population_size, (1,))] = 1
@@ -210,53 +214,56 @@ class TestAELIFIntegration(unittest.TestCase):
             hw_voltage_trace_available=True,
             hw_adaptation_trace_available=True, hw_spikes_available=True).\
             generate()
-        aelif_data = cuba_aelif_integration(
-            graded_spikes, leak=leak, reset=reset, threshold=threshold,
-            tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-            refractory_time=refractory_time, method=method, alpha=alpha,
-            exp_slope=exp_slope, exp_threshold=exp_threshold,
-            subthreshold_adaptation_strength=subthreshold_adaptation_strength,
-            spike_triggered_adaptation_increment=(
-                spike_triggered_adaptation_increment),
-            tau_adap=tau_adap, hw_data=injected_hw_data,
-            dt=dt, leaky=True, fire=True, refractory=True, exponential=True,
-            subthreshold_adaptation=True, spike_triggered_adaptation=True,
-            integration_step_code=integration_step_code_hw)
+        (membrane_cadc, membrane_madc, current, adaptation_cadc,
+            adaptation_madc, spikes) = cuba_aelif_integration(
+                graded_spikes, leak=leak, reset=reset, threshold=threshold,
+                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
+                refractory_time=refractory_time, method=method, alpha=alpha,
+                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                subthreshold_adaptation_strength=(
+                    subthreshold_adaptation_strength),
+                spike_triggered_adaptation_increment=(
+                    spike_triggered_adaptation_increment),
+                tau_adap=tau_adap, hw_data=injected_hw_data,
+                dt=dt, leaky=True, fire=True, refractory=True,
+                exponential=True, subthreshold_adaptation=True,
+                spike_triggered_adaptation=True,
+                integration_step_code=integration_step_code_hw)
 
         # Check if injected hardware data is still the same
-        self.assertTrue(torch.equal(hw_voltage, aelif_data.membrane_cadc))
-        self.assertTrue(torch.equal(hw_adaptation, aelif_data.membrane_madc))
+        self.assertTrue(torch.equal(hw_voltage, membrane_cadc))
+        self.assertTrue(torch.equal(hw_adaptation, membrane_madc))
         self.assertTrue(
-            torch.equal(hw_adaptation, aelif_data.adaptation_cadc))
-        self.assertIsNone(aelif_data.adaptation_madc)
-        self.assertTrue(torch.equal(hw_spikes, aelif_data.spikes))
+            torch.equal(hw_adaptation, adaptation_cadc))
+        self.assertIsNone(adaptation_madc)
+        self.assertTrue(torch.equal(hw_spikes, spikes))
 
         # Shapes of remaining observables
         self.assertTrue(
             torch.equal(
                 torch.tensor(hw_voltage.shape),
-                torch.tensor(aelif_data.current.shape)))
+                torch.tensor(current.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor(hw_voltage.shape),
-                torch.tensor(aelif_data.adaptation_cadc.shape)))
+                torch.tensor(adaptation_cadc.shape)))
 
         # No backpropagation error
-        loss = aelif_data.spikes.sum()
+        loss = spikes.sum()
         loss.backward()
 
         # Plot voltage, current and adaptation of first neuron
         _, ax = plt.subplots()
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.membrane_cadc[:, 0, 0].detach().numpy(),
+            membrane_cadc[:, 0, 0].detach().numpy(),
             label='membrane')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.current[:, 0, 0].detach().numpy(), label='current')
+            current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., dt * time_steps, dt),
-            aelif_data.adaptation_cadc[:, 0, 0].detach().numpy(),
+            adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
         ax.legend()
 
