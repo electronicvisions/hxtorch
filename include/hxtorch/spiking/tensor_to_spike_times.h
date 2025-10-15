@@ -1,3 +1,4 @@
+#include "grenade/vx/common/time.h"
 #include <vector>
 #include <torch/torch.h>
 
@@ -15,6 +16,6 @@ namespace hxtorch::spiking {
  * neuron index, holding a list of spike times of the corresonding neuron, i.e. shape (batch,
  * neuron index, spike times).
  */
-std::vector<std::vector<std::vector<float>>> tensor_to_spike_times(torch::Tensor times, float dt);
-
+std::vector<std::vector<std::vector<grenade::vx::common::Time>>> tensor_to_spike_times(
+    torch::Tensor times, float dt);
 }

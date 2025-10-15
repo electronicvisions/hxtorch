@@ -1,4 +1,4 @@
-# pylint: disable=unused-import, reimported
+# pylint: disable=unused-import, reimported, global-statement, unnecessary-dunder-call
 import sys as _sys
 import pylogging as logger
 

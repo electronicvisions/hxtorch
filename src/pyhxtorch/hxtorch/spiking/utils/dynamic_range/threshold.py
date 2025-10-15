@@ -10,9 +10,12 @@ from dlens_vx_v3 import halco
 
 import hxtorch
 import hxtorch.spiking as hxsnn
-from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
-from hxtorch.spiking.utils.dynamic_range.helper import ConstantCurrentNeuron
-from hxtorch.spiking.parameter import HXBaseParameter
+from hxtorch.core.utils import calib_helper
+from hxtorch.core.morphology import (
+    Morphology,
+    SingleCompartmentNeuron,
+)
+from hxtorch.core.parameter import HXBaseParameter
 
 
 class Threshold:
@@ -51,10 +54,14 @@ class Threshold:
         # Layers
         synapse = hxsnn.Synapse(
             1, self.output_size, experiment=exp)
-        self.neuron = ConstantCurrentNeuron(
-            self.output_size, **self.params, experiment=exp,
-            shift_cadc_to_first=False, neuron_structure=self.neuron_structure)
-        self.neuron.enable_current = enable_current
+        self.neuron = hxsnn.LIF(
+            self.output_size,
+            **self.params,
+            experiment=exp,
+            shift_cadc_to_first=False,
+            neuron_structure=self.neuron_structure,
+            enable_constant_current=enable_current,
+        )
 
         # forward
         inputs = hxsnn.LIFObservables(spikes=inputs)
@@ -72,7 +79,9 @@ class Threshold:
         exp = hxsnn.Experiment(mock=False, dt=dt)
         # Load calib
         if self.calib_path is not None:
-            exp.default_execution_instance.load_calib(self.calib_path)
+            exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
 
         inputs = torch.zeros((self.time_length, self.batch_size, 1))
         baselines = self.build_model(inputs, exp, enable_current=False)
@@ -82,7 +91,9 @@ class Threshold:
         exp = hxsnn.Experiment(mock=False, dt=dt)
         # Load calib
         if self.calib_path is not None:
-            exp.default_execution_instance.load_calib(self.calib_path)
+            exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
 
         # Explicitly load because we want to set initial config
         inputs = torch.zeros((self.time_length, self.batch_size, 1))

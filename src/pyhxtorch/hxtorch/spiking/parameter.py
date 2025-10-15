@@ -1,32 +1,21 @@
 """
 Generic parameter object holding hardware configurable neuron parameters.
 """
-from typing import Union, Callable
+from typing import Any, Callable
 import torch
 
+from hxtorch.core.parameter import (
+    HXParameter,
+    MixedHXModelParameter,
+    HXTransformedModelParameter,
+    ModelParameter,
+)
 
-class HXBaseParameter(torch.nn.Module):
-    def __init__(self, hardware_value, model_value):
-        super().__init__()
-        self._hardware_value = hardware_value
-        self._model_value = model_value
-        self.set_on_chip_func = None
 
-    @property
-    def hardware_value(self):
-        return self._hardware_value
-
-    @hardware_value.setter
-    def hardware_value(self, hardware_value):
-        self._hardware_value = hardware_value
-
-    @property
-    def model_value(self):
-        return self._model_value
-
-    @model_value.setter
-    def model_value(self, model_value):
-        self._model_value = model_value
+class TrainableParameterMixin(torch.nn.Module):
+    def __init__(self, set_on_hw_func: Callable = None):
+        torch.nn.Module.__init__(self)
+        self.make_trainable(set_on_hw_func=set_on_hw_func)
 
     def model_value_detach(self):
         if self.is_trainable():
@@ -35,29 +24,49 @@ class HXBaseParameter(torch.nn.Module):
 
     def hardware_value_detach(self):
         if self.is_trainable():
-            return self._hardware_value.detach()
+            if torch.is_tensor(self._hardware_value):
+                return self._hardware_value.detach()
+            return self._hardware_value
         return self._hardware_value
 
-    def set_on_chip(self, chip, neuron_coordinates):
-        if self.set_on_chip_func is None:
+    def set_hw_config(self, neuron_coordinates, neuron_configs):
+        if self.set_on_hw_func is None:
             raise ValueError(
                 'When executing on HW,'
-                + 'set_on_chip_func needs to be provided.'
+                + 'set_on_hw_func needs to be provided.'
             )
-        self.set_on_chip_func(self.hardware_value, chip,
-                              neuron_coordinates)
+        self.set_on_hw_func(
+            self.hardware_value,
+            neuron_configs,
+            neuron_coordinates,
+        )
 
     def is_trainable(self):
         return isinstance(self._model_value, torch.nn.Parameter)
 
-    def make_trainable(self, set_on_chip_func=None):
-        self.set_on_chip_func = set_on_chip_func
+    def make_trainable(self, set_on_hw_func=None):
+        self.set_on_hw_func = set_on_hw_func
+
         if not torch.is_tensor(self._model_value):
             self._model_value = torch.tensor(
                 self._model_value
             )
+
+        # For transformed parameters, _hardware_value may still be None at this
+        # point; use the property, which computes it from model_value.
+        hardware_value = self._hardware_value
+        if hardware_value is None:
+            hardware_value = self.hardware_value
+
+        # Keep structured values (e.g. tuple of tensors) unchanged.
+        if torch.is_tensor(hardware_value):
+            self._hardware_value = hardware_value
+        else:
+            self._hardware_value = torch.tensor(hardware_value)
+
         self._model_value = torch.nn.Parameter(
-            self._model_value
+            self._model_value,
+            requires_grad=True,
         )
         return self
 
@@ -70,49 +79,81 @@ class HXBaseParameter(torch.nn.Module):
             + f"trainable={self.is_trainable()})"
 
 
-class HXParameter(HXBaseParameter):
-    def __init__(self, value: Union[torch.Tensor, float, int]):
-        super().__init__(value, value)
-
-    @property
-    def model_value(self):
-        return self._hardware_value
-
-
-class MixedHXModelParameter(HXBaseParameter):
-    def __init__(self, model_value: Union[torch.Tensor, float, int],
-                 hardware_value: Union[torch.Tensor, float, int]):
-        super().__init__(hardware_value, model_value)
-
-
-class HXTransformedModelParameter(HXBaseParameter):
-    def __init__(self, model_value: Union[torch.Tensor, float, int],
-                 transform_func: Callable):
-        super().__init__(None, model_value)
-        self._func = transform_func
-
-    @property
-    def hardware_value(self):
-        return self._func(self.model_value)
-
-    @hardware_value.setter
-    def hardware_value(self, hardware_value):
-        self._hardware_value = hardware_value
+class TrainableHXParameter(
+    TrainableParameterMixin,
+    HXParameter,
+):
+    def __init__(
+        self,
+        value: Any,
+        set_on_hw_func: Callable = None,
+    ):
+        HXParameter.__init__(
+            self,
+            value,
+        )
+        TrainableParameterMixin.__init__(
+            self,
+            set_on_hw_func=set_on_hw_func
+        )
 
 
-class ModelParameter(HXBaseParameter):
-    def __init__(self, model_value: Union[torch.Tensor, float, int]):
-        super().__init__(model_value, model_value)
+class TrainableMixedHXModelParameter(
+    TrainableParameterMixin,
+    MixedHXModelParameter,
+):
+    def __init__(
+        self,
+        model_value: Any,
+        hardware_value: Any,
+        set_on_hw_func: Callable = None,
+    ):
+        MixedHXModelParameter.__init__(
+            self,
+            model_value,
+            hardware_value,
+        )
+        TrainableParameterMixin.__init__(
+            self,
+            set_on_hw_func=set_on_hw_func,
+        )
 
-    @property
-    def hardware_value(self):
-        return self._model_value
 
-    @hardware_value.setter
-    def hardware_value(self, hardware_value):
-        self._hardware_value = hardware_value
+class TrainableHXTransformedModelParameter(
+    TrainableParameterMixin,
+    HXTransformedModelParameter,
+):
+    def __init__(
+        self,
+        model_value: Any,
+        transform_func: Callable,
+        set_on_hw_func: Callable = None,
+    ):
+        HXTransformedModelParameter.__init__(
+            self,
+            model_value,
+            transform_func,
+        )
+        TrainableParameterMixin.__init__(
+            self,
+            set_on_hw_func=set_on_hw_func,
+        )
 
 
-ParameterType = Union[
-    HXParameter, MixedHXModelParameter, HXTransformedModelParameter,
-    ModelParameter]
+class TrainableModelParameter(
+    TrainableParameterMixin,
+    ModelParameter,
+):
+    def __init__(
+        self,
+        model_value: Any,
+        set_on_hw_func: Callable = None,
+    ):
+        ModelParameter.__init__(
+            self,
+            model_value,
+        )
+        TrainableParameterMixin.__init__(
+            self,
+            set_on_hw_func=set_on_hw_func,
+        )

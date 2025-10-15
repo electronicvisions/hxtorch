@@ -6,7 +6,11 @@ from dlens_vx_v3 import hal, halco
 import pygrenade_vx as grenade
 import hxtorch
 import hxtorch.snn as hxsnn
-from hxtorch.spiking.utils import calib_helper
+from hxtorch.core.plasticity_rule import (
+    Timer,
+    PlasticityRule,
+)
+from hxtorch.core.utils import calib_helper
 
 
 class TestSpikingGrenadePlasticityRule(unittest.TestCase):
@@ -21,50 +25,62 @@ class TestSpikingGrenadePlasticityRule(unittest.TestCase):
     def _run_test(self, target_value, cadc_recording, plasticity_rule):
         # Experiment
         exp = hxsnn.Experiment(dt=1e-6)
-        exp.default_execution_instance.load_calib(
-            calib_helper.nightly_calix_native_path())
+        exp.calibration = calib_helper.fixture_calibration_from_file(
+            calib_helper.nightly_calib_path(),
+        )
 
         # define PPU program symbols: init values and what to read back
         init_symbol = hal.PPUMemoryBlock(halco.PPUMemoryBlockSize(1))
         init_symbol.words = [hal.PPUMemoryWord(
             hal.PPUMemoryWord.Value(0x0))]
-        exp.default_execution_instance.write_ppu_symbols = {
+        chip_hooks = grenade.execution.ExecutionInstanceHooks.Chip()
+        chip_hooks.write_ppu_symbols = {
             "scalar_result": {
                 halco.HemisphereOnDLS.top: init_symbol,
                 halco.HemisphereOnDLS.bottom: init_symbol
             }
         }
-        exp.default_execution_instance.read_ppu_symbols = {"scalar_result"}
+        chip_hooks.read_ppu_symbols = {"scalar_result"}
+        exp.hooks = {
+            grenade.common.ExecutionInstanceOnExecutor():
+            grenade.execution.ExecutionInstanceHooks(
+                grenade.common.ChipOnConnection(), chip_hooks)
+        }
 
-        custom_plasticity_rule = grenade.network.PlasticityRule()
-        val = grenade.network.PlasticityRule.Timer.Value
-        custom_plasticity_rule.timer.start = val(1000)
-        custom_plasticity_rule.timer.period = val(10000)
-        custom_plasticity_rule.timer.num_periods = 1
-        custom_plasticity_rule.kernel = textwrap.dedent("""
-        #include "grenade/vx/ppu/neuron_view_handle.h"
-        #include "grenade/vx/ppu/synapse_array_view_handle.h"
-        #include "grenade/vx/ppu/time.h"
-        #include <array>
-        using namespace grenade::vx::ppu;
-        volatile uint32_t scalar_result;
+        custom_plasticity_rule = PlasticityRule(
+            kernel=textwrap.dedent("""
+                #include "grenade/vx/ppu/neuron_view_handle.h"
+                #include "grenade/vx/ppu/synapse_array_view_handle.h"
+                #include "grenade/vx/ppu/time.h"
+                #include <array>
+                using namespace grenade::vx::ppu;
+                volatile uint32_t scalar_result;
 
-        void PLASTICITY_RULE_KERNEL(
-        std::array<SynapseArrayViewHandle, 2>& synapses,
-        std::array<NeuronViewHandle, 0>& /* neurons */)
-        {{
-            scalar_result = {val};
-        }}
-        """.format(val=target_value))
+                void PLASTICITY_RULE_KERNEL(
+                std::array<SynapseArrayViewHandle, 1>& synapses,
+                std::array<NeuronViewHandle, 0>& /* neurons */)
+                {{
+                    scalar_result = {val};
+                }}
+                """.format(val=target_value),
+            ),
+            timer=Timer(
+                start=4,
+                period=40,
+                num_periods=1,
+            ),
+        )
 
-        # Modules
         if not plasticity_rule:
             custom_plasticity_rule = None
+        # Modules
         syn = hxsnn.Synapse(
             in_features=1,
             out_features=1,
             experiment=exp,
-            plasticity_rule=custom_plasticity_rule)
+            plasticity_rule=custom_plasticity_rule,
+            receptor="excitatory",
+        )
 
         lif = hxsnn.LIF(
             size=1,
@@ -73,7 +89,8 @@ class TestSpikingGrenadePlasticityRule(unittest.TestCase):
             enable_madc_recording=True,
             enable_spike_recording=True,
             record_neuron_id=0,
-            cadc_time_shift=-1)
+            cadc_time_shift=-1
+        )
 
         # Weights on hardware are between -63 to 63
         syn.weight.data.fill_(63)
@@ -93,14 +110,16 @@ class TestSpikingGrenadePlasticityRule(unittest.TestCase):
     def test_readwrite_ppu_symbols(self):
         target_value = 123
         exp = self._run_test(target_value, False, True)
-        for _, ppu_symbols_read in exp.ppu_symbols_read[0].items():
-            self.assertEqual(int(ppu_symbols_read[
+        self.assertEqual(
+            int(exp.ppu_symbols_read[
                 grenade.common.ChipOnConnection(0)][
-                'scalar_result'][
-                halco.HemisphereOnDLS(0)].words[0].value), target_value)
+                'scalar_result'][halco.HemisphereOnDLS(0)].words[0].value
+            ),
+            target_value,
+        )
 
     def test_cadc_and_plasticityrule(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RuntimeError):
             self._run_test(12345, True, True)
 
     def test_no_ppu_symbols_read(self):

@@ -1,80 +1,87 @@
 #include "hxtorch/core/extract_data.h"
-#include "grenade/vx/network/extract_output.h"
-#include "grenade/vx/network/network_graph.h"
-#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
 namespace hxtorch::core {
 
-std::map<
-    grenade::vx::network::PopulationOnNetwork,
-    std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>>
-extract_n_spikes(
-    grenade::vx::signal_flow::OutputData const& data,
-    grenade::vx::network::NetworkGraph const& network_graph,
-    int runtime,
-    std::map<grenade::vx::network::PopulationOnNetwork, int> n_spikes)
+std::tuple<pybind11::array_t<int>, pybind11::array_t<float>> extract_n_spikes(
+    std::vector<std::vector<std::vector<grenade::vx::common::Time>>> const& spike_times,
+    int n_events,
+    int max_spikes)
 {
-	using grenade::vx::network::Population;
-	using grenade::vx::network::PopulationOnNetwork;
+	// create numpy arrays of correct size
+	pybind11::array_t<int> numpy_indices(
+	    {static_cast<pybind11::ssize_t>(spike_times.size()), // batches
+	     static_cast<pybind11::ssize_t>(n_events)});
+	pybind11::array_t<float> numpy_values(
+	    {static_cast<pybind11::ssize_t>(spike_times.size()), // batches
+	     static_cast<pybind11::ssize_t>(n_events)});
 
-	// return data
-	std::map<PopulationOnNetwork, std::tuple<pybind11::array_t<int>, pybind11::array_t<float>>> ret;
+	numpy_indices[pybind11::make_tuple(pybind11::ellipsis())] = -1;
+	numpy_values[pybind11::make_tuple(pybind11::ellipsis())] =
+	    std::numeric_limits<float>::infinity();
 
-	// TODO: SNIP: modified from extra "extract_spikes"
-	auto const grenade_spikes = extract_neuron_spikes(data.snippets.at(0), network_graph);
 
-	// get indices of events.
-	std::map<PopulationOnNetwork, std::vector<std::tuple<int64_t, int64_t, int64_t>>> indices;
-
-	assert(network_graph.get_network());
-
-	// create return map with numpy arrays
-	for (auto const& [id, execution_instance] : network_graph.get_network()->execution_instances) {
-		for (auto const& [descriptor, population] : execution_instance.populations) {
-			if (!std::holds_alternative<Population>(population)) {
-				continue;
-			}
-			// create numpy arrays of correct size
-			pybind11::array_t<int> numpy_indices(
-			    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
-			     static_cast<pybind11::ssize_t>(
-			         n_spikes[grenade::vx::network::PopulationOnNetwork(descriptor, id)])});
-			pybind11::array_t<float> numpy_values(
-			    {static_cast<pybind11::ssize_t>(grenade_spikes.size()), // batches
-			     static_cast<pybind11::ssize_t>(
-			         n_spikes[grenade::vx::network::PopulationOnNetwork(descriptor, id)])});
-			numpy_indices[pybind11::make_tuple(pybind11::ellipsis())] = -1;
-			numpy_values[pybind11::make_tuple(pybind11::ellipsis())] =
-			    std::numeric_limits<float>::infinity();
-			ret[grenade::vx::network::PopulationOnNetwork(descriptor, id)] =
-			    std::make_tuple(numpy_indices, numpy_values);
-		}
-	}
-
-	for (size_t b = 0; b < grenade_spikes.size(); ++b) {
-		std::map<PopulationOnNetwork, int> event_idx; // new
-		for (auto const& [key, times] : grenade_spikes.at(b)) {
-			auto const& [descriptor, neuron_in_population, compartment_in_neuron] = key;
-			assert(compartment_in_neuron.value() == 0);
-			for (auto const& time : times) {
-				if (static_cast<int64_t>(time.value()) > runtime)
-					continue;
-				auto& [indices, values] = ret[descriptor];
-				if (event_idx[descriptor] < n_spikes[descriptor]) {
-					indices.mutable_at(b, event_idx[descriptor]) = neuron_in_population;
-					values.mutable_at(b, event_idx[descriptor]) = time.value();
-					event_idx[descriptor]++;
+	for (size_t b = 0; b < spike_times.size(); ++b) {
+		int event_idx = 0;
+		for (size_t p = 0; p < spike_times.at(b).size(); ++p) {
+			for (size_t t = 0; t < spike_times.at(b).at(p).size(); ++t) {
+				auto const time = spike_times.at(b).at(p).at(t).value();
+				if (event_idx < std::min(n_events, max_spikes)) {
+					numpy_indices.mutable_at(b, event_idx) = p;
+					numpy_values.mutable_at(b, event_idx) =
+					    time /
+					    static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us);
+					event_idx++;
 				}
 				// FIXME: sort spikes?
 			}
 		}
 	}
 
-	// TODO: SNIP(end): modified from "extract_spikes"
+	std::tuple<pybind11::array_t<int>, pybind11::array_t<float>> ret =
+	    std::make_tuple(numpy_indices, numpy_values);
 
+	return ret;
+}
+
+
+std::tuple<pybind11::array_t<int>, pybind11::array_t<int>> extract_n_madc(
+    std::vector<std::vector<std::vector<std::pair<
+        grenade::vx::common::Time,
+        grenade::vx::signal_flow::MADCSampleFromChip::Value>>>> const& samples,
+    int n_samples)
+{
+	// time stamp
+	pybind11::array_t<int> numpy_indices(
+	    {static_cast<pybind11::ssize_t>(samples.size()), // batches
+	     static_cast<pybind11::ssize_t>(n_samples)});
+	// value
+	pybind11::array_t<int> numpy_values(
+	    {static_cast<pybind11::ssize_t>(samples.size()), // batches
+	     static_cast<pybind11::ssize_t>(n_samples)});
+	numpy_indices[pybind11::make_tuple(pybind11::ellipsis())] = -1;
+	numpy_values[pybind11::make_tuple(pybind11::ellipsis())] = std::numeric_limits<int>::infinity();
+	for (size_t b = 0; b < samples.size(); ++b) {
+		long unsigned int sample_idx = 0;
+		for (size_t p = 0; p < samples.at(b).size(); ++p) {
+			for (size_t t = 0; t < samples.at(b).at(p).size(); ++t) {
+				auto const& [time, value] = samples.at(b).at(p).at(t);
+				if ((sample_idx >= static_cast<size_t>(n_samples)) ||
+				    (sample_idx >= samples.at(b).size())) {
+					continue;
+				}
+				numpy_indices.mutable_at(b, sample_idx) = time.value();
+				numpy_values.mutable_at(b, sample_idx) = value.value();
+				sample_idx++;
+			}
+		}
+	}
+
+	// return data
+	std::tuple<pybind11::array_t<int>, pybind11::array_t<int>> ret =
+	    std::make_tuple(numpy_indices, numpy_values);
 	return ret;
 }
 

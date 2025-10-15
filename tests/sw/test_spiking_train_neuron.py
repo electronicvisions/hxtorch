@@ -1,4 +1,3 @@
-from typing import Callable
 import unittest
 import torch
 
@@ -13,7 +12,7 @@ from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import LI
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.transforms import weight_transforms
-from hxtorch.spiking.parameter import ModelParameter
+from hxtorch.spiking.parameter import TrainableModelParameter
 
 
 @dataclass
@@ -31,15 +30,13 @@ class Model(torch.nn.Module):
         dt = 1e-6
         self.experiment = Experiment(mock=True, dt=dt)
 
-        tau_mem = ModelParameter(torch.tensor(test_parameters.target_cap))
-        tau_syn = ModelParameter(torch.tensor(test_parameters.target_tau_syn))
+        tau_mem = TrainableModelParameter(torch.tensor(test_parameters.target_cap))
+        tau_syn = TrainableModelParameter(torch.tensor(test_parameters.target_tau_syn))
 
         if test_parameters.start_cap and not is_target:
-            tau_mem = ModelParameter(torch.tensor(test_parameters.start_cap)
-                                     ).make_trainable()
+            tau_mem = TrainableModelParameter(torch.tensor(test_parameters.start_cap))
         if test_parameters.start_tau_syn and not is_target:
-            tau_syn = ModelParameter(torch.tensor(test_parameters.start_tau_syn)
-                                     ).make_trainable()
+            tau_syn = TrainableModelParameter(torch.tensor(test_parameters.start_tau_syn))
 
         self.synapse = hxtorch.snn.Synapse(
             1, 1, self.experiment, transform=partial(
@@ -50,7 +47,7 @@ class Model(torch.nn.Module):
             tau_mem=tau_mem,
             tau_syn=tau_syn,
             membrane_capacitance=tau_mem,
-            leak=ModelParameter(0.)
+            leak=TrainableModelParameter(torch.tensor(0.))
         )
 
     def forward(self, input):
@@ -78,8 +75,7 @@ class TestTranslationCapacitance(unittest.TestCase):
     def run_li_cap(self, test_parameters, epochs):
         """ Test leak can be trained """
         # Forward
-        input_spikes = torch.bernoulli(
-            torch.ones((150, 150, 1)) * 0.05)
+        input_spikes = torch.bernoulli(torch.ones((150, 150, 1)) * 0.05)
         input_handle = LIFObservables(spikes=input_spikes)
 
         loss_fn = torch.nn.MSELoss()
@@ -88,7 +84,6 @@ class TestTranslationCapacitance(unittest.TestCase):
         model = Model(test_parameters)
         model.synapse.weight.data = torch.ones_like(
             model.synapse.weight.data) * 1
-
         model.train()
 
         with torch.no_grad():

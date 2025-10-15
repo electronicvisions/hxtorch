@@ -3,7 +3,6 @@ Implementing BatchDropout Module
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Type, Optional
-import pylogging as logger
 
 import torch
 
@@ -11,10 +10,7 @@ import hxtorch.spiking.functional as F
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.modules.hx_module import HXFunctionalModule
 if TYPE_CHECKING:
-    from hxtorch.spiking.modules.hx_module import HXBaseModule
     from hxtorch.spiking.experiment import Experiment
-
-log = logger.get("hxtorch.spiking.modules")
 
 
 class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
@@ -84,7 +80,7 @@ class BatchDropout(HXFunctionalModule):  # pylint: disable=abstract-method
         :param mask: Spike mask. Must be of shape `(self.size,)`.
         """
         # Mark dirty
-        self._changed_since_last_run = True
+        self.changed_topology = True
         self._mask = mask
 
     # pylint: disable=redefined-builtin, arguments-differ

@@ -1,7 +1,9 @@
+#include "grenade/vx/common/time.h"
 #include "hate/visibility.h"
 #include <tuple>
 #include <vector>
 #include <pybind11/numpy.h>
+
 
 namespace hxtorch::core {
 
@@ -15,7 +17,7 @@ namespace hxtorch::core {
  * @param input_spikes The size of the input population
  * @return Returns a vector of spike times of shape [batch, neuron_idx, spike_time]
  */
-std::vector<std::vector<std::vector<float>>> dense_spikes_to_list(
+std::vector<std::vector<std::vector<grenade::vx::common::Time>>> dense_spikes_to_list(
     std::tuple<pybind11::array_t<int>, pybind11::array_t<float>> spikes,
     int input_size) SYMBOL_VISIBLE;
 

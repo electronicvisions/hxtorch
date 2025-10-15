@@ -1,7 +1,3 @@
-"""
-Defining tensor handles able to hold references to tensors for lazy assignment
-after hardware data acquisition
-"""
 from abc import ABC
 from typing import Type, Union
 from dataclasses import make_dataclass, is_dataclass, astuple, field, fields
@@ -45,10 +41,11 @@ class Handle(ABC):
 
         def __eq__(this, other):
             return (is_dataclass(this) and is_dataclass(other)
-                    and all(torch.equal(this_element, other_element) if
-                            isinstance(this_element, torch.Tensor)
-                            and isinstance(other_element, torch.Tensor) else
-                            this_element == other_element for
+                    and len(astuple(this)) == len(astuple(other))
+                    and all(torch.equal(this_element, other_element)
+                            if isinstance(this_element, torch.Tensor)
+                            and isinstance(other_element, torch.Tensor)
+                            else this_element == other_element for
                             (this_element, other_element) in
                             zip(astuple(this), astuple(other))))
 

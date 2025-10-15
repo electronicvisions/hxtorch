@@ -1,6 +1,7 @@
 """ """
 import torch
 import hxtorch
+import hxtorch.core as hxcore
 import hxtorch.spiking as hxsnn
 
 
@@ -19,12 +20,12 @@ def main():
     neuron = hxsnn.LIF(
         size=4,
         experiment=experiment,
-        tau_syn=hxsnn.HXParameter(6e-6),
-        tau_mem=hxsnn.HXParameter(20e-6),
-        refractory_time=hxsnn.HXParameter(1e-6),
-        leak=hxsnn.HXParameter(80.),
-        reset=hxsnn.HXParameter(80.),
-        threshold=hxsnn.HXParameter(torch.tensor([80., 90., 100., 120.])))
+        tau_syn=hxcore.HXParameter(6e-6),
+        tau_mem=hxcore.HXParameter(20e-6),
+        refractory_time=hxcore.HXParameter(1e-6),
+        leak=hxcore.HXParameter(80.),
+        reset=hxcore.HXParameter(80.),
+        threshold=hxcore.HXParameter(torch.tensor([80., 90., 100., 120.])))
 
     # Weights
     torch.nn.init.normal_(synapse.weight, mean=63., std=0.)

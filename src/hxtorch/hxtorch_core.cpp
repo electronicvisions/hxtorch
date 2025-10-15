@@ -6,11 +6,9 @@
 #include "hxtorch/core/dense_spikes_to_list.h"
 #include "hxtorch/core/docstrings.h"
 #include "hxtorch/core/extract_data.h"
-#include "hxtorch/core/weight_to_connection.h"
 #include "pyhxcomm/common/handle_connection.h"
 #include <pybind11/pybind11.h>
 
-#include "grenade/vx/signal_flow/output_data.h"
 
 PYBIND11_MODULE(_hxtorch_core, m)
 {
@@ -55,19 +53,11 @@ PYBIND11_MODULE(_hxtorch_core, m)
 	        pybind11::init<std::string>(), __doc_hxtorch_CalibrationPath_CalibrationPath,
 	        pybind11::arg("value"));
 	m.def(
-	    "extract_n_spikes", &hxtorch::core::extract_n_spikes, pybind11::arg("data"),
-	    pybind11::arg("network_graph"), pybind11::arg("runtime"), pybind11::arg("n_spikes"));
+	    "extract_n_spikes", &hxtorch::core::extract_n_spikes, pybind11::arg("spike_times"),
+	    pybind11::arg("n_events"), pybind11::arg("max_spikes"));
 	m.def(
-	    "weight_to_connection",
-	    (grenade::vx::network::Projection::Connections(*)(pybind11::array_t<int>)) &
-	        hxtorch::core::weight_to_connection,
-	    pybind11::arg("weight"));
-	m.def(
-	    "weight_to_connection",
-	    (grenade::vx::network::Projection::Connections(*)(
-	        pybind11::array_t<int>, std::vector<std::vector<int>>)) &
-	        hxtorch::core::weight_to_connection,
-	    pybind11::arg("weight"), pybind11::arg("connections"));
+	    "extract_n_madc", &hxtorch::core::extract_n_madc, pybind11::arg("samples"),
+	    pybind11::arg("n_samples"));
 	m.def(
 	    "dense_spikes_to_list", &hxtorch::core::dense_spikes_to_list, pybind11::arg("spikes"),
 	    pybind11::arg("input_size"));

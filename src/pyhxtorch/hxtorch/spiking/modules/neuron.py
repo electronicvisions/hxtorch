@@ -3,30 +3,45 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, Tuple, Type, Optional, Union, List
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Tuple,
+    Type,
+    Optional,
+    Union,
+    List,
+)
 from warnings import warn
 import pylogging as logger
-import numpy as np
 
 import torch
 
-from dlens_vx_v3 import lola, hal, halco
+from dlens_vx_v3 import halco, hal
 import pygrenade_vx as grenade
 
 import hxtorch.spiking.functional as F
-from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
+from hxtorch.core.morphology import (
+    Morphology,
+    SingleCompartmentNeuron,
+)
+from hxtorch.core.parameter import (
+    HXBaseParameter,
+    HXTransformedModelParameter,
+)
+from hxtorch.core.utils.readout_source import ReadoutSource
 from hxtorch.spiking.handle import (
-    Handle, SynapseHandle, LIFObservables, LIObservables)
-from hxtorch.spiking.parameter import HXTransformedModelParameter
-from hxtorch.spiking.modules.types import Population, ModuleParameterType
-from hxtorch.spiking.utils.readout_source import ReadoutSource
+    Handle,
+    SynapseHandle,
+    LIFObservables,
+    LIObservables,
+)
 from hxtorch.spiking.observables import AnalogObservable
-if TYPE_CHECKING:
-    from hxtorch.spiking.experiment import Experiment
-    from hxtorch.spiking.observables import HardwareObservables
-    from hxtorch.spiking.execution_instance import ExecutionInstance
+from hxtorch.spiking.modules.types.population import Population
 
-log = logger.get("hxtorch.spiking.modules")
+if TYPE_CHECKING:
+    from hxtorch.spiking.observables import HXTorchObservables
+    from hxtorch.spiking.experiment import Experiment
 
 
 class AELIF(Population):
@@ -47,58 +62,62 @@ class AELIF(Population):
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-branches,
     # pylint: disable=too-many-statements, invalid-name
-    def __init__(self, size: int,
-                 experiment: Experiment,
-                 leak: ModuleParameterType = 80,
-                 reset: ModuleParameterType = 80,
-                 threshold: ModuleParameterType = 125,
-                 tau_mem: ModuleParameterType = 10e-6,
-                 tau_syn: ModuleParameterType = 10e-6,
-                 i_synin_gm: ModuleParameterType = 500,
-                 membrane_capacitance: ModuleParameterType = (
-                     HXTransformedModelParameter(
-                         10e-6, lambda model_value: model_value / 10e-6 * 63)),
-                 leak_conductance: Optional[ModuleParameterType] = None,
-                 refractory_time: ModuleParameterType = 1e-6,
-                 synapse_dac_bias: ModuleParameterType = 600,
-                 holdoff_time: ModuleParameterType = 0.,
-                 method: str = "superspike",
-                 alpha: float = 50.,
-                 exponential_slope: ModuleParameterType = 50e-3,
-                 exponential_threshold: ModuleParameterType = 110,
-                 subthreshold_adaptation_strength: ModuleParameterType = 1,
-                 spike_triggered_adaptation_increment: ModuleParameterType = 1,
-                 clock_scale_adaptation_pulse: Tuple[int] = (5, 5),
-                 tau_adap: ModuleParameterType = 100e-6,
-                 leak_adaptation: Optional[ModuleParameterType] = None,
-                 execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[
-                     Tuple[grenade.common.ChipOnConnection,
-                           grenade.common.ConnectionOnExecutor]] = None,
-                 enable_spike_recording: bool = True,
-                 enable_cadc_recording: bool = True,
-                 enable_cadc_recording_placement_in_dram: bool = False,
-                 cadc_readout_source: hal.NeuronConfig.ReadoutSource = (
-                     ReadoutSource.VOLTAGE),
-                 enable_madc_recording: bool = False,
-                 record_neuron_id: Optional[int] = None,
-                 madc_readout_source: hal.NeuronConfig.ReadoutSource = (
-                     ReadoutSource.VOLTAGE),
-                 placement_constraint: Optional[
-                     List[halco.LogicalNeuronOnDLS]] = None,
-                 trace_offset: Union[Dict[halco.LogicalNeuronOnDLS, float],
-                                     torch.Tensor, float] = 0.,
-                 trace_scale: Union[Dict[halco.LogicalNeuronOnDLS, float],
-                                    torch.Tensor, float] = 1.,
-                 cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear",
-                 neuron_structure: Optional[Morphology] = None,
-                 leaky: bool = True,
-                 fire: bool = True,
-                 exponential: bool = True,
-                 subthreshold_adaptation: bool = True,
-                 spike_triggered_adaptation: bool = True,
-                 **extra_params) -> None:
+    def __init__(
+        self,
+        size: int,
+        experiment: Experiment,
+        leak: HXBaseParameter = 80,
+        reset: HXBaseParameter = 80,
+        threshold: HXBaseParameter = 125,
+        tau_mem: HXBaseParameter = 10e-6,
+        tau_syn: HXBaseParameter = 10e-6,
+        i_synin_gm: HXBaseParameter = 500,
+        membrane_capacitance: HXBaseParameter = (
+            HXTransformedModelParameter(
+                10e-6, lambda model_value: int(model_value / 10e-6 * 63)
+            )
+        ),
+        leak_conductance: Optional[HXBaseParameter] = None,
+        refractory_time: HXBaseParameter = 1e-6,
+        synapse_dac_bias: HXBaseParameter = 600,
+        holdoff_time: HXBaseParameter = 0.,
+        method: str = "superspike",
+        alpha: float = 50.,
+        exponential_slope: HXBaseParameter = 50e-3,
+        exponential_threshold: HXBaseParameter = 110,
+        subthreshold_adaptation_strength: HXBaseParameter = 1,
+        spike_triggered_adaptation_increment: HXBaseParameter = 1,
+        clock_scale_adaptation_pulse: Tuple[int] = (5, 5),
+        tau_adap: HXBaseParameter = 100e-6,
+        leak_adaptation: Optional[HXBaseParameter] = None,
+        chip_coordinate: Optional[
+            Tuple[grenade.common.ChipOnConnection,
+                  grenade.common.ConnectionOnExecutor]] = None,
+        enable_spike_recording: bool = True,
+        enable_cadc_recording: bool = True,
+        enable_cadc_recording_placement_in_dram: bool = False,
+        cadc_readout_source: hal.NeuronConfig.ReadoutSource = (
+            ReadoutSource.VOLTAGE),
+        enable_madc_recording: bool = False,
+        record_neuron_id: Optional[int] = None,
+        madc_readout_source: hal.NeuronConfig.ReadoutSource = (
+            ReadoutSource.VOLTAGE),
+        placement_constraint: Optional[
+            List[halco.LogicalNeuronOnDLS]] = None,
+        trace_offset: Union[Dict[halco.LogicalNeuronOnDLS, float],
+                            torch.Tensor, float] = 0.,
+        trace_scale: Union[Dict[halco.LogicalNeuronOnDLS, float],
+                           torch.Tensor, float] = 1.,
+        cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
+        interpolation_mode: str = "linear",
+        neuron_structure: Optional[Morphology] = None,
+        leaky: bool = True,
+        fire: bool = True,
+        exponential: bool = True,
+        subthreshold_adaptation: bool = True,
+        spike_triggered_adaptation: bool = True,
+        **extra_params,
+    ) -> None:
         """
         Initialize a neuron layer. This module creates a population of spiking
         neurons of size `size`. This module has an internal spiking mask, which
@@ -130,9 +149,9 @@ class AELIF(Population):
         :param reset: The reset potential. Defaults to HXParameter(80).
         :param threshold: The threshold potential. Defaults to
             HXParameter(125).
-        :param tau_syn: The synaptic time constant in s. Defaults to
-            HXParameter(10e-6).
         :param tau_mem: The membrane time constant in s. Defaults to
+            HXParameter(10e-6).
+        :param tau_syn: The synaptic time constant in s. Defaults to
             HXParameter(10e-6).
         :param i_synin_gm: A hardware parameter adjusting the hardware neuron
             -specific synaptic efficacy. Defaults to HXParameter(500).
@@ -240,56 +259,56 @@ class AELIF(Population):
         :param spike_triggered_adaptation: Flag for enabling / disabling the
             spike-triggered adaptation.
         """
-        super().__init__(size,
-                         experiment=experiment,
-                         execution_instance=execution_instance,
-                         chip_coordinate=chip_coordinate,
-                         leak=leak,
-                         reset=reset,
-                         threshold=threshold,
-                         tau_mem=tau_mem,
-                         tau_syn=tau_syn,
-                         i_synin_gm=i_synin_gm,
-                         membrane_capacitance=membrane_capacitance,
-                         leak_conductance=leak_conductance,
-                         refractory_time=refractory_time,
-                         synapse_dac_bias=synapse_dac_bias,
-                         holdoff_time=holdoff_time,
-                         exponential_slope=exponential_slope,
-                         exponential_threshold=exponential_threshold,
-                         subthreshold_adaptation_strength=(
-                             subthreshold_adaptation_strength),
-                         leak_adaptation=leak_adaptation,
-                         spike_triggered_adaptation_increment=(
-                             spike_triggered_adaptation_increment),
-                         tau_adap=tau_adap,
-                         **extra_params)
-
-        if placement_constraint is not None \
-                and len(placement_constraint) != size:
-            raise ValueError(
-                "The number of neurons in logical neurons in "
-                + "`placement_constraint` does not equal the `size` of the "
-                + "module.")
+        super().__init__(
+            size,
+            experiment=experiment,
+            chip_coordinate=chip_coordinate,
+            leak=leak,
+            reset=reset,
+            threshold=threshold,
+            tau_mem=tau_mem,
+            tau_syn=tau_syn,
+            i_synin_gm=i_synin_gm,
+            membrane_capacitance=membrane_capacitance,
+            leak_conductance=leak_conductance,
+            refractory_time=refractory_time,
+            synapse_dac_bias=synapse_dac_bias,
+            holdoff_time=holdoff_time,
+            exponential_slope=exponential_slope,
+            exponential_threshold=exponential_threshold,
+            subthreshold_adaptation_strength=(
+                subthreshold_adaptation_strength),
+            spike_triggered_adaptation_increment=(
+                spike_triggered_adaptation_increment
+            ),
+            clock_scale_adaptation_pulse=clock_scale_adaptation_pulse,
+            tau_adap=tau_adap,
+            leak_adaptation=leak_adaptation,
+            enable_spike_recording=enable_spike_recording,
+            enable_cadc_recording=enable_cadc_recording,
+            enable_cadc_recording_placement_in_dram=(
+                enable_cadc_recording_placement_in_dram
+            ),
+            cadc_readout_source=cadc_readout_source,
+            enable_madc_recording=enable_madc_recording,
+            record_neuron_id=record_neuron_id,
+            madc_readout_source=madc_readout_source,
+            placement_constraint=placement_constraint,
+            neuron_structure=neuron_structure,
+            leaky=leaky,
+            fire=fire,
+            exponential=exponential,
+            subthreshold_adaptation=subthreshold_adaptation,
+            spike_triggered_adaptation=spike_triggered_adaptation,
+            **extra_params,
+        )
 
         self.alpha = alpha
         self.method = method
-        self.clock_scale_adaptation_pulse = clock_scale_adaptation_pulse
-
-        self._enable_spike_recording = enable_spike_recording
-        self._enable_cadc_recording = enable_cadc_recording
-        self._enable_cadc_rec_in_dram = \
-            enable_cadc_recording_placement_in_dram
-        self._enable_madc_recording = enable_madc_recording
-        self._record_neuron_id = record_neuron_id
-        self._placement_constraint = placement_constraint
-        self._mask: Optional[torch.Tensor] = None
-
         self.scale = trace_scale
         self.offset = trace_offset
         self.cadc_time_shift = cadc_time_shift
         self.shift_cadc_to_first = shift_cadc_to_first
-
         self.interpolation_mode = interpolation_mode
 
         if neuron_structure is None:
@@ -302,9 +321,6 @@ class AELIF(Population):
                                  'compartment are supported.')
             self._neuron_structure = neuron_structure
 
-        self._cadc_readout_source = cadc_readout_source
-        self._madc_readout_source = madc_readout_source
-
         self.leaky = leaky
         self.fire = fire
         self.exponential = exponential
@@ -313,21 +329,23 @@ class AELIF(Population):
         self.adaptation = self.subthreshold_adaptation \
             or self.spike_triggered_adaptation
 
+        self.logger = logger.get("hxtorch.spiking.modules.AELIF")
+
         # Specify output type
         if not self.fire and not self.adaptation:
-            self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current')
+            self.output_type = type(Handle(
+                'membrane_cadc', 'membrane_madc', 'current'))
         elif not self.fire:
-            self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current', 'adaptation_cadc',
-                                         'adaptation_madc')
+            self.output_type = type(Handle(
+                'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
+                'adaptation_madc'))
         elif not self.adaptation:
-            self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current', 'spikes')
+            self.output_type = type(Handle(
+                'membrane_cadc', 'membrane_madc', 'current', 'spikes'))
         else:
-            self._output_handle = Handle('membrane_cadc', 'membrane_madc',
-                                         'current', 'adaptation_cadc',
-                                         'adaptation_madc', 'spikes')
+            self.output_type = type(Handle(
+                'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
+                'adaptation_madc', 'spikes'))
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -347,73 +365,91 @@ class AELIF(Population):
         reprs += f"{super().extra_repr()}"
         return reprs
 
-    def register_hw_entity(self) -> None:
+    def add_to_input_data(
+        self,
+        experiment,
+        snippet_begin_time,
+        snippet_end_time,
+    ):
         """
-        Infer neuron IDs on hardware and register them.
+        Convert trace dict configs to tensors using the hardware mapping
         """
-        self.unit_ids = np.arange(
-            self.execution_instance.id_counter,
-            self.execution_instance.id_counter + self.size)
-        self.execution_instance.neuron_placement.register_id(
-            self.unit_ids, self._neuron_structure.compartments,
-            self._placement_constraint)
-        self.execution_instance.id_counter += self.size
-        self.experiment.register_population(self)
+        def map_value(tensor, coord_map):
+            inter_graph_hyper_edge_descriptors = experiment.mapped_topology\
+                .get_reference().get_reference()\
+                .inter_graph_hyper_edges_by_reference(self.descriptor)
+            for inter_graph_hyper_edge_descriptor \
+                    in inter_graph_hyper_edge_descriptors:
+                compatible_vertex_descriptor = experiment.mapped_topology\
+                    .get_reference().get_reference().links(
+                        inter_graph_hyper_edge_descriptor)[0]
+                compatible_inter_graph_hyper_edge_descriptors = experiment\
+                    .mapped_topology.get_reference()\
+                    .inter_graph_hyper_edges_by_reference(
+                        compatible_vertex_descriptor)
+                for compatible_inter_graph_hyper_edge_descriptor in \
+                        compatible_inter_graph_hyper_edge_descriptors:
+                    partitioned_vertex_descriptors = experiment\
+                        .mapped_topology.get_reference().links(
+                            compatible_inter_graph_hyper_edge_descriptor)
+                    assert len(partitioned_vertex_descriptors) == 1
+                    section = experiment.mapped_topology.get_reference().get(
+                        partitioned_vertex_descriptors[0])
+                    for section_mapping_descriptor in \
+                            experiment.mapped_topology\
+                            .inter_graph_hyper_edges_by_reference(
+                                partitioned_vertex_descriptors[0]):
+                        section_mapping = experiment.mapped_topology.get(
+                            section_mapping_descriptor)
+                        if isinstance(
+                                section_mapping,
+                                grenade.network.abstract.ChipMapping):
+                            continue
+                        for i, element in enumerate(
+                                section.get_shape().get_elements()):
+                            anchor = section_mapping.anchors[i]
+                            coord = halco.LogicalNeuronOnDLS(
+                                self._neuron_structure.compartments, anchor[1])
+                            tensor[element.value[0]] = coord_map[coord]
+            return tensor
 
         # Handle offset
         if isinstance(self.offset, torch.Tensor):
             assert self.offset.shape[0] == self.size
         if isinstance(self.offset, dict):
-            # Get populations HW neurons
-            coords = self.execution_instance.neuron_placement \
-                .id2logicalneuron(self.unit_ids)
-            offset = torch.zeros(self.size)
-            for i, nrn in enumerate(coords):
-                offset[i] = self.offset[nrn]
-            self.offset = offset
+            self.offset = map_value(torch.zeros(self.size), self.offset)
 
         # Handle scale
         if isinstance(self.scale, torch.Tensor):
             assert self.scale.shape[0] == self.size
         if isinstance(self.scale, dict):
-            # Get populations HW neurons
-            coords = self.execution_instance.neuron_placement \
-                .id2logicalneuron(self.unit_ids)
-            scale = torch.zeros(self.size)
-            for i, nrn in enumerate(coords):
-                scale[i] = self.scale[nrn]
-            self.scale = scale
+            self.scale = map_value(torch.zeros(self.size), self.scale)
 
-        if self._enable_madc_recording:
-            if self.execution_instance.has_madc_recording:
-                raise RuntimeError(
-                    "Another HXModule already registered MADC recording. "
-                    + "MADC recording is only enabled for a "
-                    + "single neuron on one execution instance.")
-            self.execution_instance.has_madc_recording = True
-
-        log.TRACE(f"Registered hardware  entity '{self}'.")
+        return super().add_to_input_data(
+            experiment, snippet_begin_time, snippet_end_time)
 
     @property
     def cadc_readout_source(self) -> hal.NeuronConfig.ReadoutSource:
         return self._cadc_readout_source
 
     @cadc_readout_source.setter
-    def cadc_readout_source(self,
-                            source: hal.NeuronConfig.ReadoutSource) -> None:
-        self._changed_since_last_run = True
-        for key in self.execution_instance.cadc_neurons:
-            self.execution_instance.cadc_neurons[key] = []
+    def cadc_readout_source(
+        self,
+        source: hal.NeuronConfig.ReadoutSource,
+    ) -> None:
+        self.chaned_input_data = True
         self._cadc_readout_source = source
 
     @property
     def madc_readout_source(self) -> hal.NeuronConfig.ReadoutSource:
+        self.chaned_input_data = True
         return self._madc_readout_source
 
     @madc_readout_source.setter
-    def madc_readout_source(self,
-                            source: hal.NeuronConfig.ReadoutSource) -> None:
-        self._changed_since_last_run = True
+    def madc_readout_source(
+        self,
+        source: hal.NeuronConfig.ReadoutSource,
+    ) -> None:
         self._madc_readout_source = source
 
     @property
@@ -423,7 +459,7 @@ class AELIF(Population):
 
         :returns: Returns the current spike mask.
         """
-        return self._mask
+        return self._spike_mask
 
     @mask.setter
     def mask(self, mask: torch.Tensor) -> None:
@@ -434,211 +470,11 @@ class AELIF(Population):
         """
         # Mark dirty
         self._changed_since_last_run = True
-        self._mask = mask
-
-    @staticmethod
-    def create_default_hw_entity() -> lola.AtomicNeuron:
-        """
-        At the moment, the default neuron is loaded from grenade's ChipConfig
-        object, which holds the atomic neurons configured as a calibration is
-        loaded in `hxtorch.hardware_init()`.
-
-        TODO: - Needed?
-              - Maybe this can return a default neuron, when pop-specific
-                calibration is needed.
-        """
-        return lola.AtomicNeuron()
-
-    def configure_hw_entity(self, neuron_id: int,
-                            neuron_block: lola.NeuronBlock,
-                            coord: halco.LogicalNeuronOnDLS) \
-            -> lola.NeuronBlock:
-        """
-        Configures a neuron in the given layer with its specific properties.
-        The neuron's digital event outputs are enabled according to the given
-        spiking mask.
-
-        TODO: Additional parameterization should happen here, i.e. with
-              population-specific parameters.
-
-        :param neuron_id: In-population neuron index.
-        :param neuron_block: The neuron block hardware entity.
-        :param coord: Coordinate of neuron on hardware.
-        :returns: Configured neuron block.
-        """
-        self._neuron_structure.implement_morphology(coord, neuron_block)
-        if not self.leaky:
-            self._neuron_structure.disable_leak(coord, neuron_block)
-        if self.fire:
-            self._neuron_structure.set_spike_recording(self.mask[neuron_id],
-                                                       coord, neuron_block)
-        else:
-            self._neuron_structure.disable_spiking(coord, neuron_block)
-        if neuron_id == self._record_neuron_id:
-            self._neuron_structure.enable_madc_recording(
-                coord, neuron_block, self._madc_readout_source)
-
-        # Set all parameters of the exponential term and the adaptation term.
-
-        # Get user-defined hardware parameters
-        exponential_threshold = self.exponential_threshold.\
-            hardware_value[neuron_id] if isinstance(
-                self.exponential_threshold.hardware_value, torch.Tensor) \
-            else self.exponential_threshold.hardware_value
-        exponential_slope = self.exponential_slope.\
-            hardware_value[neuron_id] if isinstance(
-                self.exponential_slope.hardware_value, torch.Tensor) \
-            else self.exponential_slope.hardware_value
-        tau_adap = self.tau_adap.hardware_value[neuron_id] \
-            if isinstance(self.tau_adap.hardware_value, torch.Tensor) \
-            else self.tau_adap.hardware_value
-        subthreshold_adaptation_strength = self.\
-            subthreshold_adaptation_strength.hardware_value[neuron_id] \
-            if isinstance(self.subthreshold_adaptation_strength.hardware_value,
-                          torch.Tensor) \
-            else self.subthreshold_adaptation_strength.hardware_value
-        leak_adaptation = None
-        if self.leak_adaptation is not None:
-            leak_adaptation = self.leak_adaptation.hardware_value[neuron_id] \
-                if isinstance(
-                    self.leak_adaptation.hardware_value, torch.Tensor) \
-                else self.leak_adaptation.hardware_value
-        spike_triggered_adaptation_increment = self.\
-            spike_triggered_adaptation_increment.hardware_value[neuron_id] \
-            if isinstance(
-                self.spike_triggered_adaptation_increment.hardware_value,
-                torch.Tensor) \
-            else self.spike_triggered_adaptation_increment.hardware_value
-
-        # Inject values into chip object
-        if self.exponential:
-            self._neuron_structure.set_exponential_params(
-                coord, neuron_block, exponential_threshold, exponential_slope)
-        if self.adaptation:
-            self._neuron_structure.set_adaptation_base_params(
-                coord, neuron_block, tau_adap)
-        if self.subthreshold_adaptation:
-            self._neuron_structure.set_subthreshold_adaptation_strength(
-                coord, neuron_block, subthreshold_adaptation_strength,
-                leak_adaptation)
-        if self.spike_triggered_adaptation:
-            self._neuron_structure.set_spike_triggered_adaptation_increment(
-                coord, neuron_block, spike_triggered_adaptation_increment,
-                self.clock_scale_adaptation_pulse)
-
-        return neuron_block
-
-    def add_to_network_graph(self,
-                             builder: grenade.network.NetworkBuilder) \
-            -> grenade.network.PopulationOnNetwork:
-        """
-        Add the layer's neurons to grenades network builder. If
-        `enable_spike_recording` is enabled the neuron's spikes are recorded
-        according to the layer's spiking mask. If no spiking mask is given all
-        neuron spikes will be recorded. Note, the event output of the neurons
-        are configured in `configure_hw_entity`.
-        If `enable_cadc_recording` is enabled the populations neuron's are
-        registered for CADC membrane recording.
-        If `enable_madc_recording` is enabled the neuron with in-population
-        index `record_neuron_id` will be recorded via the MADC. Note, since
-        the MADC can only record a single neuron on hardware, other Neuron
-        layers registering also MADC recording might overwrite the setting
-        here.
-
-        :param builder: Grenade's network builder to add the layer's population
-            to.
-        :returns: Returns the builder with the population added.
-        """
-        # Create neuron mask if none is given (no dropout)
-        if self._mask is None:
-            self._mask = np.ones_like(self.unit_ids, dtype=bool)
-
-        # Enable record spikes according to neuron mask
         if self._enable_spike_recording:
-            enable_record_spikes = np.ones_like(self.unit_ids, dtype=bool)
-        else:
-            enable_record_spikes = np.zeros_like(self.unit_ids, dtype=bool)
+            self._spike_mask = mask
 
-        # Get neuron coordinates
-        coords: List[halco.LogicalNeuronOnDLS] = self.execution_instance \
-            .neuron_placement.id2logicalneuron(self.unit_ids)
-
-        # Create receptors
-        receptors = set([
-            grenade.network.Receptor(
-                grenade.network.Receptor.ID(),
-                grenade.network.Receptor.Type.excitatory),
-            grenade.network.Receptor(
-                grenade.network.Receptor.ID(),
-                grenade.network.Receptor.Type.inhibitory),
-        ])
-
-        neurons: List[grenade.network.Population.Neuron] = [
-            grenade.network.Population.Neuron(
-                logical_neuron,
-                {halco.CompartmentOnLogicalNeuron():
-                 grenade.network.Population.Neuron.Compartment(
-                     grenade.network.Population
-                     .Neuron.Compartment.SpikeMaster(
-                         0, enable_record_spikes[i]), [receptors] * len(
-                         logical_neuron.get_atomic_neurons()))})
-            for i, logical_neuron in enumerate(coords)
-        ]
-
-        # Create grenade population
-        gpopulation = grenade.network.Population(neurons,
-                                                 self.chip_coordinate)
-
-        # Add to builder
-        self.descriptor = builder.add(
-            gpopulation, self.execution_instance.ID)
-
-        if self._enable_cadc_recording:
-            for in_pop_id, unit_id in enumerate(self.unit_ids):
-                neuron = grenade.network.CADCRecording.Neuron()
-                neuron.coordinate.population = self.descriptor
-                neuron.source = self._cadc_readout_source
-                neuron.coordinate.neuron_on_population = in_pop_id
-                neuron.coordinate.compartment_on_neuron = 0
-                neuron.coordinate.atomic_neuron_on_compartment = 0
-                if unit_id not in self.execution_instance.cadc_neurons:
-                    self.execution_instance.cadc_neurons.update({unit_id: []})
-                self.execution_instance.cadc_neurons.update({
-                    unit_id:
-                    self.execution_instance.cadc_neurons[unit_id] + [neuron]})
-            if self.execution_instance.record_cadc_into_dram \
-                is not None and \
-                self.execution_instance.record_cadc_into_dram \
-                    != self._enable_cadc_rec_in_dram:
-                raise RuntimeError(
-                    "Requesting CADC DRAM and SRAM recording simultaneously.")
-            self.execution_instance.record_cadc_into_dram = \
-                self._enable_cadc_rec_in_dram
-
-        # No recording registered -> return
-        if not self._enable_madc_recording:
-            return self.descriptor
-
-        # Add MADC recording
-        # NOTE: If two populations register MADC recordings grenade should
-        #       throw in the following
-        madc_recording_neuron = grenade.network.MADCRecording.Neuron()
-        madc_recording_neuron.coordinate.population = self.descriptor
-        madc_recording_neuron.source = self._madc_readout_source
-        madc_recording_neuron.coordinate.neuron_on_population = int(
-            self._record_neuron_id)
-        madc_recording_neuron.coordinate.compartment_on_neuron = \
-            halco.CompartmentOnLogicalNeuron()
-        madc_recording_neuron.coordinate.atomic_neuron_on_compartment = 0
-        madc_recording = grenade.network.MADCRecording([madc_recording_neuron],
-                                                       self.chip_coordinate)
-        builder.add(madc_recording, self.execution_instance.ID)
-        log.TRACE(f"Added population '{self}' to grenade graph.")
-
-        return self.descriptor
-
-    def post_process(self, hw_data: HardwareObservables, runtime: float) \
-            -> type(Handle('voltage', 'adaptation', 'spikes')):
+    def post_process(self, hw_data: HXTorchObservables, runtime: float) \
+            -> Tuple[Optional[torch.Tensor], ...]:
         """
         User defined post process method called as soon as population-specific
         hardware observables are returned. This function has to convert the
@@ -660,6 +496,8 @@ class AELIF(Population):
             assert not self._enable_spike_recording
 
         spikes, cadc, madc = None, None, None
+
+        # TODO: unit of runtime
 
         # Get cadc samples
         if self._enable_cadc_recording:
@@ -704,15 +542,19 @@ class AELIF(Population):
         elif self._cadc_readout_source == ReadoutSource.ADAPTATION:
             adaptation.cadc = cadc
         else:
-            log.ERROR("Post processing for CADC readout source "
-                      + f"{self._cadc_readout_source} is not implemented yet.")
+            self.logger.ERROR(
+                "Post processing for CADC readout source "
+                + f"{self._cadc_readout_source} is not implemented yet."
+            )
         if self._madc_readout_source == ReadoutSource.VOLTAGE:
             voltage.madc = madc
         elif self._madc_readout_source == ReadoutSource.ADAPTATION:
             adaptation.madc = madc
         else:
-            log.ERROR("Post processing for MADC readout source "
-                      + f"{self._madc_readout_source} is not implemented yet.")
+            self.logger.ERROR(
+                "Post processing for MADC readout source "
+                + f"{self._madc_readout_source} is not implemented yet.",
+            )
 
         return Handle(voltage=voltage, adaptation=adaptation, spikes=spikes)
 
@@ -835,39 +677,43 @@ class LIF(AELIF):
     output_type: Type = LIFObservables
 
     # pylint: disable=too-many-arguments,too-many-locals
-    def __init__(self, size: int,
-                 experiment: Experiment,
-                 leak: ModuleParameterType = 80,
-                 reset: ModuleParameterType = 80,
-                 threshold: ModuleParameterType = 125,
-                 tau_mem: ModuleParameterType = 10e-6,
-                 tau_syn: ModuleParameterType = 10e-6,
-                 i_synin_gm: ModuleParameterType = 500,
-                 membrane_capacitance: ModuleParameterType = (
-                     HXTransformedModelParameter(
-                         10e-6, lambda model_value: model_value / 10e-6 * 63)),
-                 leak_conductance: Optional[ModuleParameterType] = None,
-                 refractory_time: ModuleParameterType = 1e-6,
-                 synapse_dac_bias: ModuleParameterType = 600,
-                 holdoff_time: ModuleParameterType = 0e-6,
-                 method: str = "superspike",
-                 alpha: float = 50.,
-                 execution_instance: Optional[ExecutionInstance] = None,
-                 enable_spike_recording: bool = True,
-                 enable_cadc_recording: bool = True,
-                 enable_cadc_recording_placement_in_dram: bool = False,
-                 enable_madc_recording: bool = False,
-                 record_neuron_id: Optional[int] = None,
-                 placement_constraint: Optional[
-                     List[halco.LogicalNeuronOnDLS]] = None,
-                 trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
-                                     torch.Tensor, float] = 0.,
-                 trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
-                                    torch.Tensor, float] = 1.,
-                 cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear",
-                 neuron_structure: Optional[Morphology] = None,
-                 **extra_params) -> None:
+    def __init__(
+        self,
+        size: int,
+        experiment: Experiment,
+        leak: HXBaseParameter = 80,
+        reset: HXBaseParameter = 80,
+        threshold: HXBaseParameter = 125,
+        tau_mem: HXBaseParameter = 10e-6,
+        tau_syn: HXBaseParameter = 10e-6,
+        i_synin_gm: HXBaseParameter = 500,
+        membrane_capacitance: HXBaseParameter = (
+            HXTransformedModelParameter(
+                10e-6,
+                lambda model_value: int(model_value / 10e-6 * 63),
+            )
+        ),
+        leak_conductance: Optional[HXBaseParameter] = None,
+        refractory_time: HXBaseParameter = 1e-6,
+        synapse_dac_bias: HXBaseParameter = 600,
+        holdoff_time: HXBaseParameter = 0e-6,
+        method: str = "superspike",
+        alpha: float = 50.,
+        enable_spike_recording: bool = True,
+        enable_cadc_recording: bool = True,
+        enable_cadc_recording_placement_in_dram: bool = False,
+        enable_madc_recording: bool = False,
+        record_neuron_id: Optional[int] = None,
+        placement_constraint: Optional[List[halco.LogicalNeuronOnDLS]] = None,
+        trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                            torch.Tensor, float] = 0.,
+        trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                           torch.Tensor, float] = 1.,
+        cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
+        interpolation_mode: str = "linear",
+        neuron_structure: Optional[Morphology] = None,
+        **extra_params,
+    ) -> None:
         """
         Initialize a layer of leaky integrate-and-fire neurons.
         This module creates a population of spiking neurons of size `size`
@@ -924,7 +770,6 @@ class LIF(AELIF):
             holdoff period is the time at the end of the refractory period in
             which the clamping to the reset voltage is already released but new
             spikes can still not be generated. Defaults to HXParameter(0e-6).
-        :param execution_instance: Execution instance to place to.
         :param enable_spike_recording: Boolean flag to enable or disable spike
             recording. Note, this does not disable the event out put of
             neurons. The event output has to be disabled via `mask`.
@@ -994,7 +839,6 @@ class LIF(AELIF):
             holdoff_time=holdoff_time,
             method=method,
             alpha=alpha,
-            execution_instance=execution_instance,
             enable_spike_recording=enable_spike_recording,
             enable_cadc_recording=enable_cadc_recording,
             enable_cadc_recording_placement_in_dram=(
@@ -1079,32 +923,35 @@ class LI(AELIF):
     output_type: Type = LIObservables
 
     # pylint: disable=too-many-arguments,too-many-locals
-    def __init__(self, size: int,
-                 experiment: Experiment,
-                 leak: ModuleParameterType = 80,
-                 tau_mem: ModuleParameterType = 10e-6,
-                 tau_syn: ModuleParameterType = 10e-6,
-                 i_synin_gm: ModuleParameterType = 500,
-                 membrane_capacitance: ModuleParameterType = (
-                     HXTransformedModelParameter(
-                         10e-6, lambda model_value: model_value / 10e-6 * 63)),
-                 leak_conductance: Optional[ModuleParameterType] = None,
-                 synapse_dac_bias: ModuleParameterType = 600,
-                 execution_instance: Optional[ExecutionInstance] = None,
-                 enable_cadc_recording: bool = True,
-                 enable_cadc_recording_placement_in_dram: bool = False,
-                 enable_madc_recording: bool = False,
-                 record_neuron_id: Optional[int] = None,
-                 placement_constraint: Optional[
-                     List[halco.LogicalNeuronOnDLS]] = None,
-                 trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
-                                     torch.Tensor, float] = 0.,
-                 trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
-                                    torch.Tensor, float] = 1.,
-                 cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
-                 interpolation_mode: str = "linear",
-                 neuron_structure: Optional[Morphology] = None,
-                 **extra_params) -> None:
+    def __init__(
+        self,
+        size: int,
+        experiment: Experiment,
+        leak: HXBaseParameter = 80,
+        tau_mem: HXBaseParameter = 10e-6,
+        tau_syn: HXBaseParameter = 10e-6,
+        i_synin_gm: HXBaseParameter = 500,
+        membrane_capacitance: HXBaseParameter = (
+            HXTransformedModelParameter(
+                10e-6,
+                lambda model_value: int(model_value / 10e-6 * 63),
+            )),
+        leak_conductance: Optional[HXBaseParameter] = None,
+        synapse_dac_bias: HXBaseParameter = 600,
+        enable_cadc_recording: bool = True,
+        enable_cadc_recording_placement_in_dram: bool = False,
+        enable_madc_recording: bool = False,
+        record_neuron_id: Optional[int] = None,
+        placement_constraint: Optional[List[halco.LogicalNeuronOnDLS]] = None,
+        trace_offset: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                            torch.Tensor, float] = 0.,
+        trace_scale: Union[Dict[halco.AtomicNeuronOnDLS, float],
+                           torch.Tensor, float] = 1.,
+        cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
+        interpolation_mode: str = "linear",
+        neuron_structure: Optional[Morphology] = None,
+        **extra_params,
+    ) -> None:
         """
         Initialize a layer of leaky integrator neurons. This module creates a
         population of non-spiking neurons of size `size` and is equivalent to
@@ -1130,7 +977,6 @@ class LI(AELIF):
 
         :param size: Size of the population.
         :param experiment: Experiment to register the module in.
-        :param execution_instance: Execution instance to place to.
         :param leak: The leak potential. Defaults to HXParameter(80).
         :param tau_syn: The synaptic time constant in s. Defaults to
             HXParameter(10e-6).
@@ -1210,7 +1056,6 @@ class LI(AELIF):
             leak_conductance=leak_conductance,
             refractory_time=0.,
             synapse_dac_bias=synapse_dac_bias,
-            execution_instance=execution_instance,
             enable_spike_recording=False,
             enable_cadc_recording=enable_cadc_recording,
             enable_cadc_recording_placement_in_dram=(

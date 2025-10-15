@@ -5,8 +5,8 @@ import unittest
 import hxtorch
 from hxtorch.spiking.utils.dynamic_range.weight_scaling import \
     get_weight_scaling
-from hxtorch.spiking.utils import calib_helper
-from hxtorch.spiking.parameter import MixedHXModelParameter
+from hxtorch.core.utils import calib_helper
+from hxtorch.core.parameter import MixedHXModelParameter
 
 
 class TestWeightScaling(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestWeightScaling(unittest.TestCase):
             "tau_mem": 10e-6, "tau_syn": 10e-6}
 
         hxtorch.init_hardware()
-        calib_path = calib_helper.nightly_calix_native_path()
+        calib_path = calib_helper.nightly_calib_path()
         hxtorch.release_hardware()
 
         weight_scale = get_weight_scaling(

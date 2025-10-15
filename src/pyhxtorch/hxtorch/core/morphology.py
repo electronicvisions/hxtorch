@@ -2,12 +2,18 @@
 User defined neuron morphologies.
 '''
 from abc import ABC, abstractmethod
-from typing import Tuple, Union
+from typing import (
+    Dict,
+    List,
+    Tuple,
+    Union,
+)
 import pylogging as logger
 
 import numpy as np
 
 from dlens_vx_v3 import lola, hal, halco
+import pygrenade_vx as grenade
 
 log = logger.get("hxtorch.spiking.morphology")
 
@@ -40,9 +46,12 @@ class Morphology(ABC):
         implemented.
         '''
 
-    def implement_morphology(self,
-                             coord: halco.LogicalNeuronOnDLS,
-                             neuron_block: lola.NeuronBlock) -> None:
+    def implement_morphology(
+        self,
+        coord: halco.LogicalNeuronOnDLS,
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+    ) -> None:
         '''
         Configure the atomic neurons in the given neuron block to represent
         this morphology.
@@ -56,10 +65,10 @@ class Morphology(ABC):
         # collapse_neuron() converts MCSafeAtomicNeurons to AtomicNeurons
         ln_config = self.logical_neuron.collapse_neuron()
         # set morphology
-        for comp, an_coords in coord.get_placed_compartments().items():
-            for an_coord, an_config in zip(an_coords, ln_config[comp]):
-                neuron_block.atomic_neurons[an_coord].multicompartment = \
-                    an_config.multicompartment
+        for comp, _ in coord.get_placed_compartments().items():
+            gcomp = grenade.common.CompartmentOnNeuron(comp)
+            for config, an_config in zip(configs[gcomp], ln_config[comp]):
+                config.multicompartment = an_config.multicompartment
 
     # pylint: disable=invalid-name
     @staticmethod
@@ -91,10 +100,11 @@ class Morphology(ABC):
         return tuple(return_values)
 
     @staticmethod
-    def enable_madc_recording(coord: halco.LogicalNeuronOnDLS,
-                              neuron_block: lola.NeuronBlock,
-                              readout_source: hal.NeuronConfig.ReadoutSource
-                              ) -> None:
+    def enable_madc_recording(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        readout_source: hal.NeuronConfig.ReadoutSource,
+    ) -> None:
         '''
         Configure neuron such that traces can be recorded with the MADC.
 
@@ -104,15 +114,17 @@ class Morphology(ABC):
             atomic neurons is changed.
         :param readout_source: Voltage which should be recorded.
         '''
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        config.readout.enable_amplifier = True
-        config.readout.enable_buffered_access = True
-        config.readout.source = readout_source
+        comp = grenade.common.CompartmentOnNeuron()
+        configs[comp][0].readout.enable_amplifier = True
+        configs[comp][0].readout.enable_buffered_access = True
+        configs[comp][0].readout.source = readout_source
 
     @staticmethod
-    def set_spike_recording(enable: bool,
-                            coord: halco.LogicalNeuronOnDLS,
-                            neuron_block: lola.NeuronBlock) -> None:
+    def set_spike_recording(
+        enable: bool,
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+    ) -> None:
         '''
         Set whether spikes are forwarded digitally.
 
@@ -122,12 +134,12 @@ class Morphology(ABC):
         :param neuron_block: Neuron block in which the configuration of the
             atomic neurons is changed.
         '''
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        config.event_routing.enable_digital = enable
+        comp = grenade.common.CompartmentOnNeuron()
+        configs[comp][0].event_routing.enable_digital = enable
 
     @staticmethod
-    def disable_spiking(coord: halco.LogicalNeuronOnDLS,
-                        neuron_block: lola.NeuronBlock) -> None:
+    def disable_spiking(configs: Dict[grenade.common.CompartmentOnNeuron,
+                                      List[halco.AtomicNeuronOnDLS]]) -> None:
         '''
         Disable spiking for the given neuron.
 
@@ -138,15 +150,16 @@ class Morphology(ABC):
         :param neuron_block: Neuron block in which the configuration of the
             atomic neurons is changed.
         '''
-
-        for an_coord in coord.get_atomic_neurons():
-            config = neuron_block.atomic_neurons[an_coord]
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
             config.threshold.enable = False
             config.event_routing.enable_digital = True
 
     @staticmethod
-    def disable_leak(coord: halco.LogicalNeuronOnDLS,
-                     neuron_block: lola.NeuronBlock) -> None:
+    def disable_leak(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+    ) -> None:
         '''
         Disable the leak for the given neuron.
 
@@ -155,18 +168,19 @@ class Morphology(ABC):
         :param neuron_block: Neuron block in which the configuration of the
             atomic neurons is changed.
         '''
-
-        for an_coord in coord.get_atomic_neurons():
-            config = neuron_block.atomic_neurons[an_coord]
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
             config.leak.i_bias = 0
             config.leak.enable_division = True
             config.leak.enable_multiplication = False
 
     @staticmethod
-    def set_exponential_params(coord: halco.LogicalNeuronOnDLS,
-                               neuron_block: lola.NeuronBlock,
-                               exponential_threshold: Union[float, int],
-                               exponential_slope: Union[float, int]) -> None:
+    def set_exponential_params(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        exponential_threshold: Union[float, int],
+        exponential_slope: Union[float, int],
+    ) -> None:
         '''
         Set all parameters related to the exponential term of the adaptive
         exponential leaky integrate-and-fire model on the given hardware
@@ -181,21 +195,24 @@ class Morphology(ABC):
         :param exponential_slope: Parameter value to be set for the
             exponential slope.
         '''
-
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        exponential_threshold, exponential_slope = \
-            Morphology.format_to_CapMemCell_value(
-                exponential_threshold=exponential_threshold,
-                exponential_slope=exponential_slope)
-
-        config.exponential.enable = True
-        config.exponential.v_exp = exponential_threshold
-        config.exponential.i_bias = exponential_slope
+        # TODO: Enable for all atomic neurons?
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
+            exponential_threshold, exponential_slope = \
+                Morphology.format_to_CapMemCell_value(
+                    exponential_threshold=exponential_threshold,
+                    exponential_slope=exponential_slope,
+                )
+            config.exponential.enable = True
+            config.exponential.v_exp = exponential_threshold
+            config.exponential.i_bias = exponential_slope
 
     @staticmethod
-    def set_adaptation_base_params(coord: halco.LogicalNeuronOnDLS,
-                                   neuron_block: lola.NeuronBlock,
-                                   tau_adap: Union[float, int]) -> None:
+    def set_adaptation_base_params(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        tau_adap: Union[float, int],
+    ) -> None:
         '''
         Set all parameters related to the base of the adaptation term of the
         adaptive exponential leaky integrate-and-fire model (without
@@ -208,22 +225,25 @@ class Morphology(ABC):
         :param tau_adap: Parameter value to be set for the adaptation time
             constant.
         '''
-
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        tau_adap, = Morphology.format_to_CapMemCell_value(tau_adap=tau_adap)
-
-        config.adaptation.enable = True
-        config.adaptation.enable_pulse = False
-        config.adaptation.v_ref = hal.CapMemCell.Value(int(511))
-        config.adaptation.i_bias_tau = tau_adap
+        # TODO: Enable for all atomic neurons?
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
+            tau_adap, = Morphology.format_to_CapMemCell_value(
+                tau_adap=tau_adap,
+            )
+            config.adaptation.enable = True
+            config.adaptation.enable_pulse = False
+            config.adaptation.v_ref = hal.CapMemCell.Value(int(511))
+            config.adaptation.i_bias_tau = tau_adap
 
     # pylint: disable=invalid-name
     @staticmethod
     def set_subthreshold_adaptation_strength(
-            coord: halco.LogicalNeuronOnDLS,
-            neuron_block: lola.NeuronBlock,
-            subthreshold_adaptation_strength: Union[float, int],
-            leak_adaptation: Union[float, int, None]) -> None:
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        subthreshold_adaptation_strength: Union[float, int],
+        leak_adaptation: Union[float, int, None],
+    ) -> None:
         '''
         Set the hardware parameter for the subthreshold adaptation strength
         on the given hw neuron.
@@ -238,28 +258,33 @@ class Morphology(ABC):
             potential from the membrane taken into account by the
             subthreshold adaptation mechanism on hardware.
         '''
+        # TODO: Enable for all atomic neurons?
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
+            a_is_negative = subthreshold_adaptation_strength < 0.
+            subthreshold_adaptation_strength, = \
+                Morphology.format_to_CapMemCell_value(
+                    subthreshold_adaptation_strength=abs(
+                        subthreshold_adaptation_strength))
+            if leak_adaptation is None:
+                leak_adaptation, = (config.leak.v_leak,)
+            else:
+                leak_adaptation, = Morphology.format_to_CapMemCell_value(
+                    leak_adaptation=leak_adaptation)
 
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        a_is_negative = subthreshold_adaptation_strength < 0.
-        subthreshold_adaptation_strength, = \
-            Morphology.format_to_CapMemCell_value(
-                subthreshold_adaptation_strength=abs(
-                    subthreshold_adaptation_strength))
-        leak_adaptation, = (config.leak.v_leak,) if leak_adaptation is None \
-            else Morphology.format_to_CapMemCell_value(
-                leak_adaptation=leak_adaptation)
-
-        config.adaptation.i_bias_a = subthreshold_adaptation_strength
-        config.adaptation.invert_a = a_is_negative
-        config.adaptation.v_leak = leak_adaptation
+            config.adaptation.i_bias_a = subthreshold_adaptation_strength
+            config.adaptation.invert_a = a_is_negative
+            config.adaptation.v_leak = leak_adaptation
 
     # pylint: disable=invalid-name
     @staticmethod
     def set_spike_triggered_adaptation_increment(
-            coord: halco.LogicalNeuronOnDLS,
-            neuron_block: lola.NeuronBlock,
-            spike_triggered_adaptation_increment: Union[float, int],
-            clock_scale_adaptation_pulse: Tuple[int] = (5, 5)) -> None:
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        backends: List[hal.CommonNeuronBackendConfig],
+        spike_triggered_adaptation_increment: Union[float, int],
+        clock_scale_adaptation_pulse: Tuple[int] = (5, 5),
+    ) -> None:
         '''
         Set the hardware parameter for the spike-triggered adaptation increment
         on the given hw neuron.
@@ -271,23 +296,44 @@ class Morphology(ABC):
         :param spike_triggered_adaptation_increment: Parameter value to be set
             for the spike-triggered adaptation increment.
         '''
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp]:
+            b_is_negative = spike_triggered_adaptation_increment < 0.
+            spike_triggered_adaptation_increment, = \
+                Morphology.format_to_CapMemCell_value(
+                    spike_triggered_adaptation_increment=abs(
+                        spike_triggered_adaptation_increment))
 
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        b_is_negative = spike_triggered_adaptation_increment < 0.
-        spike_triggered_adaptation_increment, = \
-            Morphology.format_to_CapMemCell_value(
-                spike_triggered_adaptation_increment=abs(
-                    spike_triggered_adaptation_increment))
+            config.adaptation.enable_pulse = True
+            config.adaptation.i_bias_b = spike_triggered_adaptation_increment
+            config.adaptation.invert_b = b_is_negative
 
-        config.adaptation.enable_pulse = True
-        neuron_block.backends[0].enable_clocks = True
-        neuron_block.backends[0].clock_scale_adaptation_pulse = \
+        backends[0].enable_clocks = True
+        backends[0].clock_scale_adaptation_pulse = \
             clock_scale_adaptation_pulse[0]
-        neuron_block.backends[1].enable_clocks = True
-        neuron_block.backends[1].clock_scale_adaptation_pulse = \
+        backends[1].enable_clocks = True
+        backends[1].clock_scale_adaptation_pulse = \
             clock_scale_adaptation_pulse[1]
-        config.adaptation.i_bias_b = spike_triggered_adaptation_increment
-        config.adaptation.invert_b = b_is_negative
+
+    @staticmethod
+    def enable_constant_current(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+        current_type: lola.AtomicNeuron.ConstantCurrent.Type
+            = lola.AtomicNeuron.ConstantCurrent.Type.source
+    ) -> None:
+        '''
+        Enable constant current input for the given neuron.
+
+        :param coord: Coordinate of the logical neuron for which constant
+            current input is enabled.
+        :param neuron_block: Neuron block in which the configuration of the
+            atomic neurons is changed.
+        '''
+        comp = grenade.common.CompartmentOnNeuron()
+        configs[comp][0].constant_current.i_offset = 1000
+        configs[comp][0].constant_current.enable = True
+        configs[comp][0].constant_current.type = current_type
 
 
 class SingleCompartmentNeuron(Morphology):
@@ -330,31 +376,32 @@ class SingleCompartmentNeuron(Morphology):
     def logical_neuron(self) -> lola.LogicalNeuron:
         return self._logical_neuron
 
-    def implement_morphology(self,
-                             coord: halco.LogicalNeuronOnDLS,
-                             neuron_block: lola.NeuronBlock) -> None:
-        assert len(coord.get_placed_compartments()) == 1
-        assert len(self.compartments.get_compartments()) == 1
-
-        super().implement_morphology(coord, neuron_block)
-
-        self._one_active_circuit(coord, neuron_block)
+    def implement_morphology(
+        self,
+        coord,
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+    ) -> None:
+        super().implement_morphology(coord, configs)
+        self._one_active_circuit(configs)
 
     @staticmethod
-    def _one_active_circuit(coord: halco.LogicalNeuronOnDLS,
-                            neuron_block: lola.NeuronBlock) -> None:
+    def _one_active_circuit(
+        configs: Dict[grenade.common.CompartmentOnNeuron,
+                      List[halco.AtomicNeuronOnDLS]],
+    ) -> None:
         '''
         Enable fire signal forwarding for first circuit and disable leak,
         capacitance as well as threshold for all other circuit.
         '''
-        for an_coord in coord.get_atomic_neurons()[1:]:
-            config = neuron_block.atomic_neurons[an_coord]
+        comp = grenade.common.CompartmentOnNeuron()
+        for config in configs[comp][1:]:
             config.leak.i_bias = 0
             config.leak.enable_division = True
             config.leak.enable_multiplication = False
             config.membrane_capacitance.capacitance = 0
             config.threshold.enable = False
 
-        config = neuron_block.atomic_neurons[coord.get_atomic_neurons()[0]]
-        config.event_routing.analog_output = \
+        config = configs[comp][0]
+        configs[comp][0].event_routing.analog_output = \
             config.EventRouting.AnalogOutputMode.normal

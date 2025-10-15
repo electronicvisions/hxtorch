@@ -2,26 +2,33 @@
 Implementing SNN modules
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Tuple, Type, Optional
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Type,
+    Optional,
+    List,
+    Tuple,
+    Literal,
+)
 import math
-import numpy as np
-import pylogging as logger
 
+import numpy as np
 import torch
 from torch.nn.parameter import Parameter
 
 import pygrenade_vx as grenade
 
-import _hxtorch_core
+
 import hxtorch.spiking.functional as F
+from hxtorch.core.plasticity_rule import PlasticityRule
+from hxtorch.core.modules.projection import ProjectionConnection
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.handle import LIFObservables, SynapseHandle
-from hxtorch.spiking.modules.types import Projection
+from hxtorch.spiking.modules.types.projection import Projection
+
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
-    from hxtorch.spiking.execution_instance import ExecutionInstance
-
-log = logger.get("hxtorch.spiking.modules")
 
 
 class Synapse(Projection):  # pylint: disable=abstract-method
@@ -36,60 +43,66 @@ class Synapse(Projection):  # pylint: disable=abstract-method
     output_type: Type = SynapseHandle
 
     # pylint: disable=too-many-arguments
-    def __init__(self, in_features: int, out_features: int,
-                 experiment: Experiment,
-                 execution_instance: Optional[ExecutionInstance] = None,
-                 chip_coordinate: Optional[
-                     Tuple[grenade.common.ChipOnConnection,
-                           grenade.common.ConnectionOnExecutor]] = None,
-                 device: str = None, dtype: Type = None,
-                 transform: Callable = weight_transforms.linear_saturating,
-                 plasticity_rule: Optional[
-                     grenade.network.PlasticityRule] = None) -> None:
+    def __init__(
+        self, in_features: int, out_features: int,
+        experiment: Experiment,
+        chip_coordinate: Optional[
+            Tuple[grenade.common.ChipOnConnection,
+                  grenade.common.ConnectionOnExecutor]] = None,
+        device: str = None,
+        dtype: Type = None,
+        transform: Callable = weight_transforms.linear_saturating,
+        plasticity_rule: PlasticityRule | None = None,
+        receptor: Literal["excitatory", "inhibitory"]
+            | List[str] | Tuple[str, ...] | None = None,
+    ) -> None:
         """
         TODO: Think about what to do with device here.
 
         :param in_features: Size of input dimension.
         :param out_features: Size of output dimension.
+        :param experiment: Experiment to append layer to.
+        :param chip_coordinate: Chip coordinate this module is placed on.
         :param device: Device to execute on. Only considered in mock-mode.
         :param dtype: Data type of weight tensor.
-        :param experiment: Experiment to append layer to.
-        :param execution_instance: Execution instance to place to.
-        :param chip_coordinate: Chip coordinate this module is placed on.
+        :param plasticity_rule: Plasticity rule adjusting this synapse.
+        :param: receptor: Receptor type of the synapse. Can be 'excitatory',
+            'inhibitory' or ('excitatory', inhibitory') for a signed synapse.
         """
         super().__init__(
-            in_features, out_features, experiment=experiment,
-            execution_instance=execution_instance,
+            in_features,
+            out_features,
+            experiment=experiment,
             chip_coordinate=chip_coordinate,
+            plasticity_rule=plasticity_rule,
+            receptor=receptor,
         )
 
         self.weight = Parameter(
             torch.empty(
                 (out_features, in_features), device=device, dtype=dtype))
-        self._weight_old = torch.zeros_like(self.weight.data)
         self.weight_transform = transform
-        self._plasticity_rule = plasticity_rule
+
+        self._weight_hash = None
 
         self.reset_parameters()
 
     @property
-    def changed_since_last_run(self) -> bool:
+    def changed_input_data(self) -> bool:
         """
         Getter for changed_since_last_run.
 
         :returns: Boolean indicating wether module changed since last run.
         """
-        self._weight_old.to(self.weight.data.device)
-        return not torch.equal(self.weight.data,
-                               self._weight_old.to(self.weight.data.device)) \
-            or self._changed_since_last_run
+        if self._weight_hash is None:
+            return True
+        return not hash(self.weight.data) == self._weight_hash
 
-    def reset_changed_since_last_run(self) -> None:
-        """
-        Reset changed_since_last_run. Sets the corresponding flag to false.
-        """
-        self._weight_old = torch.clone(self.weight.data)
-        return super().reset_changed_since_last_run()
+    @changed_input_data.setter
+    # pylint: disable=unused-argument
+    def changed_input_data(self, changed: bool) -> bool:
+        if hasattr(self, "weight"):
+            self._weight_hash = hash(self.weight.data)
 
     def reset_parameters(self) -> None:
         """
@@ -98,95 +111,17 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         """
         torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
-    def register_hw_entity(self) -> None:
-        """
-        Add the synapse layer to the experiment's projections.
-        """
-        self.experiment.register_projection(self)
-
-    # pylint: disable=too-many-locals
-    def add_to_network_graph(
-            self,
-            pre: grenade.network.PopulationOnNetwork,
-            post: grenade.network.PopulationOnNetwork,
-            builder: grenade.network.NetworkBuilder) -> Tuple[
-                grenade.network.ProjectionOnNetwork, ...]:
-        """
-        Adds the projection to a grenade network builder by providing the
-        population descriptor of the corresponding pre and post population.
-        Note: This creates one inhibitory and one excitatory projection on
-        hardware in order to represent signed hardware weights.
-
-        :param pre: Population descriptor of pre-population.
-        :param post: Population descriptor of post-population.
-        :param builder: Grenade network builder to add projection to.
-
-        :returns: A tuple of grenade ProjectionOnNetworks holding the
-            descriptors for the excitatory and inhibitory projection.
-        """
+    def get_connections(self) -> List[Tuple[int, int, float]]:
         weight_transformed = self.weight_transform(
             torch.clone(self.weight.data))
-
-        weight_exc = torch.clone(weight_transformed)
-        weight_inh = torch.clone(weight_transformed)
-        weight_exc[weight_exc < 0.] = 0
-        weight_inh[weight_inh >= 0.] = 0
-
-        weight_exc += .5
-        weight_inh -= .5
-
         # TODO: Make sure this doesn't require rerouting
-        connections_exc = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
-            weight_exc.int().cpu().numpy())
-        connections_inh = _hxtorch_core.weight_to_connection(  # pylint: disable=no-member
-            weight_inh.int().cpu().numpy())
-
-        # add inter-execution-instance projection and source if necessary
-        if pre.toExecutionInstanceID() != post.toExecutionInstanceID():
-            pre_size = weight_transformed.shape[1]
-
-            iei_pre = builder.add(grenade.network.ExternalSourcePopulation(
-                [grenade.network.ExternalSourcePopulation.Neuron(False)]
-                * pre_size, self.chip_coordinate),
-                self.execution_instance.ID)
-
-            # [nrn on pop pre, compartment on nrn pre,
-            #  nrn on pop post, compartment on nrn post, delay in clock cycles]
-            connections = np.array([[i, 0, i, 0, 0] for i in range(pre_size)])
-            iei_projection = grenade.network.InterExecutionInstanceProjection()
-            iei_projection.from_numpy(connections, pre, iei_pre)
-
-            builder.add(iei_projection)
-
-            pre = iei_pre
-
-        projection_exc = grenade.network.Projection(
-            grenade.network.Receptor(
-                grenade.network.Receptor.ID(),
-                grenade.network.Receptor.Type.excitatory),
-            connections_exc, pre, post, self.chip_coordinate)
-        projection_inh = grenade.network.Projection(
-            grenade.network.Receptor(
-                grenade.network.Receptor.ID(),
-                grenade.network.Receptor.Type.inhibitory),
-            connections_inh, pre, post, self.chip_coordinate)
-
-        exc_descriptor = builder.add(
-            projection_exc, self.execution_instance.ID)
-        inh_descriptor = builder.add(
-            projection_inh, self.execution_instance.ID)
-        self.descriptor = (exc_descriptor, inh_descriptor)
-        log.TRACE(f"Added projection '{self}' to grenade graph.")
-
-        if self._plasticity_rule:
-            log.TRACE(f"Added plasticity rule '{self}' to execution instance.")
-            assert not self._plasticity_rule.projections
-            assert not self._plasticity_rule.populations
-            self._plasticity_rule.projections = self.descriptor
-            self.execution_instance.plasticity_rules().append(
-                self._plasticity_rule)
-
-        return self.descriptor
+        connections = [
+            ProjectionConnection(col, row, weight)
+            for (row, col), weight in np.ndenumerate(
+                weight_transformed.round().int().cpu().numpy()
+            )
+        ]
+        return connections
 
     # pylint: disable=redefined-builtin, arguments-differ
     def forward_func(self, input: LIFObservables) -> SynapseHandle:

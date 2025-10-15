@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Optional
 from pathlib import Path
 from functools import partial
 from dataclasses import dataclass
@@ -7,7 +7,6 @@ import unittest
 import torch
 from tqdm.auto import tqdm
 from matplotlib import pyplot as plt
-import numpy as np
 
 import hxtorch
 from hxtorch.spiking import Experiment, ModelParameter
@@ -15,10 +14,11 @@ from hxtorch.spiking.modules import LI
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.parameter import (
-    HXTransformedModelParameter, MixedHXModelParameter)
-from hxtorch.spiking.utils import calib_helper
+    TrainableHXTransformedModelParameter,
+    MixedHXModelParameter
+)
+from hxtorch.core.utils import calib_helper
 
-from dlens_vx_v3 import lola, halco
 from dlens_vx_v3.hal import CapMemCell, NeuronConfig
 
 
@@ -44,12 +44,14 @@ class Model(torch.nn.Module):
         super().__init__()
         self.dt = 1e-6
         self.experiment = Experiment(mock=mock, dt=self.dt)
-        self.experiment.default_execution_instance.load_calib(
+        self.experiment.calibration = calib_helper.fixture_calibration_from_file(
             calib_helper.nightly_calib_path()
         )
 
         self.synapse = hxtorch.snn.Synapse(
-            1, 1, self.experiment,
+            1,
+            1,
+            self.experiment,
             transform=partial(
                 weight_transforms.linear_saturating,
                 scale=test_parameters.weight_scale
@@ -67,7 +69,9 @@ class Model(torch.nn.Module):
         )
 
         tau_mem = ModelParameter(
-            torch.tensor(test_parameters.target_cap / test_parameters.target_gl)
+            torch.tensor(
+                test_parameters.target_cap / test_parameters.target_gl
+            )
         )
 
         tau_syn = ModelParameter(
@@ -83,7 +87,8 @@ class Model(torch.nn.Module):
             threshold=MixedHXModelParameter(0., 125),
             cadc_time_shift=-1,
             shift_cadc_to_first=True,
-            trace_scale=1/45)
+            trace_scale=1/45,
+        )
 
     def forward(self, input):
         ret = self.neuron(self.synapse(input))
@@ -99,14 +104,14 @@ class Model(torch.nn.Module):
                     CapConfig.min_capacitance,
                     CapConfig.max_capacitance
                 ).int()
-            capacitance = HXTransformedModelParameter(
+            capacitance = TrainableHXTransformedModelParameter(
                 test_parameters.start_cap,
                 cap_transformer
             ).make_trainable(set_capacitance)
             self.neuron.membrane_capacitance = capacitance
 
         if test_parameters.start_tau_syn:
-            tau_syn = HXTransformedModelParameter(
+            tau_syn = TrainableHXTransformedModelParameter(
                 test_parameters.start_tau_syn,
                 SynTranslation.get_i_bias
             ).make_trainable(SynTranslation.set_tau_syn)
@@ -253,22 +258,25 @@ class CapConfig:
     max_capacitance = 63
 
 
-def set_capacitance(capacitance, chip, neuron_coordinates):
+def set_capacitance(capacitance, neuron_configs, neuron_coordinates):
     """
     Sets capacitance on the chip according to the membrane time constant
     using an ideal translation.
     """
-    for idx, coord in enumerate(neuron_coordinates):
-        atomic_neuron_coord = coord.get_atomic_neurons()[0]
-        config = chip.neuron_block.atomic_neurons[atomic_neuron_coord]
-        if capacitance.ndim > 0:
-            config.membrane_capacitance.capacitance = (
-                NeuronConfig.MembraneCapacitorSize(capacitance[idx].item())
-            )
-        else:
-            config.membrane_capacitance.capacitance = (
-                NeuronConfig.MembraneCapacitorSize(capacitance.item())
-            )
+    for idx, (configs, coords) in enumerate(
+            zip(neuron_configs, neuron_coordinates)):
+        for comp, an_configs in configs.items():
+            for config in an_configs:
+                if capacitance.ndim > 0:
+                    config.membrane_capacitance.capacitance = (
+                        NeuronConfig.MembraneCapacitorSize(
+                            capacitance[idx].item(),
+                        )
+                    )
+                else:
+                    config.membrane_capacitance.capacitance = (
+                        NeuronConfig.MembraneCapacitorSize(capacitance.item())
+                    )
 
 
 @dataclass
@@ -299,19 +307,28 @@ class SynTranslation:
         return (i_bias_exc, i_bias_inh)
 
     @staticmethod
-    def set_tau_syn(tau_syn, chip, neuron_coordinates):
+    def set_tau_syn(tau_syn, neuron_configs, neuron_coordinates):
         i_bias_tau_exc, i_bias_tau_inh = tau_syn
-        for idx, coord in enumerate(neuron_coordinates):
-            atomic_neuron_coord = coord.get_atomic_neurons()[0]
-            config = chip.neuron_block.atomic_neurons[atomic_neuron_coord]
-            if i_bias_tau_inh.ndim > 0:
-                cap_mem_inh = CapMemCell.Value(int(i_bias_tau_inh[idx].item()))
-                cap_mem_exc = CapMemCell.Value(int(i_bias_tau_exc[idx].item()))
-            else:
-                cap_mem_inh = CapMemCell.Value(int(i_bias_tau_inh.item()))
-                cap_mem_exc = CapMemCell.Value(int(i_bias_tau_exc.item()))
-            config.inhibitory_input.i_bias_tau = cap_mem_inh
-            config.excitatory_input.i_bias_tau = cap_mem_exc
+        for idx, (configs, coords) in enumerate(
+                zip(neuron_configs, neuron_coordinates)):
+            for comp, an_configs in configs.items():
+                for config in an_configs:
+                    if i_bias_tau_inh.ndim > 0:
+                        cap_mem_inh = CapMemCell.Value(
+                            int(i_bias_tau_inh[idx].item())
+                        )
+                        cap_mem_exc = CapMemCell.Value(
+                            int(i_bias_tau_exc[idx].item())
+                        )
+                    else:
+                        cap_mem_inh = CapMemCell.Value(
+                            int(i_bias_tau_inh.item())
+                        )
+                        cap_mem_exc = CapMemCell.Value(
+                            int(i_bias_tau_exc.item())
+                        )
+                    config.inhibitory_input.i_bias_tau = cap_mem_inh
+                    config.excitatory_input.i_bias_tau = cap_mem_exc
 
 
 if __name__ == "__main__":

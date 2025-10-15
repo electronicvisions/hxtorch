@@ -6,7 +6,7 @@ import unittest
 import hxtorch
 from hxtorch.examples.spiking import yinyang
 from hxtorch.examples.spiking import calib_neuron
-from hxtorch.spiking.utils import calib_helper
+from hxtorch.core.utils import calib_helper
 
 
 class YinYangExampleTest(unittest.TestCase):
@@ -47,7 +47,7 @@ class YinYangExampleTest(unittest.TestCase):
 
         # Restore default nightly calib
         hxtorch.init_hardware()
-        calib_path = calib_helper.nightly_calix_native_path("spiking2")
+        calib_path = calib_helper.nightly_calib_path("spiking2")
         hxtorch.release_hardware()
 
         if mock:

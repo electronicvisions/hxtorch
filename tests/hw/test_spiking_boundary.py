@@ -4,7 +4,7 @@ Test script for measuring membrane boundaries
 import unittest
 import hxtorch
 from hxtorch.spiking.utils.dynamic_range.boundary import get_dynamic_range
-from hxtorch.spiking.utils import calib_helper
+from hxtorch.core.utils import calib_helper
 
 
 class TestBoundaries(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestBoundaries(unittest.TestCase):
     def test_get_dynamic_range(self):
         # This should use loaded calibration
         hxtorch.init_hardware()
-        calib_path = calib_helper.nightly_calix_native_path()
+        calib_path = calib_helper.nightly_calib_path()
         hxtorch.release_hardware()
         base, upper, lower = get_dynamic_range(calib_path=calib_path)
         self.assertTrue(abs(base + 45) < 0.2 * 45)

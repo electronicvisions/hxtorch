@@ -1,16 +1,15 @@
 """
 Model class for spiking HX torch yinyang example
 """
-from typing import Callable, Optional, Tuple
+from typing import Optional, Tuple
 from functools import partial
 import torch
 
 from dlens_vx_v3 import halco
 
+import hxtorch.core as hxcore
 import hxtorch.spiking as hxsnn
 from hxtorch.spiking.transforms import weight_transforms
-from hxtorch.spiking.utils import calib_helper
-import hxtorch.spiking.functional as F
 
 
 class SNN(torch.nn.Module):
@@ -66,7 +65,10 @@ class SNN(torch.nn.Module):
         # Experiment instance to work on
         self.exp = hxsnn.Experiment(mock=mock, dt=dt)
         if calib_path is not None:
-            self.exp.default_execution_instance.load_calib(calib_path)
+            from hxtorch.core.utils import calib_helper
+            self.exp.calibration = calib_helper.fixture_calibration_from_file(
+                calib_path,
+            )
 
         # Repeat input
         self.input_repetitions = input_repetitions
@@ -87,12 +89,12 @@ class SNN(torch.nn.Module):
             experiment=self.exp,
             tau_mem=tau_mem,
             membrane_capacitance=(
-                hxsnn.HXTransformedModelParameter(
-                    tau_mem, lambda model_value: model_value / tau_mem * 63)),
+                hxcore.HXTransformedModelParameter(
+                    tau_mem, lambda model_value: int(model_value / tau_mem * 63))),
             tau_syn=tau_syn,
-            leak=hxsnn.MixedHXModelParameter(0., 80),
-            reset=hxsnn.MixedHXModelParameter(0., 80),
-            threshold=hxsnn.MixedHXModelParameter(1., 150),
+            leak=hxcore.MixedHXModelParameter(0., 80),
+            reset=hxcore.MixedHXModelParameter(0., 80),
+            threshold=hxcore.MixedHXModelParameter(1., 150),
             i_synin_gm=500,
             synapse_dac_bias=1000,
             trace_scale=trace_scale,
@@ -112,14 +114,14 @@ class SNN(torch.nn.Module):
             experiment=self.exp,
             tau_mem=tau_mem,
             tau_syn=tau_syn,
-            leak=hxsnn.MixedHXModelParameter(0., 80),
+            leak=hxcore.MixedHXModelParameter(0., 80),
             i_synin_gm=500,
             synapse_dac_bias=1000,
             trace_scale=trace_scale,
             cadc_time_shift=trace_shift_out, shift_cadc_to_first=True,
             placement_constraint=list(
                 halco.LogicalNeuronOnDLS(
-                    hxsnn.morphology.SingleCompartmentNeuron(1).compartments,
+                    hxcore.morphology.SingleCompartmentNeuron(1).compartments,
                     halco.AtomicNeuronOnDLS(
                         halco.NeuronRowOnDLS(1), halco.NeuronColumnOnDLS(nrn)))
                 for nrn in range(n_out)))

@@ -24,7 +24,7 @@ class TestDenseSpikesToList(unittest.TestCase):
 
         for a, b in zip(first_batch, grenade_format):
             for c, d in zip(a, b):
-                self.assertAlmostEqual(c, d)
+                self.assertAlmostEqual(c.value() / 125, d, 2)
 
 
 if __name__ == "__main__":

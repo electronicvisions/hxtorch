@@ -1,19 +1,30 @@
-"""
-Define graph-based data structure managing Nodes
-"""
-from typing import Any, Dict, Tuple, List, Union, Set, Optional
+""" Define graph-based data structure managing Nodes """
+from __future__ import annotations
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Tuple,
+    List,
+    Set,
+    Optional,
+    NewType,
+)
 from abc import ABC, abstractmethod
 import networkx as nx
 
-import hxtorch.spiking.modules as spiking_module
+from hxtorch.spiking.handle import Handle
+import hxtorch.spiking.modules as hxsnn_modules
 
-Source = Tuple[Any]
-Target = Any
-Module = Union[spiking_module.HXBaseExperimentModule, Any]
-Wrapper = Union[spiking_module.HXModuleWrapper, Any]
+if TYPE_CHECKING:
+    from hxtorch.spiking.modules.hx_module_wrapper import HXModuleWrapper
+
+Source = NewType("Source", Tuple[Handle, ...])
+Target = NewType("Target", Handle)
+Module = NewType("Module", hxsnn_modules.HXTorchBaseModule)
 
 
-class BaseModuleManager(ABC):
+class AbstractModuleManager(ABC):
     """ Abstract base class for module manager """
 
     def __init__(self):
@@ -21,7 +32,6 @@ class BaseModuleManager(ABC):
         self.graph: nx.DiGraph = nx.DiGraph()
         self.prev_graph: nx.DiGraph = nx.DiGraph()
         self.nodes: Dict[Module, int] = {}
-        self.wrappers: Dict[Wrapper, int] = {}
 
     def __str__(self) -> str:
         """ Add proper object string """
@@ -31,12 +41,6 @@ class BaseModuleManager(ABC):
         else:
             for module, node in self.nodes.items():
                 string += f"\t{node}: {module}\n"
-        string += "Wrappers (wrapper_id, wrapper):\n"
-        if not self.wrappers:
-            string += "\tNone\n"
-        else:
-            for wrapper, node in self.wrappers.items():
-                string += f"\t{node}: {wrapper}\n"
         string += "Connections:\n"
         for node in self.graph.nodes():
             string += f"\tNode {node}:\n"
@@ -55,7 +59,8 @@ class BaseModuleManager(ABC):
         self.graph = nx.DiGraph()
 
     @abstractmethod
-    def add_node(self, module: Module, sources: Source, target: Target):
+    def add_node(
+            self, module: Module, sources: Source, target: Target):
         """
         Adds a new module to the manager. This method adds a node to the
         internal graph to represent the module. It assigns edges to this node
@@ -63,17 +68,6 @@ class BaseModuleManager(ABC):
         :param module: Module to represented in to the graph.
         :param sources: The sources to the node representing `module`.
         :param targets: The targets of the node representing `module`.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def add_wrapper(self, wrapper: Wrapper):
-        """
-        Adds a new wrapper to the manager. This must be called after all
-        modules wrapped by this wrapper are represented in the graph.
-        internal graph to represent the module. It assigned edges to this node
-        holding the data in `sources`, resp. `target`.
-        :param module: Module to represented in to the graph.
         """
         raise NotImplementedError
 
@@ -89,14 +83,18 @@ class BaseModuleManager(ABC):
 
 # We allow u, v as variable names to be consistent with networkx
 # pylint: disable=invalid-name
-class ModuleManager(BaseModuleManager):
+class ModuleManager(AbstractModuleManager):
     """ Object representing all nodes in a graph-like data structure """
 
     # Types that are recognized as populations on hardware
-    _default_input_type = spiking_module.InputNeuron
+    _default_input_type = hxsnn_modules.InputNeuron
     # Types that are recognized as populations on hardware
     _population_types = (
-        spiking_module.Population, spiking_module.InputPopulation)
+        hxsnn_modules.Population,
+        hxsnn_modules.InputPopulation,
+    )
+    # Types that are recognized as projections on hardware
+    _projection_types = hxsnn_modules.Projection
 
     def __init__(self):
         """
@@ -107,10 +105,17 @@ class ModuleManager(BaseModuleManager):
         self._open_sources: Set = set()
         self._open_targets: Set = set()
         self._graph_hash: Optional[str] = None
+        self.wrappers: Dict[HXModuleWrapper, int] = {}
 
     def __str__(self):
         """ Append string """
         string = super().__str__()
+        string += "Wrappers (wrapper_id, wrapper):\n"
+        if not self.wrappers:
+            string += "\tNone\n"
+        else:
+            for wrapper, node in self.wrappers.items():
+                string += f"\t{node}: {wrapper}\n"
         string += "Inputs (Module, Input Module):\n"
         if not self._inputs:
             string += "\tNone\n"
@@ -138,14 +143,10 @@ class ModuleManager(BaseModuleManager):
         """
         return len(self.nodes)
 
-    def get_wrapper_id(self) -> int:
-        """
-        Get the ID of the next wrapper to add.
-        :returns: Returns the next usable ID of a wrapper to add.
-        """
-        return f"w_{len(self.wrappers)}"
-
-    def get_module_by_id(self, node_id: int):
+    def get_module_by_id(
+        self,
+        node_id: int,
+    ) -> hxsnn_modules.HXTorchBaseModule:
         """
         Finds the module of the node with ID `node_id` and returns it. If
         multiple modules assigned to this ID are found, only the first one is
@@ -156,19 +157,6 @@ class ModuleManager(BaseModuleManager):
         """
         return [key for key, val in self.nodes.items() if val == node_id].pop()
 
-    def get_wrapper_by_id(self, wrapper_id: int):
-        """
-        Finds the wrapper of the node with ID `wrapper_id` and returns it. If
-        multiple wrapper assigned to this ID are found, only the first one is
-        returned. However, this should never be the case and if so, it is a
-        bug.
-        :param wrapper_id: The ID of the node to find the module for.
-        :returns: Returns the corresponding wrapper.
-        """
-        return [
-            key for key, val in self.wrappers.items()
-            if val == wrapper_id].pop()
-
     def get_id_by_module(self, module: Module) -> Optional[int]:
         """
         Finds the ID of the node which corresponds to module `module`. If no ID
@@ -177,15 +165,6 @@ class ModuleManager(BaseModuleManager):
         :returns: Returns the node ID or `None` if no ID is found.
         """
         return self.nodes.get(module)
-
-    def get_id_by_wrapper(self, wrapper: Wrapper) -> Optional[int]:
-        """
-        Finds the ID of the wrapper which corresponds to wrapper `wrapper`. If
-        no ID is found, `None` is returned.
-        :param wrapper: The wrapper module to find the node ID for.
-        :returns: Returns the node ID or `None` if no ID is found.
-        """
-        return self.wrappers.get(wrapper)
 
     def changed_since_last_run(self) -> bool:
         """
@@ -206,7 +185,7 @@ class ModuleManager(BaseModuleManager):
         for module in self.nodes:
             module.reset_changed_since_last_run()
 
-    def has_module(self, module: Module) -> bool:
+    def has_module(self, module: hxsnn_modules.HXTorchBaseModule) -> bool:
         """
         Checks whether the module `module` is already registered within the
         graph.
@@ -236,7 +215,12 @@ class ModuleManager(BaseModuleManager):
             e['handle'] for u, v, e in self.graph.edges(data=True)
             if u in self._open_sources]
 
-    def add_node(self, module: Module, sources: Source, target: Target):
+    def add_node(
+        self,
+        module: hxsnn_modules.HXTorchBaseModule,
+        sources: Source,
+        target: Target,
+    ) -> None:
         """
         Adds a new module to the manager. This method adds a node to the
         internal graph to represent the module. It assigned edges to this node
@@ -280,22 +264,11 @@ class ModuleManager(BaseModuleManager):
             self._open_targets.add(v)
         self.graph.add_edge(node_id, v, handle=target)
 
-    def add_wrapper(self, wrapper: Wrapper):
-        """
-        Adds a new wrapper to the manager. This must be called after all
-        modules wrapped by this wrapper are represented in the graph.
-        internal graph to represent the module. It assigned edges to this node
-        holding the data in `sources`, resp. `target`.
-        :param module: Module to represented in to the graph.
-        """
-        wrapper_id = self.get_id_by_wrapper(wrapper)
-        # Get existing node or create new node
-        if wrapper_id is None:
-            wrapper_id = self.get_wrapper_id()
-        self.wrappers.update({wrapper: wrapper_id})
-
-    def _get_populations(self, module: Module, target: bool = False) \
-            -> List[Module]:
+    def _get_populations(
+        self,
+        module: hxsnn_modules.Population,
+        target: bool = False,
+    ) -> List[hxsnn_modules.Population]:
         """
         Find the target, resp. source populations of module `module`, i.e.
         modules which are of type self._population_types.
@@ -322,7 +295,7 @@ class ModuleManager(BaseModuleManager):
             stack += list(method(node_id))
         return pops
 
-    def source_populations(self, module: Module):
+    def source_populations(self, module: hxsnn_modules.HXTorchBaseModule):
         """
         Find the source populations of module `module`, i.e. modules which are
         of type self._population_types.
@@ -331,7 +304,7 @@ class ModuleManager(BaseModuleManager):
         """
         return self._get_populations(module, False)
 
-    def target_populations(self, module: Module):
+    def target_populations(self, module: hxsnn_modules.HXTorchBaseModule):
         """
         Find the target populations of module `module`, i.e. modules which are
         of type self._population_types.
@@ -352,15 +325,18 @@ class ModuleManager(BaseModuleManager):
             v = vs.pop()
 
             module = self.get_module_by_id(v)
-            if not isinstance(module, spiking_module.Projection):
+            if not isinstance(module, self._projection_types):
                 continue
 
             in_module = self._inputs.get(module)
             if not in_module:
                 in_module = self._default_input_type(
-                    module.in_features, instance, module.execution_instance)
+                    module.in_features, instance)
                 self._inputs.update({module: in_module})
                 self.nodes.update({in_module: self.get_node_id()})
+
+            # Reset dynamics flag
+            in_module.changed_dynamics = True
 
             # Update graph, i.e. forward input module handles
             source = self.graph.get_edge_data(u, v)["handle"]
@@ -369,6 +345,49 @@ class ModuleManager(BaseModuleManager):
             self.graph.add_edge(u, in_id, handle=source)
             self.graph.add_edge(in_id, v, handle=target)
             self.graph.remove_edge(u, v)
+
+    def get_wrapper_id(self) -> int:
+        """
+        Get the ID of the next wrapper to add.
+        :returns: Returns the next usable ID of a wrapper to add.
+        """
+        return f"w_{len(self.wrappers)}"
+
+    def get_wrapper_by_id(self, wrapper_id: int):
+        """
+        Finds the wrapper of the node with ID `wrapper_id` and returns it. If
+        multiple wrapper assigned to this ID are found, only the first one is
+        returned. However, this should never be the case and if so, it is a
+        bug.
+        :param wrapper_id: The ID of the node to find the module for.
+        :returns: Returns the corresponding wrapper.
+        """
+        return [
+            key for key, val in self.wrappers.items()
+            if val == wrapper_id].pop()
+
+    def get_id_by_wrapper(self, wrapper: HXModuleWrapper) -> Optional[int]:
+        """
+        Finds the ID of the wrapper which corresponds to wrapper `wrapper`. If
+        no ID is found, `None` is returned.
+        :param wrapper: The wrapper module to find the node ID for.
+        :returns: Returns the node ID or `None` if no ID is found.
+        """
+        return self.wrappers.get(wrapper)
+
+    def add_wrapper(self, wrapper: HXModuleWrapper):
+        """
+        Adds a new wrapper to the manager. This must be called after all
+        modules wrapped by this wrapper are represented in the graph.
+        internal graph to represent the module. It assigned edges to this node
+        holding the data in `sources`, resp. `target`.
+        :param module: Module to represented in to the graph.
+        """
+        wrapper_id = self.get_id_by_wrapper(wrapper)
+        # Get existing node or create new node
+        if wrapper_id is None:
+            wrapper_id = self.get_wrapper_id()
+        self.wrappers.update({wrapper: wrapper_id})
 
     def _handle_dropout_mask(self):
         """
@@ -381,14 +400,14 @@ class ModuleManager(BaseModuleManager):
         for module, u in self.nodes.items():
             if u in self._open_sources:
                 continue
-            if isinstance(module, spiking_module.BatchDropout):
+            if isinstance(module, hxsnn_modules.BatchDropout):
                 pre_nodes = list(self.graph.predecessors(u))
                 if len(pre_nodes) != 1:
                     raise TypeError(
                         "The BatchDropout module is only allowed to "
                         "preceed one module.")
                 pre_module = self.get_module_by_id(pre_nodes.pop())
-                if not isinstance(pre_module, spiking_module.AELIF):
+                if not isinstance(pre_module, hxsnn_modules.AELIF):
                     raise TypeError(
                         "The BatchDropout module is only allowed to "
                         "succeed a Neuron module.")
@@ -423,7 +442,8 @@ class ModuleManager(BaseModuleManager):
             self.graph.nodes[w_id]["sources"] = sources
             self.graph.nodes[w_id]["targets"] = targets
 
-    def _order(self) -> List[Tuple[Module, Source, Tuple[Target]]]:
+    def order(self) \
+            -> List[Tuple[Module, Source, Target]]:
         """
         This method checks whether the internal graph representation has no
         cyclic dependencies. Cyclic dependencies need to be wrapped manually at
@@ -488,6 +508,6 @@ class ModuleManager(BaseModuleManager):
             targets).
         """
         self._handle_wrappers()
-        nodes = self._order()
+        nodes = self.order()
         self.clear()
         return nodes

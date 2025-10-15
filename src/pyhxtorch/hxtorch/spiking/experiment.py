@@ -2,330 +2,73 @@
 Defining basic types to create hw-executable instances
 """
 # pylint: disable=no-member, invalid-name
-from typing import Dict, List, Tuple, Optional
-from abc import ABC, abstractmethod
-import itertools
+from __future__ import annotations
+from typing import (
+    TYPE_CHECKING,
+    Tuple,
+    Dict,
+)
 import pylogging as logger
 
-import torch
-import numpy as np
-
-from dlens_vx_v3 import hal
+from dlens_vx_v3 import lola
 import pygrenade_vx as grenade
-import pygrenade_vx.network
 
-from hxtorch import _runtime
-from hxtorch.spiking.observables import HardwareObservablesExtractor
-from hxtorch.spiking.execution_info import ExecutionInfo
-from hxtorch.spiking.execution_instance import (
-    ExecutionInstances, ExecutionInstance)
-from hxtorch.spiking import modules as spiking_modules
-from hxtorch.spiking import handle
-from hxtorch.spiking.backend.module_manager import (
-    BaseModuleManager, ModuleManager)
-
-log = logger.get("hxtorch.spiking.experiment")
+from hxtorch.core.experiment import BaseExperiment
+from hxtorch.spiking.backend.module_manager import ModuleManager
+from hxtorch.spiking.modules.types.population import Population
 
 
-class BaseExperiment(ABC):
-
-    def __init__(self, modules: BaseModuleManager, mock: bool, dt: float) \
-            -> None:
-        self.mock = mock
-        self.modules = modules
-        self.dt = dt
-
-    @abstractmethod
-    def connect(self, module: torch.nn.Module,
-                input_handles: handle.TensorHandle,
-                output_handle: handle.TensorHandle):
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.network.PopulationOnNetwork,
-                    Tuple[Optional[torch.Tensor], ...]]:
-        raise NotImplementedError
+if TYPE_CHECKING:
+    from hxtorch.spiking.handle import Handle
+    from hxtorch.spiking.modules.hx_module import HXBaseModule
+    from hxtorch.spiking.modules.hx_module_wrapper import HXModuleWrapper
 
 
 class Experiment(BaseExperiment):
 
     """ Experiment class for describing experiments on hardware """
 
-    # pylint: disable=too-many-arguments
+    _population_types = Population
+
     def __init__(
-            self, mock: bool = False, dt: float = 1e-6,
-            hw_routing_func=grenade.network.routing.PortfolioRouter()) -> None:
-        """
-        Instantiate a new experiment, representing an experiment on hardware
-        and/or in software.
-
-        :param mock: Indicating whether module is executed on hardware (False)
-            or simulated in software (True).
-        :param input_loopback: Record input spikes and use them for gradient
-            calculation. Depending on link congestion, this may or may not be
-            beneficial for the calculated gradient's precision.
-        """
-        super().__init__(ModuleManager(), mock=mock, dt=dt)
-
-        self._execution_instances = ExecutionInstances()
-
-        self.hw_routing_func = hw_routing_func
-
-        # Grenade stuff
-        self.grenade_network = None
-        self.grenade_network_graph = None
-
-        # Configs
-        self._static_config_prepared = False
-        self._default_execution_instance: Optional[ExecutionInstance] = None
-
-        self._populations: List[spiking_modules.HXModule] = []
-        self._projections: List[spiking_modules.HXModule] = []
-
-        self._hw_data_extractor = HardwareObservablesExtractor()
-        self._batch_size = 0
-        self.inter_batch_entry_routing_disabled = True
-        self.inter_batch_entry_wait = None
-
-        # Last run results
-        self._last_run_chip_configs = None
-
-        # read-back ppu symbols
-        self.ppu_symbols_read = {}
-
-    def clear(self) -> None:
-        """
-        Reset the experiments's state. Corresponds to creating a new Experiment
-        instance.
-        """
-        self.modules.clear()
-        self._execution_instances.clear()
-
-        self.grenade_network = None
-        self.grenade_network_graph = None
-
-        self.inter_batch_entry_routing_disabled = True
-        self.inter_batch_entry_wait = None
-        self._static_config_prepared = False
-        self._default_execution_instance = None
-
-        self._populations = []
-        self._projections = []
-
-        self._batch_size = 0
-        self.ppu_symbols_read = {}
+        self,
+        *args,
+        mock: bool = False,
+        dt: float = 1e-6,
+        inter_batch_entry_wait: int = 0,
+        **kwargs,
+    ):
+        super().__init__(
+            inter_batch_entry_wait,
+            *args,
+            **kwargs,
+        )
+        self.modules = ModuleManager()
+        self.mock = mock
+        self.dt = dt
+        self.log = logger.get("hxtorch.spiking.Experiment")
+        self.runtime_in_s = 0
 
     @property
-    def default_execution_instance(self) -> ExecutionInstance:
-        """
-        Getter for the default ``ExecutionInstance`` object. All modules that
-        have the same ``Experiment`` instance assigned and do not hold an
-        explicit ``ExecutionInstance`` are assigned to this default execution
-        instance.
-
-        :return: The default execution instance
-        """
-        if self._default_execution_instance is None:
-            self._default_execution_instance = ExecutionInstance()
-        return self._default_execution_instance
-
-    @default_execution_instance.setter
-    def default_execution_instance(
-            self, execution_instance: Optional[ExecutionInstance]) -> None:
-        """
-        Setter for the default ``ExecutionInstance`` object. All modules that
-        have the same ``Experiment`` instance assigned and do not hold an
-        explicit ``ExecutionInstance`` are assigned to this default execution
-        instance.
-
-        :param: The default execution instance to be used
-        """
-        self._default_execution_instance = execution_instance
-
-    def _prepare_static_config(self) -> None:
-        """
-        Prepares all the static chip config. Accesses the chip object
-        initialized by hxtorch.hardware_init and appends corresponding
-        configurations to. Additionally this method defines the
-        pre_static_config builder injected to grenade at run.
-        """
-        self._execution_instances.update([
-            module.execution_instance for module in self.modules.nodes])
-        if self._static_config_prepared:  # Only do this once
-            return
-        for execution_instance in self._execution_instances:
-            modules = [m for m in self.modules.nodes
-                       if m.execution_instance == execution_instance]
-            execution_instance.modules = modules
-        self._static_config_prepared = True
-        log.TRACE("Preparation of static config done.")
-
-    def _generate_network_graphs(self) -> grenade.network.NetworkGraph:
-        """
-        Generate grenade network graph from the populations and projections in
-        modules
-
-        TODO: Make this more ExecutionInstance specific
-
-        :return: Returns the grenade network graph.
-        """
-        changed_since_last_run = self.modules.changed_since_last_run()
-
-        log.TRACE(f"Network changed since last run: {changed_since_last_run}")
-        if not changed_since_last_run:
-            if self.grenade_network_graph is not None:
-                return self.grenade_network_graph
-
-        # Create network builder
-        network_builder = grenade.network.NetworkBuilder()
-
-        # Add populations
-        for module in self._populations:
-            module.descriptor = module.add_to_network_graph(network_builder)
-        # Add projections
-        for module in self._projections:
-            pre_pop = self.modules.source_populations(module)
-            post_pop = self.modules.target_populations(module)
-            assert len(pre_pop) == 1, "On hardware, a projection can only " \
-                "have one source population."
-            assert len(post_pop) == 1, "On hardware, a projection can only " \
-                "have one target population."
-            module.descriptor = module.add_to_network_graph(
-                pre_pop.pop().descriptor, post_pop.pop().descriptor,
-                network_builder)
-
-        # Add CADC recording
-        recording_cadc_active = False
-        for execution_instance, cadc_recording in self._execution_instances \
-                .cadc_recordings.items():
-            network_builder.add(cadc_recording, execution_instance)
-            recording_cadc_active = True
-
-        # Add plasticity rules
-        for execution_instance, plasticity_rules in self._execution_instances \
-                .plasticity_rules.items():
-            if recording_cadc_active:
-                raise ValueError(
-                    "CADC recoding & plasticity rule cannot both be active!")
-            for plasticity_rule in plasticity_rules:
-                log.TRACE(f"Added plasticity rule '{plasticity_rule}' "
-                          "to grenade graph.")
-                network_builder.add(plasticity_rule, execution_instance)
-
-        network = network_builder.done()
-
-        # route network if required
-        routing_result = None
-        if self.grenade_network_graph is None \
-                or grenade.network.requires_routing(
-                    network, self.grenade_network_graph):
-            routing_result = self.hw_routing_func(network)
-
-        # Keep graph
-        self.grenade_network = network
-
-        # build or update network graph
-        if routing_result is not None:
-            self.grenade_network_graph = grenade.network \
-                .build_network_graph(self.grenade_network, routing_result)
-        else:
-            grenade.network.update_network_graph(
-                self.grenade_network_graph, self.grenade_network)
-
-        return self.grenade_network_graph
-
-    def _configure_populations(self):
-        """
-        Configure the population on hardware.
-        """
-        pop_changed_since_last_run = any(
-            m.changed_since_last_run for m in self._populations)
-        if not pop_changed_since_last_run:
-            return
-
-        for module in self._populations:
-            if not isinstance(module, spiking_modules.AELIF):
-                continue
-            log.TRACE(f"Configure population '{module}'.")
-            for in_pop_id, unit_id in enumerate(module.unit_ids):
-                coord = module.execution_instance.neuron_placement \
-                    .id2logicalneuron(unit_id)
-                module.execution_instance.chip.neuron_block = \
-                    module.configure_hw_entity(
-                        in_pop_id, module.execution_instance.chip.neuron_block,
-                        coord)
-                log.TRACE(f"Configured neuron at coord {coord}.")
-
-    def _generate_inputs(
-        self, network_graph: grenade.network.NetworkGraph) \
-            -> grenade.signal_flow.InputData:
-        """
-        Generate external input events from the routed network graph
-        representation.
-        """
-        # Make sure all batch sizes are equal
+    def batch_size(self) -> int:
         sizes = [
-            handle.spikes.shape[1] for handle in
-            self.modules.input_data()]
+            handle.spikes.shape[1] for handle in self.modules.input_data()]
         assert all(sizes)
-        self._batch_size = sizes[0]
+        return sizes[0]
 
-        input_generator = grenade.network.InputGenerator(
-            network_graph, self._batch_size)
-        for module in self._populations:
-            in_handle = [
-                e["handle"] for _, _, e in self.modules.graph.in_edges(
-                    self.modules.get_id_by_module(module), data=True)].pop()
-            module.add_to_input_generator(in_handle, input_generator)
+    @batch_size.setter
+    def batch_size(self, value):
+        pass
 
-        return input_generator.done()
+    def get_source_handle(self, module) -> None:
+        """ Generate external input events """
+        return [
+            e["handle"] for _, _, e in self.modules.graph.in_edges(
+                self.modules.get_id_by_module(module), data=True)].pop()
 
-    def _get_observables(
-            self, network_graph: grenade.network.NetworkGraph,
-            result_map: grenade.signal_flow.OutputData, runtime) -> Dict[
-                grenade.network.PopulationOnNetwork,
-                np.ndarray]:
-        """
-        Takes the grenade network graph and the result map returned by grenade
-        after experiment execution and returns a data map where for each
-        module descriptor of a registered module the specific hardware
-        observables are represented as Optional[torch.Tensor]s.
-
-        ..note: This function calls the modules `post_process` method.
-
-        :param network_graph: The logical grenade network graph describing the
-            logic of th experiment.
-        :param result_map: The result map returned by grenade holding all
-            recorded hardware observables.
-        :param runtime: The runtime of the experiment executed on hardware in
-            ms.
-        :returns: Returns the data map as dict, where the keys are the
-            population descriptors and values are tuples of values returned by
-            the corresponding module's `post_process` method.
-        """
-        # Get hw data
-        self._hw_data_extractor.set_data(network_graph, result_map)
-
-        # Data maps
-        data_map: Dict[
-            grenade.network.PopulationsDescriptor,
-            Tuple[torch.Tensor, ...]] = {}  # pylint: disable=c-extension-no-member
-
-        # Map populations to data
-        for module in self.modules.nodes:
-            # Consider only hardware module
-            if not isinstance(module, spiking_modules.HXModule):
-                continue
-            data_map[module.descriptor] = module.post_process(
-                self._hw_data_extractor.get(module.descriptor),
-                runtime / int(hal.Timer.Value.fpga_clock_cycles_per_us) / 1e6)
-
-        return data_map
-
-    def connect(self, module: torch.nn.Module,
-                input_handles: Tuple[handle.TensorHandle],
-                output_handle: handle.TensorHandle):
+    def connect(self, module: HXBaseModule,
+                input_handles: Tuple[Handle, ...],
+                output_handle: Handle) -> Handle:
         """
         Add an module to the experiment and connect it to other experiment
         modules via input and output handles.
@@ -338,7 +81,7 @@ class Experiment(BaseExperiment):
         """
         return self.modules.add_node(module, input_handles, output_handle)
 
-    def connect_wrapper(self, wrapper: spiking_modules.HXModuleWrapper):
+    def connect_wrapper(self, wrapper: HXModuleWrapper):
         """
         Add a wrapper module to the experiment and assign it to the experiments
         modules. In the PyTorch graph the individual module functions assigned
@@ -361,33 +104,12 @@ class Experiment(BaseExperiment):
 
         self.modules.add_wrapper(wrapper)
 
-    def register_population(self, module: spiking_modules.HXModule) -> None:
-        """
-        Register a module as population.
+    def post_mapping_hook(self):
+        for module in self.modules.nodes:
+            if hasattr(module, "override_hw_params"):
+                module.override_hw_params(self.snippets[-2])
 
-        :param module: The module to register as population.
-        """
-        self._populations.append(module)
-
-    def register_projection(self, module: spiking_modules.HXModule) -> None:
-        """
-        Register a module as projection.
-
-        :param module: The module to register as projection.
-        """
-        self._projections.append(module)
-
-    def _calibrate(self):
-        """ """
-        for execution_instance in self._execution_instances:
-            if any(pop.has_trainable_params() for pop in self._populations):
-                execution_instance.set_neuron_parameters_on_chip()
-                continue
-            execution_instance.calibrate()
-
-    def get_hw_results(self, runtime: Optional[int]) \
-            -> Dict[grenade.network.PopulationOnNetwork,
-                    Tuple[Optional[torch.Tensor], ...]]:
+    def run(self, runtime: float | None):
         """
         Executes the experiment in mock or on hardware using the information
         added to the experiment for a time given by `runtime` and returns a
@@ -400,91 +122,27 @@ class Experiment(BaseExperiment):
             the corresponding module's `post_process` method.
         """
         if not self.mock:
-            self._prepare_static_config()
+            self.runtime_in_s = runtime * self.dt
 
         # Preprocess layer
         self.modules.pre_process(self)
 
         # In mock-mode nothing to do here
         if self.mock:
-            return {}, None
+            return None
 
-        # Register HW entity
-        for module in self.modules.nodes:
-            if hasattr(module, "register_hw_entity") and module \
-                    not in itertools.chain(
-                        self._projections, self._populations):
-                module.register_hw_entity()
+        results = super().run(self.runtime_in_s)
 
-        # Calibration
-        self._calibrate()
+        # TODO: Extend to more execution instances
+        self._last_run_chip_configs = results.execution_instances.get(
+            grenade.common.ExecutionInstanceOnExecutor()
+        ).pre_execution_chips
 
-        # Generate network graph
-        network = self._generate_network_graphs()
-
-        # configure populations
-        self._configure_populations()
-
-        # handle runtime
-        runtime_in_clocks = int(
-            runtime * self.dt * 1e6
-            * int(hal.Timer.Value.fpga_clock_cycles_per_us))
-        if runtime_in_clocks > hal.Timer.Value.max:
-            max_runtime = hal.Timer.Value.max /\
-                int(hal.Timer.Value.fpga_clock_cycles_per_us)
-            raise ValueError(
-                f"Runtime of {runtime} to long. Maximum supported runtime "
-                + f"{max_runtime}")
-
-        # generate external spike trains
-        inputs = grenade.signal_flow.InputData()
-        inputs.snippets = [self._generate_inputs(network)]
-        inputs.snippets[0].runtime = [{
-            execution_instance: runtime_in_clocks for execution_instance
-            in network.network.topologically_sorted_execution_instance_ids
-        }] * self._batch_size
-        log.TRACE(f"Registered runtimes: {inputs.snippets[0].runtime}")
-
-        inputs.inter_batch_entry_routing_disabled = {
-            execution_instance: self.inter_batch_entry_routing_disabled
-            for execution_instance in network.network.
-            topologically_sorted_execution_instance_ids
-        }
-
-        if self.inter_batch_entry_wait is not None:
-            inputs.inter_batch_entry_wait = {
-                execution_instance: self.inter_batch_entry_wait
-                for execution_instance in network.network.
-                topologically_sorted_execution_instance_ids
-            }
-
-        executor = _runtime.executor
-        if executor is None:
-            raise RuntimeError("Executor not initialized.")
-        outputs = pygrenade_vx.network.run(
-            executor,
-            network,
-            self._execution_instances.chips,
-            inputs,
-            self._execution_instances.playback_hooks,
-        )
-
-        if outputs.read_ppu_symbols:
-            self.ppu_symbols_read = outputs.read_ppu_symbols
-        else:
-            self.ppu_symbols_read = {}
-
-        hw_data = self._get_observables(
-            network, outputs, runtime_in_clocks)
-
-        self.modules.reset_changed_since_last_run()
-
-        self._last_run_chip_configs = outputs.snippets[0].pre_execution_chips
-
-        return hw_data, ExecutionInfo(
-            outputs.execution_time_info,
-            outputs.execution_health_info)
+        return results
 
     @property
-    def last_run_chip_configs(self) -> grenade.signal_flow.OutputData:
-        return self._last_run_chip_configs
+    def last_run_chip_configs(self) -> Dict[
+        grenade.common.ChipOnConnection,
+        lola.Chip
+    ]:
+        return self._last_execution_instances

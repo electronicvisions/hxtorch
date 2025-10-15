@@ -15,8 +15,8 @@ class TestModuleManager(unittest.TestCase):
         """ Test add module """
         # Test add two connected nodes
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -34,8 +34,8 @@ class TestModuleManager(unittest.TestCase):
 
         # Test two sources
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -53,9 +53,9 @@ class TestModuleManager(unittest.TestCase):
 
         # Test recurrence
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
-        module3 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
+        module3 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -72,13 +72,13 @@ class TestModuleManager(unittest.TestCase):
     def test_diamond(self):
         """ Test a diamond network structure """
         modules = ModuleManager()
-        top_module = snn.HXBaseExperimentModule(None)
+        top_module = snn.modules.HXTorchBaseModule()
         top_handle = snn.LIFObservables()
-        left_module = snn.HXBaseExperimentModule(None)
+        left_module = snn.modules.HXTorchBaseModule()
         left_handle = snn.LIFObservables()
-        right_module = snn.HXBaseExperimentModule(None)
+        right_module = snn.modules.HXTorchBaseModule()
         right_handle = snn.LIFObservables()
-        bot_module = snn.HXBaseExperimentModule(None)
+        bot_module = snn.modules.HXTorchBaseModule()
         bot_handle = snn.LIFObservables()
 
         modules.add_node(top_module, tuple(), top_handle)
@@ -103,8 +103,8 @@ class TestModuleManager(unittest.TestCase):
     def test_get_module_by_id(self):
         """ Test get_module_by_id returns the module """
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -120,8 +120,8 @@ class TestModuleManager(unittest.TestCase):
     def test_get_id_by_module(self):
         """ Test get_id_by_module returns the correct id """
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -138,8 +138,8 @@ class TestModuleManager(unittest.TestCase):
         """ Test clear removes nodes """
         modules = ModuleManager()
         self.assertEqual(len(modules.nodes), 0)
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         in_handle1 = snn.LIFObservables()
         out_handle1 = snn.LIFObservables()
         in_handle2 = snn.LIFObservables()
@@ -192,7 +192,7 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module2, (handle2,), handle3)
         modules.hw_graph = nx.DiGraph(modules.graph)
         modules._handle_inputs(experiment)
-        self.assertIsNone(module1.mask)
+        self.assertFalse(False in module1.mask)
         self.assertIsNone(module2.mask)
         # Set dropout masks
         modules._handle_dropout_mask()
@@ -247,9 +247,9 @@ class TestModuleManager(unittest.TestCase):
         """ Test ordering of modules """
         # Test raises if cycle is present
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
-        module3 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
+        module3 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -260,13 +260,13 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module3, (handle3,), handle4)
         modules.add_node(module1, (handle4,), handle2)
         with self.assertRaises(ValueError):
-            modules._order()
+            modules.order()
 
         # Test without wrapper
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
-        module3 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
+        module3 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()
@@ -276,7 +276,7 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle2, handle3), handle4)
         modules.add_node(module3, (handle4,), handle5)
-        nodes = modules._order()
+        nodes = modules.order()
         self.assertEqual(len(nodes), 3)
         self.assertEqual(
             nodes, [(module1, (handle1,), handle2),
@@ -288,7 +288,7 @@ class TestModuleManager(unittest.TestCase):
         modules.add_node(module1, (handle1,), handle2)
         modules.add_node(module2, (handle3, handle2), handle4)
         modules.add_node(module3, (handle4,), handle5)
-        nodes = modules._order()
+        nodes = modules.order()
         self.assertEqual(len(nodes), 3)
         self.assertEqual(
             nodes, [(module1, (handle1,), handle2),
@@ -320,7 +320,7 @@ class TestModuleManager(unittest.TestCase):
             None, module2=module2, module3=module3, module4=module4)
         modules.add_wrapper(wrapper)
         modules._handle_wrappers()
-        nodes = modules._order()
+        nodes = modules.order()
         self.assertEqual(len(nodes), 3)
         self.assertEqual(
             nodes, [(module1, (handle1,), handle2),
@@ -330,8 +330,8 @@ class TestModuleManager(unittest.TestCase):
     def test_has_module(self):
         """ Test if manager has module """
         modules = ModuleManager()
-        module1 = snn.HXBaseExperimentModule(None)
-        module2 = snn.HXBaseExperimentModule(None)
+        module1 = snn.modules.HXTorchBaseModule()
+        module2 = snn.modules.HXTorchBaseModule()
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
         handle3 = snn.LIFObservables()

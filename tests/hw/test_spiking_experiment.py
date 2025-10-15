@@ -4,12 +4,13 @@ Test HX Modules
 import unittest
 import torch
 
-import hxtorch
-from hxtorch.spiking import Experiment
-from hxtorch.spiking.modules import HXModule, InputNeuron, LIF, Synapse
-from hxtorch.spiking.handle import LIFObservables
-from hxtorch.spiking.utils import calib_helper
 import pygrenade_vx as grenade
+
+import hxtorch
+from hxtorch.core.utils import calib_helper
+from hxtorch.spiking import Experiment
+from hxtorch.spiking.modules import HXModule, LIF, Synapse
+from hxtorch.spiking.handle import LIFObservables
 
 
 class TestExperiment(unittest.TestCase):
@@ -65,7 +66,7 @@ class TestExperiment(unittest.TestCase):
         # There should be two connections present now
         self.assertEqual(len(experiment.modules.nodes), 2)
 
-    def test_get_hw_result(self):
+    def test_run(self):
         """ Test hardware results are returned properly """
         # Mock mode
         experiment = Experiment(mock=True)
@@ -79,19 +80,20 @@ class TestExperiment(unittest.TestCase):
         # Two modules should now be registered
         self.assertEqual(len(experiment.modules.nodes), 2)
         # Get results -> In mock there are no hardware results
-        results = experiment.get_hw_results(10)
-        self.assertEqual(results, (dict(), None))
+        results = experiment.run(10)
+        self.assertIsNone(results, None)
         # No input node should be injected
         self.assertEqual(len(experiment.modules.nodes), 2)
         # Do it again -> This should not change anything
-        results = experiment.get_hw_results(10)
-        self.assertEqual(results, (dict(), None))
+        results = experiment.run(10)
+        self.assertEqual(results, None)
         self.assertEqual(len(experiment.modules.nodes), 2)
 
         # HW mode
         experiment = Experiment(mock=False)
-        experiment.default_execution_instance.load_calib(
-            calib_path=calib_helper.nightly_calib_path())
+        experiment.calibration = calib_helper.fixture_calibration_from_file(
+            calib_helper.nightly_calib_path()
+        )
 
         # Modules
         module1 = Synapse(10, 10, experiment)
@@ -101,29 +103,18 @@ class TestExperiment(unittest.TestCase):
         handle1 = module1(input_handle)
         module2(handle1)
         self.assertEqual(len(experiment.modules.nodes), 2)
-        results, _ = experiment.get_hw_results(10)
+        results = experiment.run(10)
         self.assertEqual(len(experiment.modules.nodes), 3)
-        self.assertEqual(len(experiment._populations), 2)
-        self.assertEqual(len(experiment._projections), 1)
-        for pop in experiment._populations:
-            if isinstance(pop, InputNeuron):
-                continue
-            self.assertIsNotNone(results.get(pop.descriptor))
 
         # Execute again -> should still work as expected, in training we also
-        results, _ = experiment.get_hw_results(10)
+        results = experiment.run(10)
         self.assertEqual(len(experiment.modules.nodes), 3)
-        self.assertEqual(len(experiment._populations), 2)
-        self.assertEqual(len(experiment._projections), 1)
-        for pop in experiment._populations:
-            if isinstance(pop, InputNeuron):
-                continue
-            self.assertIsNotNone(results.get(pop.descriptor))
 
         # Deeper net
         experiment = Experiment(mock=False)
-        experiment.default_execution_instance.load_calib(
-            calib_path=calib_helper.nightly_calib_path())
+        experiment.calibration = calib_helper.fixture_calibration_from_file(
+            calib_helper.nightly_calib_path()
+        )
 
         # Modules
         module1 = Synapse(10, 10, experiment)
@@ -144,19 +135,14 @@ class TestExperiment(unittest.TestCase):
 
         # Six modules should now be registered
         self.assertEqual(len(experiment.modules.nodes), 6)
-        results, _ = experiment.get_hw_results(20)
+        results = experiment.run(20)
         self.assertEqual(len(experiment.modules.nodes), 7)
-        self.assertEqual(len(experiment._populations), 4)
-        self.assertEqual(len(experiment._projections), 3)
-        for pop in experiment._populations:
-            if isinstance(pop, InputNeuron):
-                continue
-            self.assertIsNotNone(results.get(pop.descriptor))
 
     def test_inter_batch_entry_wait(self):
         experiment = Experiment(mock=False)
-        experiment.default_execution_instance.load_calib(
-            calib_path=calib_helper.nightly_calib_path())
+        experiment.calibration = calib_helper.fixture_calibration_from_file(
+            calib_helper.nightly_calib_path()
+        )
 
         module1 = Synapse(10, 10, experiment)
         module2 = LIF(10, experiment)
@@ -167,9 +153,17 @@ class TestExperiment(unittest.TestCase):
         inter_batch_entry_wait = int(250e6)
         experiment.inter_batch_entry_wait = inter_batch_entry_wait
 
-        _, execution_info = experiment.get_hw_results(10)
+        result = experiment.run(10)
 
-        self.assertLess(int(inter_batch_entry_wait / 125), int(execution_info.time.execution_duration_per_hardware[grenade.common.ConnectionOnExecutor()][grenade.common.ChipOnConnection()].total_seconds()*1e6))
+        self.assertLess(
+            int(inter_batch_entry_wait / 125),
+            int(result.execution_instances.get(
+                grenade.common.ExecutionInstanceOnExecutor()
+                ).device_usage_duration[
+                    grenade.common.ChipOnConnection()
+                ].total_seconds() * 1e6,
+            ),
+        )
 
 if __name__ == "__main__":
     unittest.main()

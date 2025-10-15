@@ -3,14 +3,14 @@ Run function to execute a SNN given in an experiment.
 """
 from typing import Optional
 import pylogging as logger
+import pygrenade_vx as grenade
 from hxtorch.spiking.experiment import Experiment
-from hxtorch.spiking.execution_info import ExecutionInfo
 
 log = logger.get("hxtorch.snn.run")
 
 
 def run(experiment: Experiment, runtime: Optional[int])\
-        -> Optional[ExecutionInfo]:
+        -> Optional:
     """
     Execute the given experiment.
 
@@ -22,15 +22,34 @@ def run(experiment: Experiment, runtime: Optional[int])\
         runtime resolved with experiment.dt.
     """
     if not isinstance(runtime, int) and not experiment.mock:
-        raise ValueError("Requested runtime invalid.")
+        raise ValueError(
+            f"Requested runtime invalid. Expected an int got {type(runtime)}")
 
     # Network graph
-    data_map, execution_info \
-        = experiment.get_hw_results(runtime)
-    for module, inputs, output in experiment.modules.done():
-        module.exec_forward(inputs, output, data_map)
+    execution_info = experiment.run(runtime)
+    graph_elements = experiment.modules.done()
+    for module, inputs, output in graph_elements:
+        module.exec_forward(inputs, output)
 
     if execution_info is not None:
-        log.TRACE(execution_info.time)
+        # TODO: Generalize to more execution instances
+        log.TRACE(
+            "Grenade execution health info: ",
+            execution_info.execution_instances.get(
+                grenade.common.ExecutionInstanceOnExecutor()
+            ).execution_health_info
+        )
+        log.TRACE(
+            "Grenade device usage duration: ",
+            execution_info.execution_instances.get(
+                grenade.common.ExecutionInstanceOnExecutor()
+            ).device_usage_duration
+        )
+        log.TRACE(
+            "Grenade realtime duration: ",
+            execution_info.execution_instances.get(
+                grenade.common.ExecutionInstanceOnExecutor()
+            ).realtime_duration
+        )
 
     return execution_info

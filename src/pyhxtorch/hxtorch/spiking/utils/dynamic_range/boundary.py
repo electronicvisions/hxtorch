@@ -7,10 +7,12 @@ import torch
 from dlens_vx_v3 import lola, halco
 import hxtorch
 import hxtorch.spiking as hxsnn
-from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
-from hxtorch.spiking.utils.dynamic_range.helper import \
-    ConstantCurrentReadoutNeuron
-from hxtorch.spiking.parameter import HXBaseParameter
+from hxtorch.core.utils import calib_helper
+from hxtorch.core.parameter import HXBaseParameter
+from hxtorch.core.morphology import (
+    Morphology,
+    SingleCompartmentNeuron,
+)
 
 
 class Boundaries:
@@ -49,11 +51,15 @@ class Boundaries:
         # Layers
         synapse = hxsnn.Synapse(
             self.input_size, self.output_size, experiment=exp)
-        self.neuron = ConstantCurrentReadoutNeuron(
-            self.output_size, experiment=exp, **self.params,
-            neuron_structure=self.neuron_structure, shift_cadc_to_first=False)
-        self.neuron.enable_current = enable_current
-        self.neuron.current_type = current_type
+        self.neuron = hxsnn.LI(
+            self.output_size,
+            experiment=exp,
+            **self.params,
+            neuron_structure=self.neuron_structure,
+            shift_cadc_to_first=False,
+            enable_constant_current=enable_current,
+            current_type=current_type,
+        )
 
         # forward
         inputs = hxsnn.LIFObservables(spikes=inputs)
@@ -69,7 +75,9 @@ class Boundaries:
         # Baseline
         exp = hxsnn.Experiment(mock=False, dt=dt)
         if self.calib_path is not None:
-            exp.default_execution_instance.load_calib(self.calib_path)
+            exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
         inputs = torch.zeros(
             (self.time_length, self.batch_size, self.input_size))
         baselines = self.build_model(inputs, exp, enable_current=False)
@@ -78,7 +86,9 @@ class Boundaries:
         # Upper
         exp = hxsnn.Experiment(mock=False, dt=dt)
         if self.calib_path is not None:
-            exp.default_execution_instance.load_calib(self.calib_path)
+            exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
         inputs = torch.zeros(
             (self.time_length, self.batch_size, self.input_size))
         upperlines = self.build_model(
@@ -89,7 +99,9 @@ class Boundaries:
         # Lower
         exp = hxsnn.Experiment(mock=False, dt=dt)
         if self.calib_path is not None:
-            exp.default_execution_instance.load_calib(self.calib_path)
+            exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
         inputs = torch.zeros(
             (self.time_length, self.batch_size, self.input_size))
         lowerlines = self.build_model(
@@ -97,10 +109,6 @@ class Boundaries:
             current_type=lola.AtomicNeuron.ConstantCurrent.Type.sink)
         # Load calib
         hxsnn.run(exp, self.time_length)
-
-        # Remember HW <-> SW mapping
-        self.hw_neurons = exp.default_execution_instance.neuron_placement \
-            .id2logicalneuron(self.neuron.unit_ids)
 
         hxtorch.release_hardware()
         self.log.TRACE("Experiment ran ...")
@@ -111,12 +119,13 @@ class Boundaries:
                      lowerlines: torch.Tensor) -> Tuple[torch.Tensor, ...]:
         """ post-process data """
         self.log.TRACE("Postprocessing ...")
-        baselines = baselines.membrane_cadc.detach().mean(0).mean(0).mean()
-        upperlines = upperlines.membrane_cadc.detach()[
+        baselines_ = baselines.membrane_cadc.detach().mean(0).mean(0).mean()
+        upperlines_ = upperlines.membrane_cadc.detach()[
             int(0.8 * self.time_length):].mean(0).mean(0).mean()
-        lowerlines = lowerlines.membrane_cadc.detach()[
+        lowerlines_ = lowerlines.membrane_cadc.detach()[
             int(0.8 * self.time_length):].mean(0).mean(0).mean()
-        return baselines, upperlines, lowerlines
+
+        return baselines_, upperlines_, lowerlines_
 
 
 def get_dynamic_range(

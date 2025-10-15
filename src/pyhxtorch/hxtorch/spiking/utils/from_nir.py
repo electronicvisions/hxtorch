@@ -1,17 +1,23 @@
 '''
 Translate a NIRGraph to an hxtorch SNN.
 '''
-
 from dataclasses import dataclass, field
 from functools import partial
 import torch
+
+import pygrenade_vx as grenade
+import _pygrenade_vx_network_abstract
+
 import nir
 
+from hxtorch.core.utils import calib_helper
 from hxtorch.spiking.experiment import Experiment
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.modules import AELIF, LIF, LI, InputNeuron, Synapse
-from hxtorch.spiking.parameter import (HXTransformedModelParameter,
-                                       MixedHXModelParameter)
+from hxtorch.spiking.parameter import (
+    HXTransformedModelParameter,
+    MixedHXModelParameter,
+)
 from hxtorch.spiking.run import run
 from hxtorch.spiking.transforms import weight_transforms
 
@@ -116,13 +122,16 @@ def _map_nir_to_hxtorch(
             trace_scale=cfg.trace_scale,
             cadc_time_shift=cfg.trace_shift,
             shift_cadc_to_first=True,
-            enable_cadc_recording=cfg.cadc_recording)
+            enable_cadc_recording=cfg.cadc_recording,
+        )
         return module
     if isinstance(node, nir.Input):
         size = node.input_type["input"][0]
         module = InputNeuron(
             size,
-            experiment=exp)
+            experiment=exp,
+            enable_spike_loopback=cfg.input_loopback,
+        )
         return module
     raise NotImplementedError(
         f"Node type {type(node)} is not supported for conversion to \
@@ -148,10 +157,13 @@ def from_nir(
             self.exp = Experiment(mock=cfg.mock, dt=cfg.dt)
             if not cfg.mock:
                 if cfg.calib_path is not None:
-                    self.exp.default_execution_instance.load_calib(
-                        cfg.calib_path)
-                self.exp.default_execution_instance.input_loopback = \
-                    cfg.input_loopback
+                    calibration = \
+                        _pygrenade_vx_network_abstract.FixtureCalibration()
+                    calibration.chips = {
+                        grenade.common.ExecutionInstanceOnExecutor():
+                        calib_helper.chip_from_file(cfg.calib_path)
+                    }
+                    self.exp.calibration = calibration
 
             # Build dict of hxtorch modules
             self.hxnodes = torch.nn.ModuleDict()

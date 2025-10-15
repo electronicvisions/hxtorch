@@ -3,18 +3,14 @@ Implementing a module wrapper to wrap multiple modules as one
 """
 # pylint: disable=too-many-lines
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Dict, Tuple, List, Optional
-import pylogging as logger
+from typing import TYPE_CHECKING, Union, Tuple, List, Optional
 
 import torch
-import pygrenade_vx.network as grenade
 
 from hxtorch.spiking.handle import TensorHandle
 from hxtorch.spiking.modules.hx_module import HXFunctionalModule, HXModule
 if TYPE_CHECKING:
     from hxtorch.spiking.experiment import Experiment
-
-log = logger.get("hxtorch.spiking.modules")
 
 
 class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
@@ -93,11 +89,11 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
         self.experiment.connect_wrapper(self)
 
     # pylint: disable=redefined-builtin
-    def exec_forward(self, input: Tuple[TensorHandle],
-                     output: Tuple[TensorHandle],
-                     hw_map: Dict[
-                         grenade.PopulationOnNetwork, Tuple[torch.Tensor]]) \
-            -> None:
+    def exec_forward(
+        self,
+        input: Tuple[TensorHandle],
+        output: Tuple[TensorHandle],
+    ) -> None:
         """
         Execute the the forward function of the wrapper. This method assigns
         each output handle in `output` their corresponding PyTorch tensors and
@@ -110,16 +106,21 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
         :param hw_map: The hardware data map.
         """
         # Hw data for each module
-        hw_data = tuple(
-            hw_map.get(module.descriptor) for module in self.modules.values())
+        hw_data = [None] * len(self.modules)
+        if not self.experiment.mock:
+            for i, module in enumerate(self.modules.values()):
+                hw_data[i] = module.post_process(
+                    module.hw_observables,
+                    self.experiment.runtime_in_s,
+                )
         # Concat input handles according to self.modules order
-        output_tensors = self.func(input, hw_data=hw_data)
+        returned_handles = self.func(input, hw_data=tuple(hw_data))
         # Check for have tuples
-        if not isinstance(output_tensors, tuple):
-            output_tensors = (output_tensors,)
+        if not isinstance(returned_handles, tuple):
+            returned_handles = (returned_handles,)
         # We expect the same number of outputs as we have modules
         # TODO: Allow for multiple outputs per module
-        assert len(output_tensors) == len(self.modules)
+        assert len(returned_handles) == len(self.modules)
         # Assign output tensors
-        for returned_handle, output_handle in zip(output_tensors, output):
+        for returned_handle, output_handle in zip(returned_handles, output):
             output_handle.clone(returned_handle)

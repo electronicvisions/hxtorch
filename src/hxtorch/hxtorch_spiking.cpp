@@ -14,7 +14,6 @@
 #include "hxtorch/spiking/tensor_to_spike_times.h"
 #include "hxtorch/spiking/types.h"
 
-#include "grenade/vx/signal_flow/output_data.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -76,13 +75,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "tensor_to_spike_times", &hxtorch::spiking::tensor_to_spike_times, pybind11::arg("times"),
 	    pybind11::arg("dt"));
-	m.def(
-	    "extract_spikes", &hxtorch::spiking::extract_spikes, pybind11::arg("data"),
-	    pybind11::arg("network_graph"));
-	m.def(
-	    "extract_cadc", &hxtorch::spiking::extract_cadc, pybind11::arg("data"),
-	    pybind11::arg("network_graph"));
-	m.def(
-	    "extract_madc", &hxtorch::spiking::extract_madc, pybind11::arg("data"),
-	    pybind11::arg("network_graph"));
+	m.def("extract_spikes", &hxtorch::spiking::extract_spikes, pybind11::arg("spike_times"));
+	m.def("extract_cadc", &hxtorch::spiking::extract_cadc, pybind11::arg("data"));
+	m.def("extract_madc", &hxtorch::spiking::extract_madc, pybind11::arg("samples"));
 }

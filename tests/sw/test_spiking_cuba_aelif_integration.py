@@ -12,6 +12,7 @@ from hxtorch.spiking.functional import cuba_aelif_integration, CuBaStepCode
 from hxtorch.spiking import Handle
 from hxtorch.spiking.observables import AnalogObservable
 
+
 class TestAELIFIntegration(unittest.TestCase):
     """
     Test current based AELIF integration function.

@@ -1,11 +1,32 @@
 """ Hardware observables object """
-from typing import Optional, Union, Tuple, Dict
+from __future__ import annotations
+
+from typing import Optional
 from dataclasses import dataclass
 import torch
 
-import _hxtorch_spiking  # pylint: disable=import-error
-from _hxtorch_spiking import SpikeHandle, CADCHandle, MADCHandle  # pylint: disable=import-error
+import pyfisch_vx_v3 as fisch
 import pygrenade_vx as grenade
+
+import _hxtorch_spiking  # pylint: disable=import-error
+from hxtorch.core.observables import HXObservables
+
+
+SpikeTimes = list[list[list[
+    grenade.common.Time
+]]]
+CADCSamples = list[list[list[
+    tuple[
+        grenade.common.Time,
+        grenade.signal_flow.Int8
+    ]
+]]]
+MADCSamples = list[list[list[
+    tuple[
+        grenade.common.Time,
+        fisch.MADCSampleFromChip.Value
+    ]
+]]]
 
 
 @dataclass
@@ -18,60 +39,24 @@ class AnalogObservable:
 
 
 @dataclass
-class HardwareObservables:
-    """
-    Dataclass that holds the observable data measured on hardware, before
-    it is fed into post processing.
-    """
-    spikes: Optional[SpikeHandle] = None
-    cadc: Optional[CADCHandle] = None
-    madc: Optional[MADCHandle] = None
-
-
-class HardwareObservablesExtractor:
-
-    _spikes: Dict[
-        grenade.network.PopulationOnNetwork, Optional[SpikeHandle]] = None
-    _cadc_samples: Dict[
-        grenade.network.PopulationOnNetwork, Optional[CADCHandle]] = None
-    _madc_samples: Dict[
-        grenade.network.PopulationOnNetwork, Optional[MADCHandle]] = None
+class HXTorchObservables(HXObservables):
 
     def set_data(
-            self, network_graph: grenade.network.NetworkGraph,
-            result_map: grenade.signal_flow.OutputData) -> None:
+        self,
+        spikes: SpikeTimes | None = None,
+        cadc: CADCSamples | None = None,
+        madc: MADCSamples | None = None,
+    ) -> None:
         """
-        Set the data to be extracted. This method also evokes data extraction.
+        Extract and store hardware observables.
 
-        :param network_graph: The logical grenade network graph describing the
-            logic of th experiment.
-        :param result_map: The result map returned by grenade holding all
-            recorded hardware observables.
+        :param spikes: Raw spike observable data.
+        :param cadc: Raw CADC observable data.
+        :param madc: Raw MADC observable data.
         """
-        self._spikes = _hxtorch_spiking.extract_spikes(
-            result_map, network_graph)
-        self._cadc_samples = _hxtorch_spiking.extract_cadc(
-            result_map, network_graph)
-        self._madc_samples = _hxtorch_spiking.extract_madc(
-            result_map, network_graph)
-
-    def get(
-            self, descriptor: Optional[Union[
-                grenade.network.PopulationOnNetwork,
-                grenade.network.ProjectionOnNetwork,
-                Tuple[grenade.network.ProjectionOnNetwork, ...]]] = None) \
-            -> HardwareObservables:
-        """
-        Get the ``HardwareObservables`` assigned to the ``HXModule`` with
-        grenade Population/Projection descriptor ``descriptor``.
-
-        :param descriptor: The Population/Projection grenade descriptor to get
-            the data for
-
-        :return: The hardware data assigned to the HXModule with descriptor
-        ``descriptor``
-        """
-        return HardwareObservables(
-            spikes=self._spikes.get(descriptor),
-            cadc=self._cadc_samples.get(descriptor),
-            madc=self._madc_samples.get(descriptor))
+        if spikes is not None:
+            self.spikes = _hxtorch_spiking.extract_spikes(spikes)
+        if cadc is not None:
+            self.cadc = _hxtorch_spiking.extract_cadc(cadc)
+        if madc is not None:
+            self.madc = _hxtorch_spiking.extract_madc(madc)

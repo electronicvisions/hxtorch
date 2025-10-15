@@ -1,7 +1,7 @@
 """
 Measure translation between hardware and software weights
 """
-from typing import Tuple, Optional, Union, Dict
+from typing import Tuple, Optional, Dict
 import pylogging as logger
 from tqdm import tqdm
 
@@ -12,10 +12,10 @@ from dlens_vx_v3 import lola, halco
 
 import hxtorch
 import hxtorch.spiking as hxsnn
-import hxtorch.spiking.functional as F
-from hxtorch.spiking.morphology import Morphology, SingleCompartmentNeuron
+from hxtorch.core.utils import calib_helper
 from hxtorch.spiking.utils.dynamic_range.threshold import Threshold
-from hxtorch.spiking.parameter import HXBaseParameter
+from hxtorch.core.morphology import Morphology, SingleCompartmentNeuron
+from hxtorch.core.parameter import HXBaseParameter
 
 
 class WeightScaling:
@@ -106,7 +106,9 @@ class WeightScaling:
 
         # Load calib
         if self.calib_path is not None:
-            self.exp.default_execution_instance.load_calib(self.calib_path)
+            self.exp.calibration = calib_helper.fixture_calibration_from_file(
+                self.calib_path,
+            )
 
         # Sweep
         hw_amps = torch.zeros(hw_weights.shape[0], self.output_size)

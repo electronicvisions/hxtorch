@@ -2,18 +2,13 @@
 Test SNN examples
 """
 import unittest
-from functools import partial
-import torch
-import numpy as np
-import quantities as pq
 
-from dlens_vx_v3 import halco
-from calix.spiking.neuron import NeuronCalibTarget
-
-from hxtorch.spiking.experiment import Experiment
-from hxtorch.spiking.parameter import (
-    HXParameter, MixedHXModelParameter, HXTransformedModelParameter,
-    ModelParameter)
+from hxtorch.core.parameter import (
+    HXParameter,
+    MixedHXModelParameter,
+    HXTransformedModelParameter,
+    ModelParameter,
+)
 
 
 class TestParameter(unittest.TestCase):

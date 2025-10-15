@@ -7,6 +7,9 @@ import pickle
 from pathlib import Path
 from dlens_vx_v3 import sta
 
+import pygrenade_vx as grenade
+import pygrenade_vx.network.abstract as _abstract
+
 import _hxtorch_core
 
 
@@ -41,8 +44,22 @@ def calib_from_calix_native(path: Union[str, Path]) -> dict:
     """
     with open(path, "rb") as calibfile:
         result = pickle.load(calibfile)
-    # return result.to_chip()
     return result
+
+
+def chip_from_calibration_file(path: Union[str, Path]):
+    """
+    Extract chip config from a known calibration file format.
+
+    Supports portable-binary coco dumps (e.g. ``*.pbin``) and
+    calix-native pickle dumps (e.g. ``*_calix-native.pkl``).
+
+    :param path: path to calibration file.
+    """
+    path = Path(path)
+    if path.suffix == ".pkl":
+        return calib_from_calix_native(path)
+    return chip_from_file(path)
 
 
 def target_from_calix_native(path: Union[str, Path]) -> dict:
@@ -54,6 +71,37 @@ def target_from_calix_native(path: Union[str, Path]) -> dict:
     with open(path, "rb") as calibfile:
         result = pickle.load(calibfile)
     return result.target
+
+
+def fixture_calibration_from_file(path: Union[str, Path]):
+    """
+    Create a FixtureCalibration from a calibration file path.
+
+    :param path: path to file containing coco dump.
+    :return: FixtureCalibration instance.
+    """
+    chip = chip_from_calibration_file(path)
+    return fixture_calibration_from_chip(chip)
+
+
+def fixture_calibration_from_chip(chip):
+    """
+    Create a FixtureCalibration from a chip configuration object.
+
+    :param chip: lola chip configuration (e.g. lola.Chip.default_neuron_bypass).
+    :return: FixtureCalibration instance.
+    """
+    # TODO: make this generic
+    calibration = _abstract.FixtureCalibration()
+    calibration.chips = {
+        grenade.common.ExecutionInstanceOnExecutor(
+            grenade.common.ExecutionInstanceID(0),
+            grenade.common.ConnectionOnExecutor(0)
+        ): {
+            grenade.common.ChipOnConnection(): chip
+        },
+    }
+    return calibration
 
 
 def nightly_calib_path(name: str = "spiking") -> Path:
