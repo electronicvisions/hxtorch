@@ -1,7 +1,22 @@
 """
 Generic parameter object holding hardware configurable neuron parameters.
 """
-from typing import Any, Union, Callable
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Union,
+)
+
+import torch
+
+
+# pylint: disable=invalid-name
+def equal(x: Union[torch.Tensor, float, int],
+          y: Union[torch.Tensor, float, int]) -> bool:
+    x = torch.as_tensor(x, dtype=torch.float32)
+    y = torch.as_tensor(y, dtype=torch.float32)
+    return torch.allclose(x, y) and x.shape == y.shape
 
 
 class HXBaseParameter:
@@ -81,6 +96,55 @@ class ModelParameter(HXBaseParameter):
         self._hardware_value = hardware_value
 
 
+# pylint: disable=super-init-not-called
+class MockParameter(ModelParameter):
+    def __init__(self, mean: Union[torch.Tensor, float, int],
+                 std: Union[torch.Tensor, float, int, None] = None):
+        """
+        If mean and std are torch.Tensors, they must be of the same size or
+        std must have only one element..
+        """
+        self._mean = mean
+        self._std = std
+        self.sample()
+
+    @property
+    def mean(self):
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        if not equal(self._mean, mean):
+            self._mean = mean
+            self.sample()
+
+    @property
+    def std(self):
+        return self._std
+
+    @std.setter
+    def std(self, std):
+        if not equal(self._std, std):
+            self._std = std
+            self.sample()
+
+    def sample(self, size: Optional[int] = None):
+        if self._std is None and size is None:
+            self._model_value = self._mean
+        elif self._std is None:
+            self._model_value = torch.as_tensor(self._mean).expand(size)
+        elif size is None:
+            self._model_value = torch.normal(
+                mean=torch.as_tensor(self._mean, dtype=torch.float32),
+                std=torch.as_tensor(self._std, dtype=torch.float32))
+        else:
+            self._model_value = torch.normal(
+                mean=torch.as_tensor(
+                    self._mean, dtype=torch.float32).expand(size),
+                std=torch.as_tensor(
+                    self._std, dtype=torch.float32).expand(size))
+
+
 ParameterType = Union[
     HXParameter, MixedHXModelParameter, HXTransformedModelParameter,
-    ModelParameter]
+    ModelParameter, MockParameter]

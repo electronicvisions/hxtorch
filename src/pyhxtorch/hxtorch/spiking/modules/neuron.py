@@ -28,6 +28,7 @@ from hxtorch.core.morphology import (
 from hxtorch.core.parameter import (
     HXBaseParameter,
     HXTransformedModelParameter,
+    MockParameter,
 )
 from hxtorch.core.utils.readout_source import ReadoutSource
 from hxtorch.spiking.handle import (
@@ -302,6 +303,12 @@ class AELIF(Population):
             spike_triggered_adaptation=spike_triggered_adaptation,
             **extra_params,
         )
+
+        for param_name in self._parameters_defaults:
+            param = getattr(self, self._param_name_mapping[param_name])
+            if isinstance(param, MockParameter):
+                param.mean = torch.as_tensor(
+                    param.mean, dtype=torch.float32).expand(self.size)
 
         self.alpha = alpha
         self.method = method

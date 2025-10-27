@@ -1,7 +1,10 @@
 """
 Generic parameter object holding hardware configurable neuron parameters.
 """
-from typing import Any, Callable
+from typing import (
+    Any,
+    Callable,
+)
 import torch
 
 from hxtorch.core.parameter import (

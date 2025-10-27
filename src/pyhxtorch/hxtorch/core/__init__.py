@@ -3,5 +3,6 @@ from hxtorch.core.parameter import (
     MixedHXModelParameter,
     HXTransformedModelParameter,
     ModelParameter,
+    MockParameter,
 )
 from hxtorch.core.morphology import SingleCompartmentNeuron, Morphology
