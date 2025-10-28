@@ -28,6 +28,16 @@ class HXBaseParameter(torch.nn.Module):
     def model_value(self, model_value):
         self._model_value = model_value
 
+    def model_value_detach(self):
+        if self.is_trainable():
+            return self._model_value.detach()
+        return self._model_value
+
+    def hardware_value_detach(self):
+        if self.is_trainable():
+            return self._hardware_value.detach()
+        return self._hardware_value
+
     def set_on_chip(self, chip, neuron_coordinates):
         if self.set_on_chip_func is None:
             raise ValueError(

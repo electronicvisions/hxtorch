@@ -182,7 +182,7 @@ class TestModuleManager(unittest.TestCase):
         # Test neuron followed by dropout
         modules = ModuleManager()
         experiment = snn.Experiment(mock=True)
-        module1 = snn.LIF(10, experiment, tau_syn=None, tau_mem=None)
+        module1 = snn.LIF(10, experiment, tau_syn=1e-6, tau_mem=1e-6)
         module2 = snn.BatchDropout(10, 0.5, experiment)
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()
@@ -379,7 +379,7 @@ class TestModuleManager(unittest.TestCase):
         module1 = snn.InputNeuron(12, experiment=experiment)
         module2 = snn.Synapse(10, 12, experiment=experiment)
         module3 = snn.LIF(
-            10, experiment=experiment, tau_syn=None, tau_mem=None)
+            10, experiment=experiment, tau_syn=1e-6, tau_mem=1e-6)
         module4 = snn.BatchDropout(10, 0.5, experiment=experiment)
         handle1 = snn.LIFObservables()
         handle2 = snn.LIFObservables()

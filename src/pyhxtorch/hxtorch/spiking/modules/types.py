@@ -73,6 +73,7 @@ class Population(BasePopulation):
         "tau_syn": 1e-5,
         "i_synin_gm": 500,
         "membrane_capacitance": 63,
+        "leak_conductance": None,
         "refractory_time": 2e-6,
         "synapse_dac_bias": 600,
         "holdoff_time": 0,

@@ -58,6 +58,7 @@ class AELIF(Population):
                  membrane_capacitance: ModuleParameterType = (
                      HXTransformedModelParameter(
                          10e-6, lambda model_value: model_value / 10e-6 * 63)),
+                 leak_conductance: Optional[ModuleParameterType] = None,
                  refractory_time: ModuleParameterType = 1e-6,
                  synapse_dac_bias: ModuleParameterType = 600,
                  holdoff_time: ModuleParameterType = 0.,
@@ -138,6 +139,9 @@ class AELIF(Population):
         :param membrane_capacitance: The capacitance of the membrane. The
             available range is 0 to approximately 2.2 pF, represented as 0 to
             63 LSB.
+        :param leak_conductance: The leak conductance of the memebrane. When
+            set to None, this value is set to membrane_capacitance / tau_mem.
+            Defaults to None.
         :param refractory_time: The refractory time constant in s. Defaults to
             HXParameter(1e-6).
         :param synapse_dac_bias: Synapse DAC bias current that is desired. Can
@@ -247,6 +251,7 @@ class AELIF(Population):
                          tau_syn=tau_syn,
                          i_synin_gm=i_synin_gm,
                          membrane_capacitance=membrane_capacitance,
+                         leak_conductance=leak_conductance,
                          refractory_time=refractory_time,
                          synapse_dac_bias=synapse_dac_bias,
                          holdoff_time=holdoff_time,
@@ -776,8 +781,10 @@ class AELIF(Population):
                 threshold=self.threshold.model_value,
                 tau_syn=self.tau_syn.model_value,
                 c_mem=self.membrane_capacitance.model_value,
-                g_l=(self.membrane_capacitance.model_value
-                     / self.tau_mem.model_value),
+                g_l=(self.leak_conductance.model_value
+                     if self.leak_conductance.model_value is not None
+                     else self.membrane_capacitance.model_value_detach()
+                     / self.tau_mem.model_value_detach()),
                 refractory_time=self.refractory_time.model_value,
                 method=self.method,
                 alpha=self.alpha,
@@ -839,6 +846,7 @@ class LIF(AELIF):
                  membrane_capacitance: ModuleParameterType = (
                      HXTransformedModelParameter(
                          10e-6, lambda model_value: model_value / 10e-6 * 63)),
+                 leak_conductance: Optional[ModuleParameterType] = None,
                  refractory_time: ModuleParameterType = 1e-6,
                  synapse_dac_bias: ModuleParameterType = 600,
                  holdoff_time: ModuleParameterType = 0e-6,
@@ -902,6 +910,9 @@ class LIF(AELIF):
         :param membrane_capacitance: The capacitance of the membrane. The
             available range is 0 to approximately 2.2 pF, represented as 0 to
             63 LSB.
+        :param leak_conductance: The leak conductance of the memebrane. When
+            set to None, this value is set to membrane_capacitance / tau_mem.
+            Defaults to None.
         :param refractory_time: The refractory time constant in s. Defaults to
             HXParameter(1e-6).
         :param synapse_dac_bias: Synapse DAC bias current that is desired. Can
@@ -977,6 +988,7 @@ class LIF(AELIF):
             tau_syn=tau_syn,
             i_synin_gm=i_synin_gm,
             membrane_capacitance=membrane_capacitance,
+            leak_conductance=leak_conductance,
             refractory_time=refractory_time,
             synapse_dac_bias=synapse_dac_bias,
             holdoff_time=holdoff_time,
@@ -1076,6 +1088,7 @@ class LI(AELIF):
                  membrane_capacitance: ModuleParameterType = (
                      HXTransformedModelParameter(
                          10e-6, lambda model_value: model_value / 10e-6 * 63)),
+                 leak_conductance: Optional[ModuleParameterType] = None,
                  synapse_dac_bias: ModuleParameterType = 600,
                  execution_instance: Optional[ExecutionInstance] = None,
                  enable_cadc_recording: bool = True,
@@ -1128,6 +1141,9 @@ class LI(AELIF):
         :param membrane_capacitance: The capacitance of the membrane. The
             available range is 0 to approximately 2.2 pF, represented as 0 to
             63 LSB.
+        :param leak_conductance: The leak conductance of the memebrane. When
+            set to None, this value is set to membrane_capacitance / tau_mem.
+            Defaults to None.
         :param synapse_dac_bias: Synapse DAC bias current that is desired. Can
             be lowered in order to reduce the amplitude of a spike at the input
             of the synaptic input OTA. This can be useful to avoid saturation
@@ -1191,6 +1207,7 @@ class LI(AELIF):
             tau_syn=tau_syn,
             i_synin_gm=i_synin_gm,
             membrane_capacitance=membrane_capacitance,
+            leak_conductance=leak_conductance,
             refractory_time=0.,
             synapse_dac_bias=synapse_dac_bias,
             execution_instance=execution_instance,
