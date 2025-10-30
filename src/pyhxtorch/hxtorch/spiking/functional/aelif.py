@@ -8,6 +8,7 @@ from hxtorch.spiking.handle import Handle
 from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
+from hxtorch.spiking.functional.mock import RandomNoise, RandomNoiseAdd
 
 
 # Allow redefining builtin for PyTorch consistency
@@ -33,6 +34,12 @@ def cuba_aelif_integration(
         hw_data: Optional[type(Handle(
             'voltage', 'adaptation', 'spikes'))] = None,
         dt: float = 1e-6,
+        trace_noise_current: Optional[RandomNoise] = None,
+        trace_noise_voltage: Optional[RandomNoise] = None,
+        trace_noise_adaptation: Optional[RandomNoise] = None,
+        cadc_readout_noise_current: Optional[RandomNoise] = None,
+        cadc_readout_noise_voltage: Optional[RandomNoise] = None,
+        cadc_readout_noise_adaptation: Optional[RandomNoise] = None,
         leaky: bool = True,
         fire: bool = True,
         refractory: bool = False,
@@ -82,6 +89,36 @@ def cuba_aelif_integration(
     :param hw_data: An optional tuple holding optional hardware observables in
         the order (spikes, membrane_cadc, membrane_madc).
     :param dt: Integration step width.
+    :param trace_noise_current: `RandomNoise` object which generates random
+        noise that is added onto the simulation result of the synaptic input
+        current in each time step during simulation in order to mock
+        temporal noise. If set to `None`, no temporal noise will be applied to
+        the current trace.
+    :param trace_noise_voltage: `RandomNoise` object which generates random
+        noise that is added onto the simulation result of the membrane
+        voltage increment in each time step during simulation in order to mock
+        temporal noise. If set to `None`, no temporal noise will be applied to
+        the voltage trace.
+    :param trace_noise_adaptation: `RandomNoise` object which generates random
+        noise that is added onto the simulation result of the adaptation in
+        each time step during simulation in order to mock temporal noise. If
+        set to `None`, no temporal noise will be applied to the adaptation
+        trace.
+    :param cadc_readout_noise_current: `RandomNoise` object which generates
+        random noise that is added onto the simulation result of the
+        synaptic current once after the simulation in order to mock readout
+        noise.  If set to `None`, no readout noise will be applied to the
+        synaptic current.
+    :param cadc_readout_noise_voltage: `RandomNoise` object which generates
+        random noise that is added onto the simulation result of the
+        membrane voltage once after the simulation in order to mock readout
+        noise.  If set to `None`, no readout noise will be applied to the
+        membrane voltage.
+    :param cadc_readout_noise_adaptation: `RandomNoise` object which
+        generates random noise that is added onto the simulation result of
+        the adaptation once after the simulation in order to mock readout
+        noise.  If set to `None`, no readout noise will be applied to the
+        adaptation.
     :param leaky: Flag that enables / disables the leak term when set
         to true / false
     :param fire: Flag that enables / disables firing behaviour when set
@@ -137,10 +174,25 @@ def cuba_aelif_integration(
     membrane = torch.empty_like(input, device=dev)
     adaptation_storage = torch.empty_like(input, device=dev)
 
+    # Set up mock attributes
+    if trace_noise_current is None:
+        trace_noise_current = RandomNoise(None, dev)
+    if trace_noise_voltage is None:
+        trace_noise_voltage = RandomNoise(None, dev)
+    if trace_noise_adaptation is None:
+        trace_noise_adaptation = RandomNoise(None, dev)
+    trace_noise_current.to(dev)
+    trace_noise_voltage.to(dev)
+    trace_noise_adaptation.to(dev)
+
     # Initialize dictionary to match locals with code variables
     variables = {'i': i, 'z': z, 'adaptation': adaptation,
                  'tau_syn': tau_syn, 'c': c_mem, 'dt': dt,
-                 'exp': torch.exp, 'Unterjubel': Unterjubel}
+                 'exp': torch.exp, 'Unterjubel': Unterjubel,
+                 'random_noise_current': trace_noise_current,
+                 'random_noise_voltage': trace_noise_voltage,
+                 'random_noise_adaptation': trace_noise_adaptation,
+                 'RandomNoiseAdd': RandomNoiseAdd}
 
     if leaky:
         v[:] = leak
@@ -219,5 +271,17 @@ def cuba_aelif_integration(
         spikes[ts, :, :] = variables['z']
         adaptation_storage[ts, :, :] = variables['adaptation']
 
+    # Add CADC readout noise
+    if cadc_readout_noise_current is not None:
+        current = RandomNoiseAdd.apply(
+            current, cadc_readout_noise_current.sample(current.shape))
+    if cadc_readout_noise_voltage is not None and membrane_cadc_hw is None:
+        membrane = RandomNoiseAdd.apply(
+            membrane, cadc_readout_noise_voltage.sample(membrane.shape))
+    if (cadc_readout_noise_adaptation is not None
+            and adaptation_cadc_hw is None):
+        adaptation_storage = RandomNoiseAdd.apply(
+            adaptation_storage,
+            cadc_readout_noise_adaptation.sample(adaptation_storage.shape))
     return (membrane, membrane_madc_hw, current, adaptation_storage,
             adaptation_madc_hw, spikes)

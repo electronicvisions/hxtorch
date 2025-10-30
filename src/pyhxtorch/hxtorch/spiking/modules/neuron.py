@@ -31,6 +31,7 @@ from hxtorch.core.parameter import (
     MockParameter,
 )
 from hxtorch.core.utils.readout_source import ReadoutSource
+from hxtorch.spiking.functional.mock import RandomNoise
 from hxtorch.spiking.handle import (
     Handle,
     SynapseHandle,
@@ -112,6 +113,12 @@ class AELIF(Population):
         cadc_time_shift: int = 0, shift_cadc_to_first: bool = False,
         interpolation_mode: str = "linear",
         neuron_structure: Optional[Morphology] = None,
+        trace_noise_current: Optional[RandomNoise] = None,
+        trace_noise_voltage: Optional[RandomNoise] = None,
+        trace_noise_adaptation: Optional[RandomNoise] = None,
+        cadc_readout_noise_current: Optional[RandomNoise] = None,
+        cadc_readout_noise_voltage: Optional[RandomNoise] = None,
+        cadc_readout_noise_adaptation: Optional[RandomNoise] = None,
         leaky: bool = True,
         fire: bool = True,
         exponential: bool = True,
@@ -252,6 +259,36 @@ class AELIF(Population):
             CADC traces onto the given time grid.
         :param neuron_structure: Structure of the neuron. If not supplied a
             single neuron circuit is used.
+        :param trace_noise_current: `RandomNoise` object which generates
+            random noise that is added onto the simulation result of the
+            synaptic input current in each time step during simulation, in
+            order to mock temporal noise. If set to `None`, no temporal noise
+            will be applied to the current trace.
+        :param trace_noise_voltage: `RandomNoise` object which generates
+            random noise that is added onto the simulation result of the
+            membrane voltage increment in each time step during simulation in
+            order to mock temporal noise. If set to `None`, no temporal noise
+            will be applied to the voltage trace.
+        :param trace_noise_adaptation: `RandomNoise` object which generates
+            random noise that is added onto the simulation result of the
+            adaptation in each time step during simulation in order to mock
+            temporal noise. If set to `None`, no temporal noise will be
+            applied to the adaptation trace.
+        :param cadc_readout_noise_current: `RandomNoise` object which generates
+            random noise that is added onto the simulation result of the
+            synaptic current once after the simulation in order to mock readout
+            noise.  If set to `None`, no readout noise will be applied to the
+            synaptic current.
+        :param cadc_readout_noise_voltage: `RandomNoise` object which generates
+            random noise that is added onto the simulation result of the
+            membrane voltage once after the simulation in order to mock readout
+            noise.  If set to `None`, no readout noise will be applied to the
+            membrane voltage.
+        :param cadc_readout_noise_adaptation: `RandomNoise` object which
+            generates random noise that is added onto the simulation result of
+            the adaptation once after the simulation in order to mock readout
+            noise.  If set to `None`, no readout noise will be applied to the
+            adaptation.
         :param leaky: Flag for enabling / disabling the leak term.
         :param fire: Flag for enabling / disabling the firing behaviour.
         :param exponential: Flag for enabling / disabling the exponential term.
@@ -353,6 +390,16 @@ class AELIF(Population):
             self.output_type = type(Handle(
                 'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
                 'adaptation_madc', 'spikes'))
+
+        self.trace_noise_current = trace_noise_current
+        self.trace_noise_voltage = trace_noise_voltage
+        self.trace_noise_adaptation = trace_noise_adaptation
+        self.noisy_traces = not (
+            trace_noise_current is None and trace_noise_voltage is None
+            and trace_noise_adaptation is None)
+        self.cadc_readout_noise_current = cadc_readout_noise_current
+        self.cadc_readout_noise_voltage = cadc_readout_noise_voltage
+        self.cadc_readout_noise_adaptation = cadc_readout_noise_adaptation
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -620,7 +667,8 @@ class AELIF(Population):
             spike_triggered_adaptation=self.spike_triggered_adaptation,
             hw_voltage_trace_available=hw_voltage_cadc_trace_available,
             hw_adaptation_trace_available=hw_adaptation_cadc_trace_available,
-            hw_spikes_available=hw_spikes_available).generate()
+            hw_spikes_available=hw_spikes_available,
+            noisy_traces=self.noisy_traces).generate()
         assert all(synapse_handle.graded_spikes is not None for
                    synapse_handle in input)
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
@@ -648,6 +696,13 @@ class AELIF(Population):
                 tau_adap=self.tau_adap.model_value,
                 hw_data=hw_data,
                 dt=self.experiment.dt,
+                trace_noise_current=self.trace_noise_current,
+                trace_noise_voltage=self.trace_noise_voltage,
+                trace_noise_adaptation=self.trace_noise_adaptation,
+                cadc_readout_noise_current=self.cadc_readout_noise_current,
+                cadc_readout_noise_voltage=self.cadc_readout_noise_voltage,
+                cadc_readout_noise_adaptation=(
+                    self.cadc_readout_noise_adaptation),
                 leaky=self.leaky,
                 fire=self.fire,
                 refractory=refractory,
