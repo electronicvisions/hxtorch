@@ -3,6 +3,7 @@ Define module types
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Dict, List, Union, Tuple
+from collections import ChainMap
 import numpy as np
 import quantities as pq
 import torch
@@ -77,15 +78,23 @@ class Population(BasePopulation):
         "refractory_time": 2e-6,
         "synapse_dac_bias": 600,
         "holdoff_time": 0,
+        "e_coba_reversal": None,
+        "e_coba_reference": None
+    }
+    _non_calibratable_parameters_defaults = {  # pylint: disable=invalid-name
+        "leak_conductance": 1.,
         "exponential_slope": 50e-3,
         "exponential_threshold": 110,
         "subthreshold_adaptation_strength": 1,
         "leak_adaptation": None,
         "spike_triggered_adaptation_increment": 1,
         "tau_adap": 100e-6,
-        "e_coba_reversal": None,
-        "e_coba_reference": None
     }
+
+    @property
+    def _parameters_defaults(self):
+        return ChainMap(self._calibratable_parameters_defaults,
+                        self._non_calibratable_parameters_defaults)
 
     def __init__(self, size: int, experiment: Experiment,
                  execution_instance: Optional[ExecutionInstance] = None,
@@ -113,7 +122,7 @@ class Population(BasePopulation):
 
     def _generate_hxparameters(self, hxparams: Dict[str, ModuleParameterType]):
         for param_key, param_default in \
-                self._calibratable_parameters_defaults.items():
+                self._parameters_defaults.items():
             try:
                 param = hxparams[param_key]
             except KeyError:
@@ -124,7 +133,7 @@ class Population(BasePopulation):
 
     def has_trainable_params(self) -> bool:
         return any(getattr(self, param).is_trainable()
-                   for param in self._calibratable_parameters_defaults)
+                   for param in self._parameters_defaults)
 
     def extra_repr(self) -> str:
         reprs = ""
@@ -135,7 +144,7 @@ class Population(BasePopulation):
 
     def params_dict(self) -> Dict:
         return {param: getattr(self, param)
-                for param in self._calibratable_parameters_defaults}
+                for param in self._parameters_defaults}
 
     def calib_changed_since_last_run(self) -> bool:
         new_params_hash = hash(frozenset(self.params_dict()))
@@ -144,7 +153,7 @@ class Population(BasePopulation):
         return calibrate
 
     def set_trainable_params(self, chip):
-        for param in [p for p in self._calibratable_parameters_defaults
+        for param in [p for p in self._parameters_defaults
                       if getattr(self, p).is_trainable()]:
             coords = (
                 self.execution_instance.neuron_placement
