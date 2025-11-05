@@ -6,12 +6,14 @@ class CuBaStepCode():
     # Initialize code snippets
     base_code = dedent(
         """
-        # Membrane increment
-        dv = dt / c * (i{leak_term}{exponential_term}{adaptation_v_dgl})
+        # Voltage
+        v = v + dt / c * (i{leak_term}{exponential_term}{adaptation_v_dgl})
+        {clamp_voltage}
         {add_random_noise_voltage}
 
         # Current
         i = i * (1 - dt / tau_syn) + input[ts]
+        {clamp_current}
         {add_random_noise_current}
 
         # Apply integration step
@@ -24,6 +26,7 @@ class CuBaStepCode():
         # Adaptation
         {adaptation_adaptation_dgl}{subthreshold_adaptation}\
         {spike_triggered_adaptation}
+        {clamp_adaptation}
         {add_random_noise_adaptation}
         {unterjubel_adaptation}
 
@@ -41,15 +44,17 @@ class CuBaStepCode():
 
     adaptation_code_v_dgl = " - adaptation"
 
+    clamp_voltage_code = "v = saturate(v, dynamic_range_voltage)"
+
     add_random_noise_voltage_code = \
-        "dv = RandomNoiseAdd.apply(dv, random_noise_voltage.sample(dv.shape))"
+        "v = RandomNoiseAdd.apply(v, random_noise_voltage.sample(v.shape))"
+
+    clamp_current_code = "i = saturate(i, dynamic_range_current)"
 
     add_random_noise_current_code = \
         "i = RandomNoiseAdd.apply(i, random_noise_current.sample(i.shape))"
 
-    unterjubel_v_code = "v = Unterjubel.apply(dv + v, membrane_hw[ts])"
-
-    non_unterjubel_v_code = "v = v + dv"
+    unterjubel_v_code = "v = Unterjubel.apply(v, membrane_hw[ts])"
 
     spike_code = \
         "spike = spiking_threshold(v - threshold, method, alpha)"
@@ -64,6 +69,9 @@ class CuBaStepCode():
     subthreshold_adaptation_code = " + dt / tau_adaptation * a * (v - leak)"
 
     spike_triggered_adaptation_code = " + b * z"
+
+    clamp_adaptation_code = \
+        "adaptation = saturate(adaptation, dynamic_range_adaptation)"
 
     add_random_noise_adaptation_code = \
         """adaptation = RandomNoiseAdd.apply(
@@ -89,7 +97,8 @@ class CuBaStepCode():
                  hw_voltage_trace_available: bool = False,
                  hw_adaptation_trace_available: bool = False,
                  hw_spikes_available: bool = False,
-                 noisy_traces: bool = False) -> None:
+                 noisy_traces: bool = False,
+                 finite_dynamic_ranges: bool = False) -> None:
         """
         Initialize a code factory that can generate the necessary
         code for executing one integration step in simulation of the forward
@@ -116,6 +125,9 @@ class CuBaStepCode():
             spike-triggered adaptation when set to true / false.
         :param noisy_traces: Flag that enables / disables the incrementation of
             voltage and adaptation data by a random number in each time step.
+        :param finite_dynamic_ranges: Flag that enables / disables clamping of
+            voltage and adaptation traces to certain bounds throughout the
+            simulation.
 
         If neither `subthreshold_adaptation` nor `spike_triggered_adaptation`
         are enabled, the adaptation won't be simulated at all.
@@ -133,6 +145,7 @@ class CuBaStepCode():
         self.hw_adaptation_trace_available = hw_adaptation_trace_available
         self.hw_spikes_available = hw_spikes_available
         self.noisy_traces = noisy_traces
+        self.finite_dynamic_ranges = finite_dynamic_ranges
 
     # pylint: disable=too-many-locals
     def generate(self) -> str:
@@ -140,12 +153,16 @@ class CuBaStepCode():
         exponential_term = self.exponential_code if self.exponential else ""
         adaptation_v_dgl = self.adaptation_code_v_dgl if self.adaptation \
             else ""
+        clamp_voltage = self.clamp_voltage_code if self.finite_dynamic_ranges \
+            else ""
         add_random_noise_voltage = self.add_random_noise_voltage_code if \
             self.noisy_traces else ""
+        clamp_current = self.clamp_current_code if self.finite_dynamic_ranges \
+            else ""
         add_random_noise_current = self.add_random_noise_current_code if \
             self.noisy_traces else ""
         unterjubel_voltage = self.unterjubel_v_code if \
-            self.hw_voltage_trace_available else self.non_unterjubel_v_code
+            self.hw_voltage_trace_available else ""
         spike = self.spike_code if self.fire else ""
         unterjubel_spike = ""
         if self.fire:
@@ -157,6 +174,8 @@ class CuBaStepCode():
             self.subthreshold_adaptation else ""
         spike_triggered_adaptation = self.spike_triggered_adaptation_code if \
             self.spike_triggered_adaptation else ""
+        clamp_adaptation = self.clamp_adaptation_code if \
+            self.finite_dynamic_ranges else ""
         add_random_noise_adaptation = self.add_random_noise_adaptation_code \
             if self.noisy_traces else ""
         unterjubel_adaptation = self.unterjubel_adaptation_code if \
@@ -169,7 +188,9 @@ class CuBaStepCode():
             leak_term=leak_term,
             exponential_term=exponential_term,
             adaptation_v_dgl=adaptation_v_dgl,
+            clamp_voltage=clamp_voltage,
             add_random_noise_voltage=add_random_noise_voltage,
+            clamp_current=clamp_current,
             add_random_noise_current=add_random_noise_current,
             unterjubel_voltage=unterjubel_voltage,
             spike=spike,
@@ -177,6 +198,7 @@ class CuBaStepCode():
             adaptation_adaptation_dgl=adaptation_adaptation_dgl,
             subthreshold_adaptation=subthreshold_adaptation,
             spike_triggered_adaptation=spike_triggered_adaptation,
+            clamp_adaptation=clamp_adaptation,
             add_random_noise_adaptation=add_random_noise_adaptation,
             unterjubel_adaptation=unterjubel_adaptation,
             non_unterjubel_reset=non_unterjubel_reset,

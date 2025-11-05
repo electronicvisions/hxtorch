@@ -8,7 +8,8 @@ from hxtorch.spiking.handle import Handle
 from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
-from hxtorch.spiking.functional.mock import RandomNoise, RandomNoiseAdd
+from hxtorch.spiking.functional.mock import (
+    RandomNoise, RandomNoiseAdd, Bounds, saturate)
 
 
 # Allow redefining builtin for PyTorch consistency
@@ -40,6 +41,12 @@ def cuba_aelif_integration(
         cadc_readout_noise_current: Optional[RandomNoise] = None,
         cadc_readout_noise_voltage: Optional[RandomNoise] = None,
         cadc_readout_noise_adaptation: Optional[RandomNoise] = None,
+        cadc_readout_bounds_current: Optional[Bounds] = None,
+        cadc_readout_bounds_voltage: Optional[Bounds] = None,
+        cadc_readout_bounds_adaptation: Optional[Bounds] = None,
+        dynamic_range_current: Optional[Bounds] = None,
+        dynamic_range_voltage: Optional[Bounds] = None,
+        dynamic_range_adaptation: Optional[Bounds] = None,
         leaky: bool = True,
         fire: bool = True,
         refractory: bool = False,
@@ -119,6 +126,36 @@ def cuba_aelif_integration(
         the adaptation once after the simulation in order to mock readout
         noise.  If set to `None`, no readout noise will be applied to the
         adaptation.
+    :param cadc_readout_bounds_current: `Bounds` object that specifies lower
+        and upper bounds of the value range the resulting observable data for
+        current is clamped to after the simulation is finished. If set to
+        `None`, no clamping is performed on the current data after the
+        simulation.
+    :param cadc_readout_bounds_voltage: `Bounds` object that specifies lower
+        and upper bounds of the value range the resulting observable data for
+        voltage is clamped to after the simulation is finished. If set to
+        `None`, no clamping is performed on the voltage data after the
+        simulation.
+    :param cadc_readout_bounds_adaptation: `Bounds` object that specifies
+        lower and upper bounds of the value range the resulting observable data
+        for adaptation is clamped to after the simulation is finished. If set
+        to `None`, no clamping is performed on the adaptation data after the
+        simulation.
+    :param dynamic_range_current: `Bounds` object that specifies lower and
+        upper bounds of the value range for the current trace. If a bound is
+        exceeded in a time step in simulation, the value for the current is
+        clamped to the according bound. If set to `None`, no clamping is
+        performed on the current trace throughout simulation.
+    :param dynamic_range_voltage: `Bounds` object that specifies lower and
+        upper bounds of the value range for the voltage trace. If a bound is
+        exceeded in a time step in simulation, the value for the voltage is
+        clamped to the according bound. If set to `None`, no clamping is
+        performed on the voltage trace throughout simulation.
+    :param dynamic_range_adaptation: `Bounds` object that specifies lower and
+        upper bounds of the value range for the adaptation trace. If a bound is
+        exceeded in a time step in simulation, the value for the adaptation is
+        clamped to the according bound. If set to `None`, no clamping is
+        performed on the adaptation trace throughout simulation.
     :param leaky: Flag that enables / disables the leak term when set
         to true / false
     :param fire: Flag that enables / disables firing behaviour when set
@@ -185,6 +222,18 @@ def cuba_aelif_integration(
     trace_noise_voltage.to(dev)
     trace_noise_adaptation.to(dev)
 
+    lower_limit = -torch.inf
+    upper_limit = torch.inf
+    if dynamic_range_current is None:
+        dynamic_range_current = Bounds(lower_limit, upper_limit)
+    if dynamic_range_voltage is None:
+        dynamic_range_voltage = Bounds(lower_limit, upper_limit)
+    if dynamic_range_adaptation is None:
+        dynamic_range_adaptation = Bounds(lower_limit, upper_limit)
+    dynamic_range_current.to(dev)
+    dynamic_range_voltage.to(dev)
+    dynamic_range_adaptation.to(dev)
+
     # Initialize dictionary to match locals with code variables
     variables = {'i': i, 'z': z, 'adaptation': adaptation,
                  'tau_syn': tau_syn, 'c': c_mem, 'dt': dt,
@@ -192,7 +241,11 @@ def cuba_aelif_integration(
                  'random_noise_current': trace_noise_current,
                  'random_noise_voltage': trace_noise_voltage,
                  'random_noise_adaptation': trace_noise_adaptation,
-                 'RandomNoiseAdd': RandomNoiseAdd}
+                 'RandomNoiseAdd': RandomNoiseAdd,
+                 'dynamic_range_current': dynamic_range_current,
+                 'dynamic_range_voltage': dynamic_range_voltage,
+                 'dynamic_range_adaptation': dynamic_range_adaptation,
+                 'saturate': saturate}
 
     if leaky:
         v[:] = leak
@@ -283,5 +336,15 @@ def cuba_aelif_integration(
         adaptation_storage = RandomNoiseAdd.apply(
             adaptation_storage,
             cadc_readout_noise_adaptation.sample(adaptation_storage.shape))
+
+    # Clamp results at CADC readout bounds
+    if cadc_readout_bounds_current is not None:
+        membrane = saturate(membrane, cadc_readout_bounds_current)
+    if cadc_readout_bounds_voltage is not None:
+        membrane = saturate(membrane, cadc_readout_bounds_voltage)
+    if cadc_readout_bounds_adaptation is not None:
+        adaptation_storage = saturate(
+            adaptation_storage, cadc_readout_bounds_adaptation)
+
     return (membrane, membrane_madc_hw, current, adaptation_storage,
             adaptation_madc_hw, spikes)

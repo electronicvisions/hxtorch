@@ -31,7 +31,10 @@ from hxtorch.core.parameter import (
     MockParameter,
 )
 from hxtorch.core.utils.readout_source import ReadoutSource
-from hxtorch.spiking.functional.mock import RandomNoise
+from hxtorch.spiking.functional.mock import (
+    RandomNoise,
+    Bounds,
+)
 from hxtorch.spiking.handle import (
     Handle,
     SynapseHandle,
@@ -119,6 +122,12 @@ class AELIF(Population):
         cadc_readout_noise_current: Optional[RandomNoise] = None,
         cadc_readout_noise_voltage: Optional[RandomNoise] = None,
         cadc_readout_noise_adaptation: Optional[RandomNoise] = None,
+        cadc_readout_bounds_current: Optional[Bounds] = None,
+        cadc_readout_bounds_voltage: Optional[Bounds] = None,
+        cadc_readout_bounds_adaptation: Optional[Bounds] = None,
+        dynamic_range_current: Optional[Bounds] = None,
+        dynamic_range_voltage: Optional[Bounds] = None,
+        dynamic_range_adaptation: Optional[Bounds] = None,
         leaky: bool = True,
         fire: bool = True,
         exponential: bool = True,
@@ -289,6 +298,37 @@ class AELIF(Population):
             the adaptation once after the simulation in order to mock readout
             noise.  If set to `None`, no readout noise will be applied to the
             adaptation.
+        :param cadc_readout_bounds_current: `Bounds` object that specifies
+            lower and upper bounds of the value range the resulting observable
+            data for current is clamped to after the simulation is finished.
+            If set to `None`, no clamping is performed on the current data
+            after the simulation.
+        :param cadc_readout_bounds_voltage: `Bounds` object that specifies
+            lower and upper bounds of the value range the resulting observable
+            data for voltage is clamped to after the simulation is finished.
+            If set to `None`, no clamping is performed on the voltage data
+            after the simulation.
+        :param cadc_readout_bounds_adaptation: `Bounds` object that specifies
+            lower and upper bounds of the value range the resulting observable
+            data for adaptation is clamped to after the simulation is finished.
+            If set to `None`, no clamping is performed on the adaptation data
+            after the simulation.
+        :param dynamic_range_current: `Bounds` object that specifies lower and
+            upper bounds of the value range for the current trace. If a bound
+            is exceeded in a time step in simulation, the value for the current
+            is clamped to the according bound. If set to `None`, no clamping is
+            performed on the current trace throughout simulation.
+        :param dynamic_range_voltage: `Bounds` object that specifies lower and
+            upper bounds of the value range for the voltage trace. If a bound
+            is exceeded in a time step in simulation, the value for the voltage
+            is clamped to the according bound. If set to `None`, no clamping is
+            performed on the voltage trace throughout simulation.
+        :param dynamic_range_adaptation: `Bounds` object that specifies lower
+            and upper bounds of the value range for the adaptation trace. If a
+            bound is exceeded in a time step in simulation, the value for the
+            adaptation is clamped to the according bound. If set to `None`, no
+            clamping is performed on the adaptation trace throughout
+            simulation.
         :param leaky: Flag for enabling / disabling the leak term.
         :param fire: Flag for enabling / disabling the firing behaviour.
         :param exponential: Flag for enabling / disabling the exponential term.
@@ -391,6 +431,7 @@ class AELIF(Population):
                 'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
                 'adaptation_madc', 'spikes'))
 
+        # Mock properties
         self.trace_noise_current = trace_noise_current
         self.trace_noise_voltage = trace_noise_voltage
         self.trace_noise_adaptation = trace_noise_adaptation
@@ -400,6 +441,15 @@ class AELIF(Population):
         self.cadc_readout_noise_current = cadc_readout_noise_current
         self.cadc_readout_noise_voltage = cadc_readout_noise_voltage
         self.cadc_readout_noise_adaptation = cadc_readout_noise_adaptation
+        self.cadc_readout_bounds_current = cadc_readout_bounds_current
+        self.cadc_readout_bounds_voltage = cadc_readout_bounds_voltage
+        self.cadc_readout_bounds_adaptation = cadc_readout_bounds_adaptation
+        self.dynamic_range_current = dynamic_range_current
+        self.dynamic_range_voltage = dynamic_range_voltage
+        self.dynamic_range_adaptation = dynamic_range_adaptation
+        self.finite_dynamic_ranges = not (
+            dynamic_range_current is None and dynamic_range_voltage is None
+            and dynamic_range_adaptation is None)
 
     def extra_repr(self) -> str:
         """ Add additional information """
@@ -668,7 +718,8 @@ class AELIF(Population):
             hw_voltage_trace_available=hw_voltage_cadc_trace_available,
             hw_adaptation_trace_available=hw_adaptation_cadc_trace_available,
             hw_spikes_available=hw_spikes_available,
-            noisy_traces=self.noisy_traces).generate()
+            noisy_traces=self.noisy_traces,
+            finite_dynamic_ranges=self.finite_dynamic_ranges).generate()
         assert all(synapse_handle.graded_spikes is not None for
                    synapse_handle in input)
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
@@ -703,6 +754,13 @@ class AELIF(Population):
                 cadc_readout_noise_voltage=self.cadc_readout_noise_voltage,
                 cadc_readout_noise_adaptation=(
                     self.cadc_readout_noise_adaptation),
+                cadc_readout_bounds_current=self.cadc_readout_bounds_current,
+                cadc_readout_bounds_voltage=self.cadc_readout_bounds_voltage,
+                cadc_readout_bounds_adaptation=(
+                    self.cadc_readout_bounds_adaptation),
+                dynamic_range_current=self.dynamic_range_current,
+                dynamic_range_voltage=self.dynamic_range_voltage,
+                dynamic_range_adaptation=self.dynamic_range_adaptation,
                 leaky=self.leaky,
                 fire=self.fire,
                 refractory=refractory,
