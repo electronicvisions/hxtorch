@@ -31,8 +31,8 @@ class TestToNIRConversion(unittest.TestCase):
         nir_neuron = _map_hxtorch_to_nir(neuron)
 
         self.assertIsInstance(nir_neuron, nir.CubaLI)
-        self.assertEqual(nir_neuron.tau_mem[0], 0.02)
-        self.assertEqual(nir_neuron.tau_syn[0], 0.005)
+        self.assertEqual(nir_neuron.tau_mem[0], 0.02 * 1e3)
+        self.assertEqual(nir_neuron.tau_syn[0], 0.005 * 1e3)
         self.assertEqual(nir_neuron.v_leak[0], 0.1)
         self.assertEqual(nir_neuron.tau_mem.shape, (10,))
 
@@ -55,8 +55,8 @@ class TestToNIRConversion(unittest.TestCase):
         nir_neuron = _map_hxtorch_to_nir(neuron)
 
         self.assertIsInstance(nir_neuron, nir.CubaLIF)
-        self.assertEqual(nir_neuron.tau_mem[0], 0.02)
-        self.assertEqual(nir_neuron.tau_syn[0], 0.005)
+        self.assertEqual(nir_neuron.tau_mem[0], 0.02 * 1e3)
+        self.assertEqual(nir_neuron.tau_syn[0], 0.005 * 1e3)
         self.assertEqual(nir_neuron.v_leak[0], 0.1)
         self.assertEqual(nir_neuron.v_threshold[0], 1.0)
         self.assertEqual(nir_neuron.tau_mem.shape, (10,))
@@ -93,8 +93,8 @@ class TestFromNIRConversion(unittest.TestCase):
         exp = hxsnn.Experiment(mock=True)
         cfg = ConversionConfig()
         nir_neuron = nir.CubaLI(
-            tau_mem=np.array([0.02] * 10),
-            tau_syn=np.array([0.005] * 10),
+            tau_mem=np.array([0.02 * 1e3] * 10),
+            tau_syn=np.array([0.005 * 1e3] * 10),
             r=np.array([1.0] * 10),
             v_leak=np.array([0.1] * 10)
         )
@@ -111,8 +111,8 @@ class TestFromNIRConversion(unittest.TestCase):
         exp = hxsnn.Experiment(mock=True)
         cfg = ConversionConfig()
         nir_neuron = nir.CubaLIF(
-            tau_mem=np.array([0.02] * 10),
-            tau_syn=np.array([0.005] * 10),
+            tau_mem=np.array([0.02 * 1e3] * 10),
+            tau_syn=np.array([0.005 * 1e3] * 10),
             r=np.array([1.0] * 10),
             v_leak=np.array([0.1] * 10),
             v_reset=np.array([0.0] * 10),

@@ -15,26 +15,24 @@ def _map_hxtorch_to_nir(module):
         weight = module.weight.detach().numpy()
         return nir.Linear(weight)
     if isinstance(module, AELIF):
-
-        if module.fire:
-            size = module.size
-            tau_mem = module.tau_mem.model_value
-            tau_syn = module.tau_syn.model_value
-            v_leak = module.leak.model_value
-            v_reset = module.reset.model_value
-            v_threshold = module.threshold.model_value
-            return nir.CubaLIF(tau_mem=np.array(size * [tau_mem]),
-                               tau_syn=np.array(size * [tau_syn]),
-                               r=np.array(size * [1.]),
-                               v_leak=np.array(size * [v_leak]),
-                               v_reset=np.array(size * [v_reset]),
-                               v_threshold=np.array(size * [v_threshold]))
         size = module.size
         tau_mem = module.tau_mem.model_value
         tau_syn = module.tau_syn.model_value
+        c_mem = module.membrane_capacitance.model_value
         v_leak = module.leak.model_value
-        return nir.CubaLI(tau_mem=np.array(size * [tau_mem]),
-                          tau_syn=np.array(size * [tau_syn]),
+
+        if module.fire:
+            v_reset = module.reset.model_value
+            v_threshold = module.threshold.model_value
+            return nir.CubaLIF(tau_mem=np.array(size * [tau_mem * 1e3]),
+                               tau_syn=np.array(size * [tau_syn * 1e3]),
+                               r=np.array(size * [tau_mem / c_mem]),
+                               v_leak=np.array(size * [v_leak]),
+                               v_reset=np.array(size * [v_reset]),
+                               v_threshold=np.array(size * [v_threshold]))
+
+        return nir.CubaLI(tau_mem=np.array(size * [tau_mem * 1e3]),
+                          tau_syn=np.array(size * [tau_syn * 1e3]),
                           r=np.array(size * [1.]),
                           v_leak=np.array(size * [v_leak]))
     raise NotImplementedError(

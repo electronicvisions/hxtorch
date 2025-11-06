@@ -10,7 +10,8 @@ import nir
 from hxtorch.spiking.experiment import Experiment
 from hxtorch.spiking.handle import LIFObservables
 from hxtorch.spiking.modules import AELIF, LIF, LI, InputNeuron, Synapse
-from hxtorch.spiking.parameter import MixedHXModelParameter
+from hxtorch.spiking.parameter import (HXTransformedModelParameter,
+                                       MixedHXModelParameter)
 from hxtorch.spiking.run import run
 from hxtorch.spiking.transforms import weight_transforms
 
@@ -69,8 +70,8 @@ def _map_nir_to_hxtorch(
                     "CubaLI parameters must be homogeneous across neurons"
                     "in a layer.")
 
-        tau_mem = node.tau_mem[0]
-        tau_syn = node.tau_syn[0]
+        tau_mem = node.tau_mem[0] * 1e-3  # convert ms to s
+        tau_syn = node.tau_syn[0] * 1e-3  # convert ms to s
         leak = node.v_leak[0]
 
         module = LI(
@@ -87,17 +88,18 @@ def _map_nir_to_hxtorch(
     if isinstance(node, nir.CubaLIF):
         size = node.input_type["input"][0]
         for param in [node.tau_mem, node.tau_syn, node.v_leak, node.v_reset,
-                      node.v_threshold]:
+                      node.v_threshold, node.r]:
             if not all(x == param[0] for x in param):
                 raise ValueError(
                     "CubaLIF parameters must be homogeneous across neurons"
                     "in a layer.")
 
-        tau_mem = node.tau_mem[0]
-        tau_syn = node.tau_syn[0]
+        tau_mem = node.tau_mem[0] * 1e-3  # convert ms to s
+        tau_syn = node.tau_syn[0] * 1e-3  # convert ms to s
         leak = node.v_leak[0]
         reset = node.v_reset[0]
         threshold = node.v_threshold[0]
+        r = node.r[0]  # pylint: disable=invalid-name
 
         module = LIF(
             size,
@@ -107,6 +109,10 @@ def _map_nir_to_hxtorch(
             threshold=MixedHXModelParameter(threshold, 150),
             tau_mem=tau_mem,
             tau_syn=tau_syn,
+            membrane_capacitance=(
+                HXTransformedModelParameter(
+                    tau_mem / r,
+                    lambda model_value: model_value / tau_mem * r * 63)),
             trace_scale=cfg.trace_scale,
             cadc_time_shift=cfg.trace_shift,
             shift_cadc_to_first=True,
