@@ -14,7 +14,7 @@ def to_nir_data(hxtorch_dict: dict, hxtorch_model) -> NIRGraphData:
     nir_nodes = {}
 
     for key, spikes in hxtorch_dict.items():
-        spikes = spikes.detach().cpu().numpy()
+        spikes = spikes.detach().cpu().numpy().astype(bool)
         spikes = np.moveaxis(spikes, 1, 0)
 
         nir_node_data = NIRNodeData(
