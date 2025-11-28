@@ -48,7 +48,7 @@ class MNISTExampleTest(unittest.TestCase):
         # get the default calib path for used setup
         with hxcomm.ManagedConnection() as connection:
             calib_path = "/wang/data/calibration/hicann-dls-sr-hx/" \
-                + connection.get_unique_identifier() \
+                + connection.get_unique_identifier()[0] \
                 + "/stable/latest/hagen_cocolist.pbin"
 
         parser = mnist.get_parser()

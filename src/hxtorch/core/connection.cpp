@@ -84,7 +84,8 @@ void init_hardware(std::optional<HWDBPath> const& hwdb_path, bool ann)
 		auto const calibration_path = "/wang/data/calibration/hicann-dls-sr-hx/"s +
 		                              detail::getExecutor()
 		                                  ->get_unique_identifier(hwdb_path_value)
-		                                  .at(grenade::common::ConnectionOnExecutor()) +
+		                                  .at(grenade::common::ConnectionOnExecutor())
+		                                  .at(0) +
 		                              "/"s + version + "/" + "hagen_cocolist.pbin"s;
 
 		detail::getChip() = load_and_apply_calibration(calibration_path);
@@ -99,7 +100,7 @@ void init_hardware(CalibrationPath const& calibration_path)
 	    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(executor));
 }
 
-std::string get_unique_identifier(std::optional<HWDBPath> const& hwdb_path)
+std::vector<std::string> get_unique_identifier(std::optional<HWDBPath> const& hwdb_path)
 {
 	std::optional<std::string> hwdb_path_value;
 	if (hwdb_path) {

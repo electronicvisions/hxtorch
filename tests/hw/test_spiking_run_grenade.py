@@ -116,7 +116,7 @@ class TestRun(unittest.TestCase):
         inputs = self.generate_inputs(network)
 
         # Get chip config
-        identifier = hxtorch.get_unique_identifier()
+        identifier = hxtorch.get_unique_identifier()[0]
         path = f"/wang/data/calibration/hicann-dls-sr-hx/{identifier}/stable/"\
             + "latest/spiking_cocolist.pbin"
         with open(path, 'rb') as fd:

@@ -28,7 +28,7 @@ PYBIND11_MODULE(_hxtorch_core, m)
 	    __doc_hxtorch_init_hardware_minimal);
 	m.def(
 	    "get_unique_identifier",
-	    (std::string(*)(std::optional<hxtorch::core::HWDBPath> const&)) &
+	    (std::vector<std::string>(*)(std::optional<hxtorch::core::HWDBPath> const&)) &
 	        hxtorch::core::get_unique_identifier,
 	    __doc_hxtorch_get_unique_identifier, pybind11::arg("hwdb_path") = std::nullopt);
 	m.def("release_hardware", &hxtorch::core::release_hardware, __doc_hxtorch_release_hardware);

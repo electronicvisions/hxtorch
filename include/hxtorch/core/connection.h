@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace hxtorch::core {
 
@@ -14,7 +15,8 @@ struct HWDBPath
 	explicit HWDBPath(
 	    std::optional<std::string> path = std::nullopt, std::string version = "stable/latest") :
 	    path(path), version(version)
-	{}
+	{
+	}
 };
 
 /**
@@ -54,7 +56,8 @@ void init_hardware_minimal();
  *
  * @param hwdb_path Optional path to the hwdb to use
  */
-std::string get_unique_identifier(std::optional<HWDBPath> const& hwdb_path = std::nullopt);
+std::vector<std::string> get_unique_identifier(
+    std::optional<HWDBPath> const& hwdb_path = std::nullopt);
 
 /**
  * Release hardware resource.

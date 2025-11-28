@@ -60,7 +60,7 @@ def nightly_calib_path(name: str = "spiking") -> Path:
     """
     Find path for nightly calibration.
     """
-    identifier = _hxtorch_core.get_unique_identifier()
+    identifier = _hxtorch_core.get_unique_identifier()[0]
     path = f"/wang/data/calibration/hicann-dls-sr-hx/{identifier}/stable/"\
         f"latest/{name}_cocolist.pbin"
     return Path(path)
@@ -72,7 +72,7 @@ def nightly_calix_native_path(name: str = "spiking") -> Path:
 
     :param name: calibration name prefix.
     """
-    identifier = _hxtorch_core.get_unique_identifier()
+    identifier = _hxtorch_core.get_unique_identifier()[0]
     path = f"/wang/data/calibration/hicann-dls-sr-hx/{identifier}/stable/"\
         f"latest/{name}_calix-native.pkl"
     return Path(path)
