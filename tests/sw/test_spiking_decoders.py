@@ -5,7 +5,7 @@ import unittest
 import torch
 
 from hxtorch.spiking.transforms.decode import (
-    MaxOverTime, SumOverTime, MeanOverTime)
+    MaxOverTime, SumOverTime, MeanOverTime, ExpSumOverTime)
 
 
 class TestDecoder(unittest.TestCase):
@@ -73,6 +73,31 @@ class TestDecoder(unittest.TestCase):
 
         # Test
         self.assertTrue(torch.equal(scores, torch.ones(*(scores.shape))))
+
+    def test_exp_sum_over_time(self):
+        """ Test exponential sum traces along time dimension """
+        decoder = ExpSumOverTime()
+
+        inputs = torch.zeros(100, 10, 100)
+        indices = torch.empty((inputs.shape[1], inputs.shape[-1]))
+        for b in range(inputs.shape[1]):
+            for n in range(inputs.shape[-1]):
+                idx_1 = torch.randint(0, int(inputs.shape[0]) - 1, (1,))
+                indices[b, n] = idx_1
+                inputs[idx_1, b, n] = 1.
+
+        # Forward
+        scores = decoder(inputs)
+
+        # Test shape
+        self.assertTrue(torch.equal(
+            torch.tensor(scores.shape),
+            torch.tensor([inputs.shape[1], inputs.shape[-1]])))
+
+        # Test
+        self.assertTrue(
+            torch.equal(scores, torch.exp(-indices / inputs.shape[0]))
+        )
 
 
 if __name__ == "__main__":

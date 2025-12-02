@@ -66,3 +66,33 @@ class MeanOverTime(torch.nn.Module):
         :return: Returns the tensor holding the mean-over-time values.
         """
         return torch.mean(input, 0)
+
+
+class ExpSumOverTime(torch.nn.Module):
+
+    """ Exponential sum-over-time decoding """
+
+    # pylint: disable=redefined-builtin
+    # NOTE: - We redefine builtin as PyTorch does
+    #       - We inherit for torch.nn.Module for consistency
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        """
+        Translate an `input` tensor of shape (time_length, batch_size
+        population_size) into a tensor of shape (batch_size, population_size),
+        where the time dimension is discarded by computing the exponentially
+        weighted sum along the time.
+        Hence this module performs a 'sum-over-time' operation.
+
+        :param input: The input tensor to transform.
+            expected shape: (time_length, batch_size, population_size)
+        :return: Returns the tensor holding the exponential sum-over-time
+            values.
+        """
+        n_steps = input.shape[0]
+        idx = torch.arange(
+            n_steps,
+            device=input.device,
+            dtype=input.dtype
+        )
+        weights = torch.exp(-idx / n_steps).view(n_steps, 1, 1)
+        return torch.sum(weights * input, 0)
