@@ -23,46 +23,47 @@ class TestAELIFIntegration(unittest.TestCase):
     plot_path = Path(__file__).parent.joinpath("plots")
 
     def setUp(self):
-        self.plot_path.mkdir(exist_ok = True)
+        self.plot_path.mkdir(exist_ok=True)
 
-    def test_cuba_aelif_integration(self):
-        """
-        Test CuBa AELIF integration function.
-        """
-
-        population_size = 15
-        batch_size = 10
-        time_steps = 100
-        dt = 1e-6
+        self.population_size = 15
+        self.batch_size = 10
+        self.time_steps = 100
+        self.dt = 1e-6
 
         # Parameters
-        leak = torch.Tensor([0]).expand(population_size)
-        reset = torch.Tensor([-0.1]).expand(population_size)
-        threshold = torch.Tensor([0.7]).expand(population_size)
-        tau_syn = torch.Tensor([10e-6]).expand(population_size)
-        c_mem = torch.Tensor([10e-6]).expand(population_size)
-        g_l = torch.Tensor([1]).expand(population_size)
-        refractory_time = torch.Tensor([3e-6]).expand(population_size)
-        method = "superspike"
-        alpha = 50
-        exp_slope = torch.Tensor([200e-3]).expand(population_size)
-        exp_threshold = torch.Tensor([0.3]).expand(population_size)
-        subthreshold_adaptation_strength = torch.Tensor([10]).expand(
-            population_size)
-        spike_triggered_adaptation_increment = torch.Tensor([0.2]).expand(
-            population_size)
-        tau_adap = torch.Tensor([100e-6]).expand(population_size)
+        self.leak = torch.Tensor([0]).expand(self.population_size)
+        self.reset = torch.Tensor([-0.1]).expand(self.population_size)
+        self.threshold = torch.Tensor([0.7]).expand(self.population_size)
+        self.tau_syn = torch.Tensor([10e-6]).expand(self.population_size)
+        self.c_mem = torch.Tensor([10e-6]).expand(self.population_size)
+        self.g_l = torch.Tensor([1]).expand(self.population_size)
+        self.refractory_time = torch.Tensor([3e-6]).expand(self.population_size)
+        self.method = "superspike"
+        self.alpha = 50
+        self.exp_slope = torch.Tensor([200e-3]).expand(self.population_size)
+        self.exp_threshold = torch.Tensor([0.3]).expand(self.population_size)
+        self.subthreshold_adaptation_strength = torch.Tensor([10]).expand(
+            self.population_size)
+        self.spike_triggered_adaptation_increment = torch.Tensor([0.2]).expand(
+            self.population_size)
+        self.tau_adap = torch.Tensor([100e-6]).expand(self.population_size)
 
         # Inputs
-        inputs = torch.zeros(time_steps, batch_size, 5)
+        inputs = torch.zeros(self.time_steps, self.batch_size, 5)
         inputs[10, :, 0] = 1
         inputs[30, :, 2:4] = 1
         inputs[40, :, 1] = 1
         inputs[53, :, 4] = 1
 
+        torch.manual_seed(42)
         weights = 1 * \
-            torch.nn.parameter.Parameter(torch.randn(population_size, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weights)
+            torch.nn.parameter.Parameter(torch.randn(self.population_size, 5))
+        self.graded_spikes = torch.nn.functional.linear(inputs, weights)
+
+    def test_cuba_aelif_integration(self):
+        """
+        Test CuBa AELIF integration function.
+        """
 
         # Test full AELIF model (all options enabled)
         integration_step_code = CuBaStepCode(
@@ -74,15 +75,15 @@ class TestAELIFIntegration(unittest.TestCase):
         self.assertTrue(type(integration_step_code) == str)
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
             adaptation_madc, spikes) = cuba_aelif_integration(
-                graded_spikes, leak=leak, reset=reset, threshold=threshold,
-                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-                refractory_time=refractory_time, method=method, alpha=alpha,
-                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
+                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
-                    subthreshold_adaptation_strength),
+                    self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
-                    spike_triggered_adaptation_increment),
-                tau_adap=tau_adap, dt=dt, leaky=True, fire=True,
+                    self.spike_triggered_adaptation_increment),
+                tau_adap=self.tau_adap, dt=self.dt, leaky=True, fire=True,
                 refractory=True, exponential=True,
                 subthreshold_adaptation=True, spike_triggered_adaptation=True,
                 integration_step_code=integration_step_code)
@@ -90,19 +91,19 @@ class TestAELIFIntegration(unittest.TestCase):
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([time_steps, batch_size, population_size]),
+                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
                 torch.tensor(membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([time_steps, batch_size, population_size]),
+                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
                 torch.tensor(current.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([time_steps, batch_size, population_size]),
+                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
                 torch.tensor(adaptation_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([time_steps, batch_size, population_size]),
+                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
                 torch.tensor(spikes.shape)))
         self.assertIsNone(membrane_madc)
         self.assertIsNone(adaptation_madc)
@@ -114,17 +115,17 @@ class TestAELIFIntegration(unittest.TestCase):
         # Plot voltage, current and adaptation of first neuron
         _, ax = plt.subplots()
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             membrane_cadc[:, 0, 0].detach().numpy(),
             label='membrane')
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
-        ax.axhline(exp_threshold[0], label='exp_threshold', linestyle='--',
+        ax.axhline(self.exp_threshold[0], label='exp_threshold', linestyle='--',
                    color='red')
         ax.legend()
 
@@ -136,40 +137,6 @@ class TestAELIFIntegration(unittest.TestCase):
         hardware data.
         """
 
-        population_size = 15
-        batch_size = 10
-        time_steps = 100
-        dt = 1e-6
-
-        # Parameters
-        leak = torch.Tensor([0]).expand(population_size)
-        reset = torch.Tensor([-0.1]).expand(population_size)
-        threshold = torch.Tensor([0.7]).expand(population_size)
-        tau_syn = torch.Tensor([10e-6]).expand(population_size)
-        c_mem = torch.Tensor([10e-6]).expand(population_size)
-        g_l = torch.Tensor([1]).expand(population_size)
-        refractory_time = torch.Tensor([3e-6]).expand(population_size)
-        method = "superspike"
-        alpha = 50
-        exp_slope = torch.Tensor([50e-3]).expand(population_size)
-        exp_threshold = torch.Tensor([0.3]).expand(population_size)
-        subthreshold_adaptation_strength = torch.Tensor([1]).expand(
-            population_size)
-        spike_triggered_adaptation_increment = torch.Tensor([0.5]).expand(
-            population_size)
-        tau_adap = torch.Tensor([100e-6]).expand(population_size)
-
-        # Inputs
-        inputs = torch.zeros(time_steps, batch_size, 5)
-        inputs[10, :, 0] = 1
-        inputs[30, :, 2:4] = 1
-        inputs[40, :, 1] = 1
-        inputs[53, :, 4] = 1
-
-        weights = 0.1 * \
-            torch.nn.parameter.Parameter(torch.randn(population_size, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weights)
-
         # Generate observable data which is to be injected as hardware data
         integration_step_code = CuBaStepCode(
             leaky=True, fire=True, refractory=True, exponential=True,
@@ -178,15 +145,15 @@ class TestAELIFIntegration(unittest.TestCase):
             generate()
         (membrane_cadc_hw, membrane_madc_hw, current_hw, adaptation_cadc_hw,
             adaptation_madc_hw, spikes_hw) = cuba_aelif_integration(
-                graded_spikes, leak=leak, reset=reset, threshold=threshold,
-                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-                refractory_time=refractory_time, method=method, alpha=alpha,
-                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
+                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
-                    subthreshold_adaptation_strength),
+                    self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
-                    spike_triggered_adaptation_increment),
-                tau_adap=tau_adap, dt=dt, leaky=True, fire=True,
+                    self.spike_triggered_adaptation_increment),
+                tau_adap=self.tau_adap, dt=self.dt, leaky=True, fire=True,
                 refractory=True, exponential=True,
                 subthreshold_adaptation=True, spike_triggered_adaptation=True,
                 integration_step_code=integration_step_code)
@@ -200,8 +167,8 @@ class TestAELIFIntegration(unittest.TestCase):
             torch.rand(adaptation_cadc_hw.shape) * 0.05
         hw_spikes = spikes_hw
         hw_spikes[
-            torch.randint(time_steps, (1,)), torch.randint(batch_size, (1,)),
-            torch.randint(population_size, (1,))] = 1
+            torch.randint(self.time_steps, (1,)), torch.randint(self.batch_size, (1,)),
+            torch.randint(self.population_size, (1,))] = 1
         injected_hw_data = Handle(
             voltage=AnalogObservable(cadc=hw_voltage, madc=hw_adaptation),
             adaptation=AnalogObservable(cadc=hw_adaptation, madc=None),
@@ -216,16 +183,16 @@ class TestAELIFIntegration(unittest.TestCase):
             generate()
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
             adaptation_madc, spikes) = cuba_aelif_integration(
-                graded_spikes, leak=leak, reset=reset, threshold=threshold,
-                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-                refractory_time=refractory_time, method=method, alpha=alpha,
-                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
+                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
-                    subthreshold_adaptation_strength),
+                    self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
-                    spike_triggered_adaptation_increment),
-                tau_adap=tau_adap, hw_data=injected_hw_data,
-                dt=dt, leaky=True, fire=True, refractory=True,
+                    self.spike_triggered_adaptation_increment),
+                tau_adap=self.tau_adap, hw_data=injected_hw_data,
+                dt=self.dt, leaky=True, fire=True, refractory=True,
                 exponential=True, subthreshold_adaptation=True,
                 spike_triggered_adaptation=True,
                 integration_step_code=integration_step_code_hw)
@@ -255,59 +222,26 @@ class TestAELIFIntegration(unittest.TestCase):
         # Plot voltage, current and adaptation of first neuron
         _, ax = plt.subplots()
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             membrane_cadc[:, 0, 0].detach().numpy(),
             label='membrane')
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             current[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
-            np.arange(0., dt * time_steps, dt),
+            np.arange(0., self.dt * self.time_steps, self.dt),
             adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
+        ax.axhline(self.exp_threshold[0], label='exp_threshold', linestyle='--',
+                   color='red')
         ax.legend()
 
         plt.savefig(self.plot_path.joinpath("./cuba_aelif_dynamics_hw.png"))
-
 
     def test_error_message(self):
         """
         Test custom error handling done in the CuBa AELIF integration function.
         """
-
-        population_size = 15
-        batch_size = 10
-        time_steps = 100
-        dt = 1e-6
-
-        # Parameters
-        leak = torch.Tensor([0]).expand(population_size)
-        reset = torch.Tensor([-0.1]).expand(population_size)
-        threshold = torch.Tensor([0.7]).expand(population_size)
-        tau_syn = torch.Tensor([10e-6]).expand(population_size)
-        c_mem = torch.Tensor([10e-6]).expand(population_size)
-        g_l = torch.Tensor([1]).expand(population_size)
-        refractory_time = torch.Tensor([3e-6]).expand(population_size)
-        method = "superspike"
-        alpha = 50
-        exp_slope = torch.Tensor([50e-3]).expand(population_size)
-        exp_threshold = torch.Tensor([0.3]).expand(population_size)
-        subthreshold_adaptation_strength = torch.Tensor([1]).expand(
-            population_size)
-        spike_triggered_adaptation_increment = torch.Tensor([0.5]).expand(
-            population_size)
-        tau_adap = torch.Tensor([100e-6]).expand(population_size)
-
-        # Inputs
-        inputs = torch.zeros(time_steps, batch_size, 5)
-        inputs[10, :, 0] = 1
-        inputs[30, :, 2:4] = 1
-        inputs[40, :, 1] = 1
-        inputs[53, :, 4] = 1
-
-        weights = 0.1 * \
-            torch.nn.parameter.Parameter(torch.randn(population_size, 5))
-        graded_spikes = torch.nn.functional.linear(inputs, weights)
 
         # Generate observable data which is to be injected as hardware data
         integration_step_code = CuBaStepCode(
@@ -330,15 +264,15 @@ class TestAELIFIntegration(unittest.TestCase):
         # Examine error
         with self.assertRaises(RuntimeError) as context:
             hw_data = cuba_aelif_integration(
-                graded_spikes, leak=leak, reset=reset, threshold=threshold,
-                tau_syn=tau_syn, c_mem=c_mem, g_l=g_l,
-                refractory_time=refractory_time, method=method, alpha=alpha,
-                exp_slope=exp_slope, exp_threshold=exp_threshold,
+                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
+                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
-                    subthreshold_adaptation_strength),
+                    self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
-                    spike_triggered_adaptation_increment),
-                tau_adap=tau_adap, dt=dt, leaky=True, fire=True,
+                    self.spike_triggered_adaptation_increment),
+                tau_adap=self.tau_adap, dt=self.dt, leaky=True, fire=True,
                 refractory=True, exponential=True,
                 subthreshold_adaptation=True, spike_triggered_adaptation=True,
                 integration_step_code=integration_step_code)
