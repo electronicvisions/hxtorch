@@ -84,6 +84,7 @@ class Experiment(BaseExperiment):
 
         self._hw_data_extractor = HardwareObservablesExtractor()
         self._batch_size = 0
+        self.inter_batch_entry_routing_disabled = True
         self.inter_batch_entry_wait = None
 
         # Last run results
@@ -100,6 +101,7 @@ class Experiment(BaseExperiment):
         self.grenade_network = None
         self.grenade_network_graph = None
 
+        self.inter_batch_entry_routing_disabled = True
         self.inter_batch_entry_wait = None
         self._static_config_prepared = False
         self._default_execution_instance = None
@@ -424,6 +426,12 @@ class Experiment(BaseExperiment):
             in network.network.topologically_sorted_execution_instance_ids
         }] * self._batch_size
         log.TRACE(f"Registered runtimes: {inputs.snippets[0].runtime}")
+
+        inputs.inter_batch_entry_routing_disabled = {
+            execution_instance: self.inter_batch_entry_routing_disabled
+            for execution_instance in network.network.
+            topologically_sorted_execution_instance_ids
+        }
 
         if self.inter_batch_entry_wait is not None:
             inputs.inter_batch_entry_wait = {
