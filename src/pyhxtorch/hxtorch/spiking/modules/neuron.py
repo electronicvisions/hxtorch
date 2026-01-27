@@ -462,6 +462,8 @@ class AELIF(Population):
         :returns: Configured neuron block.
         """
         self._neuron_structure.implement_morphology(coord, neuron_block)
+        if not self.leaky:
+            self._neuron_structure.disable_leak(coord, neuron_block)
         if self.fire:
             self._neuron_structure.set_spike_recording(self.mask[neuron_id],
                                                        coord, neuron_block)
