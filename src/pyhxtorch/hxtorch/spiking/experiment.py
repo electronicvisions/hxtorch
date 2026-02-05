@@ -90,6 +90,9 @@ class Experiment(BaseExperiment):
         # Last run results
         self._last_run_chip_configs = None
 
+        # read-back ppu symbols
+        self.ppu_symbols_read = {}
+
     def clear(self) -> None:
         """
         Reset the experiments's state. Corresponds to creating a new Experiment
@@ -110,6 +113,7 @@ class Experiment(BaseExperiment):
         self._projections = []
 
         self._batch_size = 0
+        self.ppu_symbols_read = {}
 
     @property
     def default_execution_instance(self) -> ExecutionInstance:
@@ -191,9 +195,22 @@ class Experiment(BaseExperiment):
                 network_builder)
 
         # Add CADC recording
+        recording_cadc_active = False
         for execution_instance, cadc_recording in self._execution_instances \
                 .cadc_recordings.items():
             network_builder.add(cadc_recording, execution_instance)
+            recording_cadc_active = True
+
+        # Add plasticity rules
+        for execution_instance, plasticity_rules in self._execution_instances \
+                .plasticity_rules.items():
+            if recording_cadc_active:
+                raise ValueError(
+                    "CADC recoding & plasticity rule cannot both be active!")
+            for plasticity_rule in plasticity_rules:
+                log.TRACE(f"Added plasticity rule '{plasticity_rule}' "
+                          "to grenade graph.")
+                network_builder.add(plasticity_rule, execution_instance)
 
         network = network_builder.done()
 
@@ -443,6 +460,11 @@ class Experiment(BaseExperiment):
         outputs = _hxtorch_spiking.run(
             self._execution_instances.chips, network, inputs,
             self._execution_instances.playback_hooks)
+
+        if outputs.read_ppu_symbols:
+            self.ppu_symbols_read = outputs.read_ppu_symbols
+        else:
+            self.ppu_symbols_read = {}
 
         hw_data = self._get_observables(
             network, outputs, runtime_in_clocks)

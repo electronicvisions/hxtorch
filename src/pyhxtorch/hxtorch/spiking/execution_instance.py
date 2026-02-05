@@ -52,6 +52,19 @@ class ExecutionInstances(set):
                 if len(inst.cadc_neurons) != 0}
 
     @property
+    def plasticity_rules(self) -> Dict[
+            grenade.common.ExecutionInstanceID,
+            List[grenade.network.PlasticityRule]]:
+        """
+        Getter for (grenade) PlasticityRules.
+
+        :return: The PlasticityRules for each instance in a
+            dict[ExecutionInstanceID, PlasticityRule]
+        """
+        return {inst.ID: inst.plasticity_rules() for inst in self
+                if inst.plasticity_rules()}
+
+    @property
     def playback_hooks(self) -> Dict[
             grenade.common.ExecutionInstanceID,
             grenade.execution.ExecutionInstanceHooks]:
@@ -75,6 +88,8 @@ class BaseExecutionInstance(ABC):
         BaseExecutionInstance._instance_counter += 1
         self.cadc_neurons: Optional[
             Dict[int, grenade.network.CADCRecording.Neuron]] = {}
+        self._plasticity_rules: List[
+            grenade.network.PlasticityRule] = []
         self.modules: List[HXModule] = None
 
     def __hash__(self) -> int:
@@ -153,6 +168,8 @@ class ExecutionInstance(BaseExecutionInstance):
         self.injection_inside_realtime_begin = None
         self.injection_inside_realtime = None
         self.injection_inside_realtime_end = None
+        self.write_ppu_symbols = {}
+        self.read_ppu_symbols = set()
 
     def load_calib(self, calib_path: Union[Path, str]):
         """
@@ -274,6 +291,15 @@ class ExecutionInstance(BaseExecutionInstance):
         )
         return cadc_recording
 
+    def plasticity_rules(self) -> List[grenade.network.PlasticityRule]:
+        """
+        Return the instance's ``PlasticityRule`` object, holding all plasticity
+        rules to be applied in this instance.
+
+        :return: List of ``grenade.network.PlasticityRule`` objects
+        """
+        return self._plasticity_rules
+
     def generate_playback_hooks(self) \
             -> grenade.execution.ExecutionInstanceHooks:
         """
@@ -312,4 +338,5 @@ class ExecutionInstance(BaseExecutionInstance):
             grenade.common.ChipOnConnection(),
             grenade.execution.ExecutionInstanceHooks.Chip(
                 pre_static_config, pre_realtime, inside_realtime_begin,
-                inside_realtime, inside_realtime_end, post_realtime))
+                inside_realtime, inside_realtime_end, post_realtime,
+                self.write_ppu_symbols, self.read_ppu_symbols))

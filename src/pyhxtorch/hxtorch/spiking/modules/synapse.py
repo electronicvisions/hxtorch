@@ -43,8 +43,9 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                      Tuple[grenade.common.ChipOnConnection,
                            grenade.common.ConnectionOnExecutor]] = None,
                  device: str = None, dtype: Type = None,
-                 transform: Callable = weight_transforms.linear_saturating) \
-            -> None:
+                 transform: Callable = weight_transforms.linear_saturating,
+                 plasticity_rule: Optional[
+                     grenade.network.PlasticityRule] = None) -> None:
         """
         TODO: Think about what to do with device here.
 
@@ -67,6 +68,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                 (out_features, in_features), device=device, dtype=dtype))
         self._weight_old = torch.zeros_like(self.weight.data)
         self.weight_transform = transform
+        self._plasticity_rule = plasticity_rule
 
         self.reset_parameters()
 
@@ -175,6 +177,14 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             projection_inh, self.execution_instance.ID)
         self.descriptor = (exc_descriptor, inh_descriptor)
         log.TRACE(f"Added projection '{self}' to grenade graph.")
+
+        if self._plasticity_rule:
+            log.TRACE(f"Added plasticity rule '{self}' to execution instance.")
+            assert not self._plasticity_rule.projections
+            assert not self._plasticity_rule.populations
+            self._plasticity_rule.projections = self.descriptor
+            self.execution_instance.plasticity_rules().append(
+                self._plasticity_rule)
 
         return self.descriptor
 
