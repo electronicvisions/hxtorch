@@ -436,8 +436,11 @@ class ModuleManager(BaseModuleManager):
             tuple of all output targets of module `module`.
         """
         # Check for cycles in graph
-        graph = self.graph.to_undirected(as_view=True)
-        if nx.cycle_basis(graph):
+        try:
+            nx.find_cycle(self.graph)
+        except nx.exception.NetworkXNoCycle:
+            pass
+        else:
             raise ValueError(
                 "Encountered cyclic dependencies in the network. At the"
                 " moment, cyclic dependencies are expected to be wrapped"

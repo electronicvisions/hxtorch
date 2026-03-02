@@ -69,6 +69,25 @@ class TestModuleManager(unittest.TestCase):
         self.assertEqual(len(modules._open_sources), 1)
         self.assertEqual(len(modules._open_targets), 0)
 
+    def test_diamond(self):
+        """ Test a diamond network structure """
+        modules = ModuleManager()
+        top_module = snn.HXBaseExperimentModule(None)
+        top_handle = snn.LIFObservables()
+        left_module = snn.HXBaseExperimentModule(None)
+        left_handle = snn.LIFObservables()
+        right_module = snn.HXBaseExperimentModule(None)
+        right_handle = snn.LIFObservables()
+        bot_module = snn.HXBaseExperimentModule(None)
+        bot_handle = snn.LIFObservables()
+
+        modules.add_node(top_module, tuple(), top_handle)
+        modules.add_node(left_module, (top_handle,), left_handle)
+        modules.add_node(right_module, (top_handle,), right_handle)
+        modules.add_node(bot_module, (left_handle, right_handle), bot_handle)
+
+        modules.done()
+
     def test_add_wrapper(self):
         """ Test add wrapper module """
         modules = ModuleManager()
