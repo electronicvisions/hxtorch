@@ -3,6 +3,7 @@ Test CuBa AELIF integration function
 """
 import unittest
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import torch
@@ -11,6 +12,7 @@ import matplotlib.pyplot as plt
 from hxtorch.spiking.functional import cuba_aelif_integration, CuBaStepCode
 from hxtorch.spiking import Handle
 from hxtorch.spiking.observables import AnalogObservable
+from hxtorch.spiking.functional.surrogates import superspike
 
 
 class TestAELIFIntegration(unittest.TestCase):
@@ -38,9 +40,9 @@ class TestAELIFIntegration(unittest.TestCase):
         self.tau_syn = torch.Tensor([10e-6]).expand(self.population_size)
         self.c_mem = torch.Tensor([10e-6]).expand(self.population_size)
         self.g_l = torch.Tensor([1]).expand(self.population_size)
-        self.refractory_time = torch.Tensor([3e-6]).expand(self.population_size)
-        self.method = "superspike"
-        self.alpha = 50
+        self.refractory_time = torch.Tensor([3e-6]).expand(
+            self.population_size)
+        self.spike_surrogate = partial(superspike, alpha=50)
         self.exp_slope = torch.Tensor([200e-3]).expand(self.population_size)
         self.exp_threshold = torch.Tensor([0.3]).expand(self.population_size)
         self.subthreshold_adaptation_strength = torch.Tensor([10]).expand(
@@ -76,9 +78,11 @@ class TestAELIFIntegration(unittest.TestCase):
         self.assertTrue(type(integration_step_code) == str)
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
             adaptation_madc, spikes) = cuba_aelif_integration(
-                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
-                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
-                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                self.graded_spikes, leak=self.leak, reset=self.reset,
+                threshold=self.threshold, tau_syn=self.tau_syn,
+                c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time,
+                spike_surrogate=self.spike_surrogate,
                 exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
@@ -92,19 +96,23 @@ class TestAELIFIntegration(unittest.TestCase):
         # Shapes
         self.assertTrue(
             torch.equal(
-                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
+                torch.tensor([self.time_steps, self.batch_size,
+                              self.population_size]),
                 torch.tensor(membrane_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
+                torch.tensor([self.time_steps, self.batch_size,
+                              self.population_size]),
                 torch.tensor(current.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
+                torch.tensor([self.time_steps, self.batch_size,
+                              self.population_size]),
                 torch.tensor(adaptation_cadc.shape)))
         self.assertTrue(
             torch.equal(
-                torch.tensor([self.time_steps, self.batch_size, self.population_size]),
+                torch.tensor([self.time_steps, self.batch_size,
+                              self.population_size]),
                 torch.tensor(spikes.shape)))
         self.assertIsNone(membrane_madc)
         self.assertIsNone(adaptation_madc)
@@ -146,9 +154,11 @@ class TestAELIFIntegration(unittest.TestCase):
             generate()
         (membrane_cadc_hw, membrane_madc_hw, current_hw, adaptation_cadc_hw,
             adaptation_madc_hw, spikes_hw) = cuba_aelif_integration(
-                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
-                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
-                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                self.graded_spikes, leak=self.leak, reset=self.reset,
+                threshold=self.threshold, tau_syn=self.tau_syn,
+                c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time,
+                spike_surrogate=self.spike_surrogate,
                 exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
@@ -184,9 +194,11 @@ class TestAELIFIntegration(unittest.TestCase):
             generate()
         (membrane_cadc, membrane_madc, current, adaptation_cadc,
             adaptation_madc, spikes) = cuba_aelif_integration(
-                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
-                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
-                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                self.graded_spikes, leak=self.leak, reset=self.reset,
+                threshold=self.threshold, tau_syn=self.tau_syn,
+                c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time,
+                spike_surrogate=self.spike_surrogate,
                 exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
@@ -265,9 +277,11 @@ class TestAELIFIntegration(unittest.TestCase):
         # Examine error
         with self.assertRaises(RuntimeError) as context:
             hw_data = cuba_aelif_integration(
-                self.graded_spikes, leak=self.leak, reset=self.reset, threshold=self.threshold,
-                tau_syn=self.tau_syn, c_mem=self.c_mem, g_l=self.g_l,
-                refractory_time=self.refractory_time, method=self.method, alpha=self.alpha,
+                self.graded_spikes, leak=self.leak, reset=self.reset,
+                threshold=self.threshold, tau_syn=self.tau_syn,
+                c_mem=self.c_mem, g_l=self.g_l,
+                refractory_time=self.refractory_time,
+                spike_surrogate=self.spike_surrogate,
                 exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),

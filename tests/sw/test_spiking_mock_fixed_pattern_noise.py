@@ -4,6 +4,8 @@ Test mocking of fixed pattern noise via MockParameter
 import unittest
 from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
+from functools import partial
 
 import numpy as np
 import torch
@@ -11,6 +13,7 @@ import matplotlib.pyplot as plt
 
 from hxtorch.core.parameter import ModelParameter, MockParameter
 import hxtorch.spiking as hxsnn
+from hxtorch.spiking.functional.surrogates import superspike
 
 
 # pylint: disable=too-many-instance-attributes
@@ -101,9 +104,9 @@ class TestMockParameter(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=tau_mem_clean_sim,
                 g_l=self.g_l, tau_syn=tau_syn_clean_sim,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     subthreshold_adaptation_strength_clean_sim),
                 spike_triggered_adaptation_increment=(
@@ -129,9 +132,9 @@ class TestMockParameter(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=tau_mem_mock.model_value,
                 g_l=self.g_l, tau_syn=tau_syn_mock.model_value,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     subthreshold_adaptation_strength_mock.model_value),
                 spike_triggered_adaptation_increment=(

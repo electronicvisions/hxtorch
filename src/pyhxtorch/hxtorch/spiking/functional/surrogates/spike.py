@@ -1,7 +1,6 @@
 """
-Surrograte gradient for SuperSpike.
-Basically reimplemented from:
-https://github.com/norse/norse/blob/18cd8aa256c3e7b5a28a852f5e928b104bc637fc/norse/torch/functional/superspike.py#L33
+A collection of surrogate functions providing functionality for making spiking
+outputs differentiable.
 """
 from typing import Optional, Tuple
 import torch
@@ -56,5 +55,5 @@ class SuperSpike(torch.autograd.Function):
 
 
 # pylint: disable=redefined-builtin, arguments-differ
-def superspike_func(input: torch.Tensor, alpha: float) -> torch.Tensor:
+def superspike(input: torch.Tensor, alpha: float) -> torch.Tensor:
     return SuperSpike.apply(input, alpha)

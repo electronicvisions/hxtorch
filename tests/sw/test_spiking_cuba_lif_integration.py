@@ -4,6 +4,7 @@ Test CUBA-LIF integration function
 from warnings import warn
 import unittest
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 from hxtorch.spiking.functional import exp_cuba_lif_integration
 from hxtorch.spiking import Handle
 from hxtorch.spiking.observables import AnalogObservable
+from hxtorch.spiking.functional.surrogates import superspike
 
 
 # DEPRECATED
@@ -34,8 +36,7 @@ class TestLIFIntegration(unittest.TestCase):
         threshold = 0.7
         reset = -0.1
         leak = 0
-        alpha = 50
-        method = "superspike"
+        spike_surrogate = partial(superspike, alpha=50)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -48,7 +49,8 @@ class TestLIFIntegration(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = exp_cuba_lif_integration(
             graded_spikes, leak=leak, reset=reset, tau_mem_exp=tau_mem,
-            tau_syn_exp=tau_syn, threshold=threshold, method=method, alpha=alpha)
+            tau_syn_exp=tau_syn, threshold=threshold,
+            spike_surrogate=spike_surrogate)
 
         # Shapes
         self.assertTrue(
@@ -89,8 +91,7 @@ class TestLIFIntegration(unittest.TestCase):
         threshold = 0.7
         reset = -0.1
         leak = 0
-        alpha = 50
-        method = "superspike"
+        spike_surrogate = partial(superspike, alpha=50)
 
         # Inputs
         inputs = torch.zeros(100, 10, 5)
@@ -103,7 +104,8 @@ class TestLIFIntegration(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(inputs, weight)
         spikes, membrane_cadc, current, membrane_madc = exp_cuba_lif_integration(
             graded_spikes, leak=leak, reset=reset, tau_mem_exp=tau_mem,
-            tau_syn_exp=tau_syn, threshold=threshold, method=method, alpha=alpha)
+            tau_syn_exp=tau_syn, threshold=threshold,
+            spike_surrogate=spike_surrogate)
         self.assertIsNone(membrane_madc)
 
         # Add jitter
@@ -120,8 +122,8 @@ class TestLIFIntegration(unittest.TestCase):
         spikes_hw, membrane_cadc_hw, current_hw, membrane_madc_hw = \
             exp_cuba_lif_integration(
                 graded_spikes, leak=leak, reset=reset, tau_mem_exp=tau_mem,
-                tau_syn_exp=tau_syn, threshold=threshold, method=method,
-                alpha=alpha, hw_data=hw_data)
+                tau_syn_exp=tau_syn, threshold=threshold,
+                spike_surrogate=spike_surrogate, hw_data=hw_data)
 
         # Shapes
         self.assertTrue(

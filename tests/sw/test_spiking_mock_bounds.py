@@ -4,12 +4,15 @@ dynamic ranges.
 """
 import unittest
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
 from hxtorch.spiking.functional.mock import Bounds
+from hxtorch.spiking.functional.surrogates import (
+    superspike, exponential_rolloff)
 import hxtorch.spiking as hxsnn
 
 
@@ -39,6 +42,7 @@ class TestBounds(unittest.TestCase):
         self.threshold = 1.
         self.g_l = 1.
         self.refractory_time = 1e-6
+        self.spike_surrogate = partial(superspike, alpha=50)
         self.exp_slope = 0.2
         self.exp_threshold = 0.3
         self.spike_triggered_adaptation_increment = 0.2
@@ -101,8 +105,9 @@ class TestBounds(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope,
                 exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
@@ -114,18 +119,20 @@ class TestBounds(unittest.TestCase):
                 integration_step_code=self.integration_step_code)
 
         # Generate traces with dynamic range bounds
-        dynamic_range_current = Bounds(-torch.inf, torch.inf)
-        dynamic_range_voltage = Bounds(-0.5, 1.2, rolloff_margin=0.05)
-        dynamic_range_adaptation = Bounds(-0.3, 0.6, rolloff_margin=0.05)
+        surrogate = partial(exponential_rolloff, rolloff_margin=0.05)
+        dynamic_range_current = Bounds(
+            -torch.inf, torch.inf, surrogate=surrogate)
+        dynamic_range_voltage = Bounds(-0.5, 1.2, surrogate=surrogate)
+        dynamic_range_adaptation = Bounds(-0.3, 0.6, surrogate=surrogate)
         (membrane_cadc_saturated_traces, _, current_cadc_saturated_traces,
          adaptation_cadc_saturated_traces, _, spikes_saturated_traces) = \
             hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
@@ -168,9 +175,9 @@ class TestBounds(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
@@ -191,9 +198,9 @@ class TestBounds(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
@@ -235,8 +242,9 @@ class TestBounds(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
+                refractory_time=self.refractory_time,
+                spike_surrogate=self.spike_surrogate,
+                exp_slope=self.exp_slope,
                 exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
@@ -262,8 +270,9 @@ class TestBounds(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope,
                 exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),

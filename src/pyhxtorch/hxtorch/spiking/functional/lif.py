@@ -2,11 +2,10 @@
 """
 Leaky-integrate and fire neurons
 """
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 from warnings import warn
 import torch
 
-from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
 from hxtorch.spiking.handle import Handle
@@ -22,8 +21,7 @@ def exp_cuba_lif_integration(input: torch.Tensor,
                              threshold: torch.Tensor,
                              tau_syn_exp: torch.Tensor,
                              tau_mem_exp: torch.Tensor,
-                             method: torch.Tensor,
-                             alpha: torch.Tensor,
+                             spike_surrogate: Callable,
                              hw_data: Optional[type(Handle(
                                  'voltage', 'adaptation', 'spikes'))] = None
                              ) -> Tuple[torch.Tensor, ...]:
@@ -51,9 +49,8 @@ def exp_cuba_lif_integration(input: torch.Tensor,
         as torch.Tensor.
     :param tau_mem_exp: The membrane time constant as e^(-dt / \tau_{mem})
         as torch.Tensor.
-    :param method: The method used for the surrogate gradient, e.g.,
-        'superspike'.
-    :param alpha: The slope of the surrogate gradient in case of 'superspike'.
+    :param spike_surrogate: Surrogate function for the spike triggering
+        mechanism.
     :param hw_data: An optional tuple holding optional hardware observables in
         the order (spikes, membrane_cadc, membrane_madc).
     :param dt: Integration step width.
@@ -92,7 +89,7 @@ def exp_cuba_lif_integration(input: torch.Tensor,
         i = tau_syn_exp * i + input[ts]
 
         # compute spikes
-        out_spikes = spiking_threshold(v - threshold, method, alpha)
+        out_spikes = spike_surrogate(v - threshold)
         z = Unterjubel.apply(out_spikes, spikes_hw[ts]) \
             if spikes_hw is not None else out_spikes
 

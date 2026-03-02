@@ -57,7 +57,7 @@ class CuBaStepCode():
     unterjubel_v_code = "v = Unterjubel.apply(v, membrane_hw[ts])"
 
     spike_code = \
-        "spike = spiking_threshold(v - threshold, method, alpha)"
+        "spike = spike_surrogate(v - threshold)"
 
     unterjubel_z_code = "z = Unterjubel.apply(spike, spikes_hw[ts])"
 

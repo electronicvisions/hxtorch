@@ -1,15 +1,16 @@
 """
 Adaptive exponential leaky-integrate and fire neurons
 """
-from typing import Tuple, Optional, Union
+from functools import partial
+from typing import Tuple, Optional, Union, Callable
 import torch
 
 from hxtorch.spiking.handle import Handle
-from hxtorch.spiking.functional.threshold import threshold as spiking_threshold
 from hxtorch.spiking.functional.unterjubel import Unterjubel
 from hxtorch.spiking.functional.refractory import refractory_update
 from hxtorch.spiking.functional.mock import (
     RandomNoise, RandomNoiseAdd, Bounds, saturate)
+from hxtorch.spiking.functional.surrogates import superspike
 
 
 # Allow redefining builtin for PyTorch consistency
@@ -25,8 +26,7 @@ def cuba_aelif_integration(
         c_mem: Union[torch.Tensor, float, int],
         g_l: Union[torch.Tensor, float, int],
         refractory_time: Union[torch.Tensor, float, int],
-        method: str,
-        alpha: float,
+        spike_surrogate: Callable = partial(superspike, alpha=50),
         exp_slope: Union[torch.Tensor, float, int],
         exp_threshold: Union[torch.Tensor, float, int],
         subthreshold_adaptation_strength: Union[torch.Tensor, float, int],
@@ -83,9 +83,8 @@ def cuba_aelif_integration(
     :param c_mem: The membrane capacitance.
     :param g_l: The leak conductance.
     :param refractory_time: The refractory time constant.
-    :param method: The method used for the surrogate gradient, e.g.,
-        'superspike'.
-    :param alpha: The slope of the surrogate gradient in case of 'superspike'.
+    :param spike_surrogate: Surrogate function for the spike triggering
+        mechanism.
     :param exp_slope: The exponential slope.
     :param exp_threshold: The exponential threshold.
     :param subthreshold_adaptation_strength: The subthreshold adaptation
@@ -256,9 +255,7 @@ def cuba_aelif_integration(
     else:
         v[:, :] = 0.
     if fire:
-        variables['spiking_threshold'] = spiking_threshold
-        variables['method'] = method
-        variables['alpha'] = alpha
+        variables['spike_surrogate'] = spike_surrogate
         variables['threshold'] = threshold
         variables['z'] = z
         variables['reset'] = reset

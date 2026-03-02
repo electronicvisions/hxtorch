@@ -11,7 +11,9 @@ from typing import (
     Optional,
     Union,
     List,
+    Callable,
 )
+from functools import partial
 from warnings import warn
 import pylogging as logger
 
@@ -35,6 +37,7 @@ from hxtorch.spiking.functional.mock import (
     RandomNoise,
     Bounds,
 )
+from hxtorch.spiking.functional.surrogates import superspike
 from hxtorch.spiking.handle import (
     Handle,
     SynapseHandle,
@@ -86,8 +89,7 @@ class AELIF(Population):
         refractory_time: HXBaseParameter = 1e-6,
         synapse_dac_bias: HXBaseParameter = 600,
         holdoff_time: HXBaseParameter = 0.,
-        method: str = "superspike",
-        alpha: float = 50.,
+        spike_surrogate: Callable = partial(superspike, alpha=50),
         exponential_slope: HXBaseParameter = 50e-3,
         exponential_threshold: HXBaseParameter = 110,
         subthreshold_adaptation_strength: HXBaseParameter = 1,
@@ -189,6 +191,8 @@ class AELIF(Population):
             holdoff period is the time at the end of the refractory period in
             which the clamping to the reset voltage is already released but new
             spikes can still not be generated. Defaults to HXParameter(0e-6).
+        :param spike_surrogate: Surrogate function for the spike triggering
+            mechanism.
         :param exponential_slope: The exponential slope. Defaults to
             HxParameter(50e-3).
         :param exponential_threshold: The exponential threshold. Defaults to
@@ -214,7 +218,6 @@ class AELIF(Population):
             actual leak potential. If value is `None`, the value of the actual
             leak potential is taken. Only applicable on hardware, not in
             simulation.
-        :param execution_instance: Execution instance to place to.
         :param chip_coordinate: Chip coordinate this module is placed on.
         :param enable_spike_recording: Boolean flag to enable or disable spike
             recording. Note, this does not disable the event out put of
@@ -387,8 +390,8 @@ class AELIF(Population):
                 param.mean = torch.as_tensor(
                     param.mean, dtype=torch.float32).expand(self.size)
 
-        self.alpha = alpha
-        self.method = method
+        self.spike_surrogate = spike_surrogate
+
         self.scale = trace_scale
         self.offset = trace_offset
         self.cadc_time_shift = cadc_time_shift
@@ -454,9 +457,13 @@ class AELIF(Population):
     def extra_repr(self) -> str:
         """ Add additional information """
         reprs = ""
-        if self.fire:
-            reprs += f"alpha={self.alpha}, " \
-                + f"method={self.method}, "
+        if hasattr(self.spike_surrogate, "func"):
+            reprs += f"spike_surrogate={self.spike_surrogate.func.__name__}, "
+        else:
+            try:
+                reprs += f"spike_surrogate={self.spike_surrogate.__name__}, "
+            except AttributeError:
+                pass
         if not self.experiment.mock:
             reprs += f"spike_recording={self._enable_spike_recording}, " \
                 + f"cadc_recording={self._enable_cadc_recording}, " \
@@ -736,8 +743,7 @@ class AELIF(Population):
                      else self.membrane_capacitance.model_value_detach()
                      / self.tau_mem.model_value_detach()),
                 refractory_time=self.refractory_time.model_value,
-                method=self.method,
-                alpha=self.alpha,
+                spike_surrogate=self.spike_surrogate,
                 exp_slope=self.exponential_slope.model_value,
                 exp_threshold=self.exponential_threshold.model_value,
                 subthreshold_adaptation_strength=(
@@ -819,8 +825,7 @@ class LIF(AELIF):
         refractory_time: HXBaseParameter = 1e-6,
         synapse_dac_bias: HXBaseParameter = 600,
         holdoff_time: HXBaseParameter = 0e-6,
-        method: str = "superspike",
-        alpha: float = 50.,
+        spike_surrogate: Callable = partial(superspike, alpha=50),
         enable_spike_recording: bool = True,
         enable_cadc_recording: bool = True,
         enable_cadc_recording_placement_in_dram: bool = False,
@@ -892,6 +897,8 @@ class LIF(AELIF):
             holdoff period is the time at the end of the refractory period in
             which the clamping to the reset voltage is already released but new
             spikes can still not be generated. Defaults to HXParameter(0e-6).
+        :param spike_surrogate: Surrogate function for the spike triggering
+            mechanism.
         :param enable_spike_recording: Boolean flag to enable or disable spike
             recording. Note, this does not disable the event out put of
             neurons. The event output has to be disabled via `mask`.
@@ -959,8 +966,7 @@ class LIF(AELIF):
             refractory_time=refractory_time,
             synapse_dac_bias=synapse_dac_bias,
             holdoff_time=holdoff_time,
-            method=method,
-            alpha=alpha,
+            spike_surrogate=spike_surrogate,
             enable_spike_recording=enable_spike_recording,
             enable_cadc_recording=enable_cadc_recording,
             enable_cadc_recording_placement_in_dram=(
@@ -1028,8 +1034,7 @@ class NeuronExp(LIF):
             threshold=self.threshold.model_value,
             tau_syn_exp=self.tau_syn.model_value,
             tau_mem_exp=self.tau_mem.model_value,
-            method=self.method,
-            alpha=self.alpha,
+            spike_surrogate=self.spike_surrogate,
             hw_data=hw_data))
 
 

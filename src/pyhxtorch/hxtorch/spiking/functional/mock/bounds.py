@@ -3,9 +3,12 @@ Define dataclass that holds data needed to mock bounds (e.g. bounds of the
 dynamic ranges of membrane- and adaptation voltage or the CADC readout bounds)
 """
 from __future__ import annotations
-from typing import Optional, Union, Self
+from typing import Optional, Union, Self, Callable
 from dataclasses import InitVar, dataclass, field
+from functools import partial
 import torch
+
+from hxtorch.spiking.functional.surrogates import exponential_rolloff
 
 
 @dataclass
@@ -21,19 +24,9 @@ class Bounds:
         considered in the backward pass of the simulation; Else, the backward
         function is set to be the identity function and `torch.clamp()` is used
         instead of a surrogate.
-    :param surrogate: In case of of a hardware aware backpropagation, a smooth
-        surrogate function that approximates the clamp function is needed.
-        `surrogate` is a string indicating which surrogate function is to be
-        used in forward- and backward pass to ensure continuous
-        differentiability. The surrogate is only applied, when
-        `hardware_aware` is set. The surrogate can be set to
-        `"linear_rolloff"`.
-    :param rolloff_margin: Parameter of the linear roll off surrogate: Size of
-        the margin from the bounds inwards, in which the roll off is active.
-        Value relative to the distance between the bounds.
-    :param rolloff_margin_abs: Absolute size of the margin from the bounds
-        inwards, in which the roll off is active. This value is needed as a
-        fallback, in case one of the thresholds is infinite.
+    :param surrogate: Callable that implements a surrogate function for the
+        clamp function. Is needed in case of of a hardware aware
+        backpropagation.
     """
     lower: InitVar[Union[float, torch.Tensor]]
     _lower: torch.Tensor = field(init=False)
@@ -41,9 +34,8 @@ class Bounds:
     _upper: torch.Tensor = field(init=False)
     device: Optional[torch.device] = None
     hardware_aware: bool = True
-    surrogate: str = "linear_rolloff"
-    rolloff_margin: float = 0.03
-    rolloff_margin_abs: float = 0.05
+    surrogate: Callable = partial(
+        exponential_rolloff, rolloff_margin=0.1, rolloff_margin_abs=0.15)
 
     def __post_init__(self, lower: Union[float, torch.Tensor],
                       upper: Union[float, torch.Tensor]) -> None:
@@ -59,9 +51,7 @@ class Bounds:
     def __getitem__(self, idx) -> Bounds:
         return Bounds(
             lower=self._lower[idx], upper=self._upper[idx], device=self.device,
-            hardware_aware=self.hardware_aware, surrogate=self.surrogate,
-            rolloff_margin=self.rolloff_margin,
-            rolloff_margin_abs=self.rolloff_margin_abs)
+            hardware_aware=self.hardware_aware, surrogate=self.surrogate)
 
     @property
     def lower(self) -> torch.Tensor:

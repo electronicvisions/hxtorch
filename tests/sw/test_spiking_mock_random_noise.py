@@ -4,12 +4,14 @@ and ADC readout noise
 """
 import unittest
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
 from hxtorch.spiking.functional.mock import RandomNoise
+from hxtorch.spiking.functional.surrogates import superspike
 import hxtorch.spiking as hxsnn
 
 
@@ -106,9 +108,9 @@ class TestRandomNoise(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
@@ -128,9 +130,9 @@ class TestRandomNoise(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=(
                     self.subthreshold_adaptation_strength),
                 spike_triggered_adaptation_increment=(
@@ -173,9 +175,9 @@ class TestRandomNoise(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=0.,
                 spike_triggered_adaptation_increment=(
                     self.spike_triggered_adaptation_increment),
@@ -194,9 +196,9 @@ class TestRandomNoise(unittest.TestCase):
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
-                refractory_time=self.refractory_time, method="superspike",
-                alpha=50, exp_slope=self.exp_slope,
-                exp_threshold=self.exp_threshold,
+                refractory_time=self.refractory_time,
+                spike_surrogate=partial(superspike, alpha=50),
+                exp_slope=self.exp_slope, exp_threshold=self.exp_threshold,
                 subthreshold_adaptation_strength=0.,
                 spike_triggered_adaptation_increment=(
                     self.spike_triggered_adaptation_increment),
