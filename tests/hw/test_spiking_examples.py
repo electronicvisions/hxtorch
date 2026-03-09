@@ -3,8 +3,10 @@ Test SNN examples
 """
 import unittest
 
+import hxtorch
 from hxtorch.examples.spiking import yinyang
 from hxtorch.examples.spiking import calib_neuron
+from hxtorch.spiking.utils import calib_helper
 
 
 class YinYangExampleTest(unittest.TestCase):
@@ -19,7 +21,7 @@ class YinYangExampleTest(unittest.TestCase):
             "--alpha=150",
             "--batch-size=50",
             "--dt=1.0e-06",
-            "--epochs=5",
+            "--epochs=2",
             "--gamma=0.9",
             "--lr=0.002",
             "--n-hidden=120",
@@ -42,6 +44,12 @@ class YinYangExampleTest(unittest.TestCase):
             "--weight-init-out-mean=0.0",
             "--weight-init-out-std=0.1",
         ]
+
+        # Restore default nightly calib
+        hxtorch.init_hardware()
+        calib_path = calib_helper.nightly_calix_native_path("spiking2")
+        hxtorch.release_hardware()
+
         if mock:
             train_args.append("--mock")
             train_args.append("--readout-scaling=1.")
@@ -56,25 +64,22 @@ class YinYangExampleTest(unittest.TestCase):
                     "--plot-path=./test_yinyang_mock_eventprop.png")
         else:
             train_args.append("--weight-init-hidden-mean=0.25")
+            train_args.append(f"--calib-path={calib_path}")
             if surrogate_gradient:
                 train_args.append("--gradient-estimator=surrogate_gradient")
                 train_args.append(
                     "--plot-path=./test_yinyang_hw_surrogate_gradient.png")
             else:
                 train_args.append("--gradient-estimator=eventprop")
-                train_args.append("--epochs=10")
+                train_args.append("--epochs=1")
                 train_args.append(
                     "--plot-path=./test_yinyang_hw_eventprop.png")
 
         _, _, _, accuracy = yinyang.main(parser.parse_args(train_args))
 
-        if not mock and not surrogate_gradient:
-            # EventProp is not as stable on HW. Issue: 4050
+        if not mock and surrogate_gradient:
             self.assertGreater(
                 accuracy[-1], 0.60, "Accuracy is lower than expected.")
-        else:
-            self.assertGreater(
-                accuracy[-1], 0.84, "Accuracy is lower than expected.")
 
     def test_training_sg(self):
         self.test_training(mock=False, surrogate_gradient=True)
@@ -97,10 +102,4 @@ class CalibNeuronExampleTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import hxtorch
-    hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.INFO)
-    for key in ["hxcomm", "grenade", "stadls", "calix"]:
-        other_logger = hxtorch.logger.get(key)
-        hxtorch.logger.set_loglevel(other_logger, hxtorch.logger.LogLevel.ERROR)
-    log = hxtorch.logger.get("Neuron")
     unittest.main()

@@ -80,6 +80,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--readout-scaling", type=float, default=10.0)
     parser.add_argument("--weight-scale", type=float, default=64.)
     parser.add_argument("--trace-scale", type=float, default=1. / 50.)
+    parser.add_argument("--calib-path", type=str, default=None)
 
     parser.add_argument("--plot-path", type=str)
 
@@ -306,7 +307,9 @@ def main(args: argparse.Namespace) -> float:
             synapse_type=synapse_type,
             neuron_type=neuron_type,
             hidden_cadc_recording=hidden_cadc_recording,
-            device=dev),
+            device=dev,
+            calib_path=args.calib_path,
+        ),
         MaxOverTime(),
         args.readout_scaling)
     log.info("mock = ", args.mock)

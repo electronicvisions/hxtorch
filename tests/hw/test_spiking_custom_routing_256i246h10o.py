@@ -274,4 +274,4 @@ class TestSNNCustomRouting256I246H10O(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    Funittest.main()
+    unittest.main()

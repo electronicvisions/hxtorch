@@ -171,19 +171,26 @@ class TestExecutionInstance(HXTestCase):
                              old_params[key].hardware_value)
 
         # Now we assign default values
-        # Should calibrate
-        inst = ExecutionInstance()
-        exp = hxsnn.Experiment()
-        syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
-        nrn = hxsnn.LIF(10, exp, execution_instance=inst)
-        # Ensure modules get placed
-        syn.register_hw_entity()
-        nrn.register_hw_entity()
-        inst.modules = [syn, nrn]
-        self.assertNotEqual(0, len(inst.modules))
-        inst.calibrate()
-        self.assertIsNotNone(inst.calib)
-        self.assertIsNotNone(inst.chip)
+        from unittest.mock import patch
+        with patch(
+                "hxtorch.spiking.execution_instance.calibrate") as mock_calib:
+            mock_calib.return_value = calib_helper.calib_from_calix_native(
+                calib_helper.nightly_calix_native_path())
+            inst = ExecutionInstance()
+            exp = hxsnn.Experiment()
+            syn = hxsnn.Synapse(10, 10, exp, execution_instance=inst)
+            nrn = hxsnn.LIF(10, exp, execution_instance=inst)
+            # Ensure modules get placed
+            syn.register_hw_entity()
+            nrn.register_hw_entity()
+            inst.modules = [syn, nrn]
+            self.assertNotEqual(0, len(inst.modules))
+            self.assertIsNone(inst.calib)
+            self.assertIsNone(inst.chip)
+            inst.calibrate()
+            self.assertIsNotNone(inst.calib)
+            self.assertIsNotNone(inst.chip)
+            mock_calib.assert_called_once()
 
     def test_cadc_recordings(self):
         """ Test CADC recordings """

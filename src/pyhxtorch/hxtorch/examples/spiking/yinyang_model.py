@@ -30,7 +30,8 @@ class SNN(torch.nn.Module):
                  synapse_type: hxsnn.HXModule = hxsnn.Synapse,
                  neuron_type: hxsnn.HXModule = hxsnn.LIF,
                  hidden_cadc_recording: bool = False,
-                 device: torch.device = torch.device("cpu")) -> None:
+                 device: torch.device = torch.device("cpu"),
+                 calib_path: Optional[str] = None) -> None:
         """
         Initialize the SNN.
 
@@ -58,11 +59,14 @@ class SNN(torch.nn.Module):
             backpropagation functionality.
         :param device: The used PyTorch device used for tensor operations in
             software.
+        :param calib_path: Path to the calibration data.
         """
         super().__init__()
 
         # Experiment instance to work on
         self.exp = hxsnn.Experiment(mock=mock, dt=dt)
+        if calib_path is not None:
+            self.exp.default_execution_instance.load_calib(calib_path)
 
         # Repeat input
         self.input_repetitions = input_repetitions
