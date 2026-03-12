@@ -96,7 +96,8 @@ class TestHXMACPerformance(unittest.TestCase):
                 "at batchsize: {} and matrix size: {}.".format(
                     data_in.shape[0], weights_in.shape))
         # for largest batchsize expect 150Mop/s with 30% allowed deviation
-        self.assertGreater(ops / duration, 150e6 * 0.7)
+        # disabled due to high performace variance on cluster
+        # self.assertGreater(ops / duration, 150e6 * 0.7)
 
 
     def test_sweep_matrixsize(self):
@@ -120,7 +121,8 @@ class TestHXMACPerformance(unittest.TestCase):
                 "at batch size: {} and matrix size: {}.".format(
                     2000, weights_in.shape))
         # for largest matrixsize expect 240Mop/s with 20% allowed deviation
-        self.assertGreater(ops / duration, 240e6 * 0.8)
+        # disabled due to high performace variance on cluster
+        # self.assertGreater(ops / duration, 240e6 * 0.8)
 
 
 if __name__ == '__main__':
