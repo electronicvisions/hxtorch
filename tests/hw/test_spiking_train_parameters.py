@@ -1,6 +1,5 @@
 from typing import Optional
 from pathlib import Path
-from functools import partial
 from dataclasses import dataclass
 
 import unittest
@@ -12,7 +11,6 @@ import hxtorch
 from hxtorch.spiking import Experiment, ModelParameter
 from hxtorch.spiking.modules import LI
 from hxtorch.spiking.handle import LIFObservables
-from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.parameter import (
     TrainableHXTransformedModelParameter,
     MixedHXModelParameter
@@ -52,10 +50,7 @@ class Model(torch.nn.Module):
             1,
             1,
             self.experiment,
-            transform=partial(
-                weight_transforms.linear_saturating,
-                scale=test_parameters.weight_scale
-            )
+            weight_scale=test_parameters.weight_scale
         )
         self.synapse.weight.requires_grad_(False)
 

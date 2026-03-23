@@ -4,12 +4,12 @@ Implementing SNN modules
 from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
-    Callable,
     Type,
     Optional,
     List,
     Tuple,
     Literal,
+    Union,
 )
 import math
 
@@ -18,11 +18,13 @@ import torch
 from torch.nn.parameter import Parameter
 
 import pygrenade_vx as grenade
+from dlens_vx_v3 import lola
 
 
 import hxtorch.spiking.functional as F
 from hxtorch.core.plasticity_rule import PlasticityRule
 from hxtorch.core.modules.projection import ProjectionConnection
+from hxtorch.spiking.functional.mock import Bounds
 from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.handle import LIFObservables, SynapseHandle
 from hxtorch.spiking.modules.types.projection import Projection
@@ -51,10 +53,17 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                   grenade.common.ConnectionOnExecutor]] = None,
         device: str = None,
         dtype: Type = None,
-        transform: Callable = weight_transforms.linear_saturating,
         plasticity_rule: PlasticityRule | None = None,
-        receptor: Literal["excitatory", "inhibitory"]
-            | List[str] | Tuple[str, ...] | None = None,
+        receptor: (Literal["excitatory", "inhibitory"]
+                   | List[str] | Tuple[str, ...] | None) = None,
+        weight_scale: float = 1.,
+        mock: bool = False,
+        weight_step: Union[torch.Tensor, float, int, None] = 1.,
+        weight_bounds: Optional[Bounds] = Bounds(
+            lower=(-torch.tensor(
+                lola.SynapseMatrix.Weight.max).to(torch.float32)),
+            upper=(torch.tensor(
+                lola.SynapseMatrix.Weight.max).to(torch.float32))),
     ) -> None:
         """
         TODO: Think about what to do with device here.
@@ -68,6 +77,19 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         :param plasticity_rule: Plasticity rule adjusting this synapse.
         :param: receptor: Receptor type of the synapse. Can be 'excitatory',
             'inhibitory' or ('excitatory', inhibitory') for a signed synapse.
+        :param weight_scale: Scaling factor, with which the weight values are
+            multiplied to transform them from model to hardware domain.
+        :param mock: Flag that enables the mocking of discrete and finite
+            weights in simulation, similar as on hardware.
+        :param weight_step: The step size for the discretization, which is to
+            be performed on the weights. The weight values are rounded to the
+            closest multiple of `weight_step`. If set to `None`, no weight
+            discretization is performed.
+        :param weight_bounds: The bounds, to which the values in the `weight`
+            Tensor are clamped to if they exceed the bounds. Also holds the
+            surrogate function which is used as a replacement for the clamp
+            function. If `weight_bounds` is set to `None`, no clamping is
+            performed.
         """
         super().__init__(
             in_features,
@@ -81,9 +103,18 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         self.weight = Parameter(
             torch.empty(
                 (out_features, in_features), device=device, dtype=dtype))
-        self.weight_transform = transform
-
         self._weight_hash = None
+        self.weight_scale = weight_scale
+        self.mock = mock
+        self.weight_step = None
+        if weight_step is not None:
+            self.weight_step = torch.tensor(weight_step) / self.weight_scale
+        self.weight_bounds = weight_bounds
+        if weight_bounds is not None:
+            self.weight_bounds.lower = (
+                self.weight_bounds.lower / self.weight_scale)
+            self.weight_bounds.upper = (
+                self.weight_bounds.upper / self.weight_scale)
 
         self.reset_parameters()
 
@@ -112,8 +143,10 @@ class Synapse(Projection):  # pylint: disable=abstract-method
         torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     def get_connections(self) -> List[Tuple[int, int, float]]:
-        weight_transformed = self.weight_transform(
-            torch.clone(self.weight.data))
+        weight_transformed = weight_transforms.linear_saturating(
+            torch.clone(self.weight.data),
+            scale=self.weight_scale,
+        )
         # TODO: Make sure this doesn't require rerouting
         connections = [
             ProjectionConnection(col, row, weight)
@@ -125,8 +158,13 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
     # pylint: disable=redefined-builtin, arguments-differ
     def forward_func(self, input: LIFObservables) -> SynapseHandle:
-        return SynapseHandle(
-            graded_spikes=F.linear(input.spikes, self.weight, None))
+        if self.mock:
+            graded_spikes = F.linear_mock(
+                input.spikes, self.weight, None, self.weight_step,
+                self.weight_bounds)
+        else:
+            graded_spikes = F.linear(input.spikes, self.weight, None)
+        return SynapseHandle(graded_spikes=graded_spikes)
 
 
 class EventPropSynapse(Synapse):

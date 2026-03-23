@@ -8,6 +8,7 @@ from hxtorch.spiking.functional.linear import (
     linear,
     linear_sparse,
     linear_exponential_clamp,
+    linear_mock,
 )
 from hxtorch.spiking.functional.eventprop import (
     EventPropLIFFunction,

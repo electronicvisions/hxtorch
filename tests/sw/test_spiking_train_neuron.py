@@ -3,7 +3,6 @@ import torch
 
 from pathlib import Path
 from tqdm.auto import tqdm
-from functools import partial
 from matplotlib import pyplot as plt
 from dataclasses import dataclass
 
@@ -11,7 +10,6 @@ import hxtorch
 from hxtorch.spiking import Experiment
 from hxtorch.spiking.modules import LI
 from hxtorch.spiking.handle import LIFObservables
-from hxtorch.spiking.transforms import weight_transforms
 from hxtorch.spiking.parameter import TrainableModelParameter
 
 
@@ -47,8 +45,7 @@ class Model(torch.nn.Module):
             )
 
         self.synapse = hxtorch.snn.Synapse(
-            1, 1, self.experiment, transform=partial(
-                weight_transforms.linear_saturating))
+            1, 1, self.experiment)
         self.synapse.weight.requires_grad_(False)
         self.neuron = LI(
             1, self.experiment,

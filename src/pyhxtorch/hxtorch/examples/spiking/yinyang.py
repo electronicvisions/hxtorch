@@ -161,8 +161,7 @@ def train(model: torch.nn.Module, loader: DataLoader,
                     ).max(),
                     args.weight_scale)
                 # reset partial
-                model.network.linear_o.weight_transform.keywords["scale"] \
-                    = scale
+                model.network.linear_o.weight_scale = scale
 
         scores = model(data.to(dev))
 

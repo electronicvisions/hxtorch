@@ -1,8 +1,12 @@
 """
 Implement linear (and similar) autograd functions
 """
+from typing import Optional
+
 import torch
 from dlens_vx_v3 import lola
+
+from hxtorch.spiking.functional.mock import Discrete, saturate, Bounds
 
 
 # Allow redefining builtin for PyTorch consistancy
@@ -12,6 +16,40 @@ def linear(input: torch.Tensor, weight: torch.nn.parameter.Parameter,
     """
     Wrap `linear` to allow signature inspection
     """
+    return torch.nn.functional.linear(input, weight, bias)
+
+
+# pylint: disable=too-many-arguments
+def linear_mock(input: torch.Tensor, weight: torch.nn.parameter.Parameter,
+                bias: Optional[torch.nn.parameter.Parameter] = None,
+                weight_step: Optional[torch.Tensor] = torch.Tensor([1.]),
+                weight_bounds: Optional[Bounds] = Bounds(
+                    lower=-torch.tensor(lola.SynapseMatrix.Weight.max),
+                    upper=torch.tensor(lola.SynapseMatrix.Weight.max))
+                ) -> torch.Tensor:
+    """
+    Linear function which scales the input with weight factors, which can be
+    discretized and clamped at the specified bounds.
+    :param input: The input which is to be scaled.
+    :param weight: The scaling factor, which the input is to be scaled with.
+    :param bias: An offset which is added to the result after scaling.
+    :param weight_step: The step size for the discretization, which is to be
+        performed on the weights. The values in the `weight` Tensor are rounded
+        to the closest multiple of `weight_step`. If set to `None`, no weight
+        discretization is performed.
+    :param weight_bounds: The bounds, to which the values in the `weight`
+        Tensor are clamped to if they exceed the bounds. Also holds the
+        surrogate function which is used as a replacement for the clamp
+        function. If `weight_bounds` is set to `None`, no clamping is
+        performed.
+    :return: Returns appropriately scaled input.
+    """
+    if weight_bounds:
+        weight_bounds.to(input.device)
+        weight = saturate(weight, weight_bounds)
+    if weight_step is not None:
+        weight_step = weight_step.to(input.device)
+        weight = Discrete.apply(weight, weight_step)
     return torch.nn.functional.linear(input, weight, bias)
 
 

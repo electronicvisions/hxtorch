@@ -1,7 +1,11 @@
 """
 Model class for spiking HX torch yinyang example
 """
-from typing import Optional, Tuple
+from typing import (
+    Optional,
+    Tuple,
+    Callable,
+)
 from functools import partial
 import torch
 
@@ -9,7 +13,6 @@ from dlens_vx_v3 import halco
 
 import hxtorch.core as hxcore
 import hxtorch.spiking as hxsnn
-from hxtorch.spiking.transforms import weight_transforms
 
 
 class SNN(torch.nn.Module):
@@ -75,8 +78,7 @@ class SNN(torch.nn.Module):
         # Input projection
         self.linear_h = synapse_type(
             n_in * input_repetitions, n_hidden, experiment=self.exp,
-            transform=partial(
-                weight_transforms.linear_saturating, scale=weight_scale))
+            weight_scale=weight_scale)
         # Initialize weights
         if weight_init_hidden:
             w = torch.zeros(n_hidden, n_in)
@@ -104,9 +106,7 @@ class SNN(torch.nn.Module):
 
         # Output projection
         self.linear_o = hxsnn.Synapse(
-            n_hidden, n_out, experiment=self.exp,
-            transform=partial(
-                weight_transforms.linear_saturating, scale=weight_scale))
+            n_hidden, n_out, experiment=self.exp, weight_scale=weight_scale)
 
         # Readout layer
         self.li_readout = hxsnn.LI(

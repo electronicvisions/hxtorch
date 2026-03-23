@@ -3,7 +3,6 @@ Example for usage of utils.measure_mock_scaling with plots
 """
 from typing import Dict
 import argparse
-from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -15,7 +14,6 @@ from hxtorch.core.utils import calib_helper
 from hxtorch.spiking.utils.dynamic_range.boundary import get_dynamic_range
 from hxtorch.spiking.utils.dynamic_range.weight_scaling import get_weight_scaling
 from hxtorch.spiking.utils.dynamic_range.threshold import get_trace_scaling
-from hxtorch.spiking.transforms.weight_transforms import linear_saturating
 
 log = hxtorch.logger.get("hxtorch.examples.spiking.mock_scaling")
 hxtorch.logger.default_config(level=hxtorch.logger.LogLevel.ERROR)
@@ -72,7 +70,7 @@ def run(inputs: torch.Tensor, nrn_params: Dict[str, hxcore.HXParameter],
             in_features=1,
             out_features=1,
             experiment=exp,
-            transform=partial(linear_saturating, scale=weight_scale))
+            weight_scale=weight_scale)
         lif = hxsnn.LIF(
             size=1,
             **nrn_params,

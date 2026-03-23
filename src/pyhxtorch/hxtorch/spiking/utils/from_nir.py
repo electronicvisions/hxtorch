@@ -2,7 +2,6 @@
 Translate a NIRGraph to an hxtorch SNN.
 '''
 from dataclasses import dataclass, field
-from functools import partial
 import torch
 
 import pygrenade_vx as grenade
@@ -19,7 +18,6 @@ from hxtorch.spiking.parameter import (
     MixedHXModelParameter,
 )
 from hxtorch.spiking.run import run
-from hxtorch.spiking.transforms import weight_transforms
 
 
 @dataclass
@@ -64,8 +62,7 @@ def _map_nir_to_hxtorch(
             in_features=node.weight.shape[1],
             out_features=node.weight.shape[0],
             experiment=exp,
-            transform=partial(
-                weight_transforms.linear_saturating, scale=cfg.weight_scale))
+            weight_scale=cfg.weight_scale)
         module.weight.data = torch.Tensor(node.weight)
         return module
     if isinstance(node, nir.CubaLI):
