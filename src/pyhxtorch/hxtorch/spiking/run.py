@@ -30,6 +30,9 @@ def run(experiment: Experiment, runtime: Optional[int])\
     graph_elements = experiment.modules.done()
     for module, inputs, output in graph_elements:
         module.exec_forward(inputs, output)
+    # Post processing
+    for module, _, output in graph_elements:
+        module.post_simulation_processing(output)
 
     if execution_info is not None:
         # TODO: Generalize to more execution instances

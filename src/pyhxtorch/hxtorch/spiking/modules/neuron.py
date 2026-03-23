@@ -130,6 +130,7 @@ class AELIF(Population):
         dynamic_range_current: Optional[Bounds] = None,
         dynamic_range_voltage: Optional[Bounds] = None,
         dynamic_range_adaptation: Optional[Bounds] = None,
+        event_drop_transform: Optional[Callable] = None,
         leaky: bool = True,
         fire: bool = True,
         exponential: bool = True,
@@ -332,6 +333,11 @@ class AELIF(Population):
             adaptation is clamped to the according bound. If set to `None`, no
             clamping is performed on the adaptation trace throughout
             simulation.
+        :param event_drop_transform: A function which implements the mocking of
+            event drops that happen at data transfer between the chip and the
+            FPGA. Has to take a spike tensor of shape
+            (timesteps, batch size, population size) and modify the given
+            instance (i.e. return nothing).
         :param leaky: Flag for enabling / disabling the leak term.
         :param fire: Flag for enabling / disabling the firing behaviour.
         :param exponential: Flag for enabling / disabling the exponential term.
@@ -407,6 +413,8 @@ class AELIF(Population):
                 raise ValueError('Currently only neurons with a single '
                                  'compartment are supported.')
             self._neuron_structure = neuron_structure
+
+        self.event_drop_transform = event_drop_transform
 
         self.leaky = leaky
         self.fire = fire
@@ -791,6 +799,15 @@ class AELIF(Population):
             membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
             current=current, adaptation_cadc=adaptation_cadc,
             adaptation_madc=adaptation_madc, spikes=spikes)
+
+    def post_simulation_processing(self, output) -> None:
+        """
+        Implements post processing of resulting experiment data.
+        """
+        # Event drops
+        if self.event_drop_transform is None or not hasattr(output, "spikes"):
+            return
+        self.event_drop_transform(output.spikes)
 
 
 class LIF(AELIF):

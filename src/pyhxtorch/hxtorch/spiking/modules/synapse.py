@@ -10,6 +10,7 @@ from typing import (
     Tuple,
     Literal,
     Union,
+    Callable,
 )
 import math
 
@@ -64,6 +65,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                 lola.SynapseMatrix.Weight.max).to(torch.float32)),
             upper=(torch.tensor(
                 lola.SynapseMatrix.Weight.max).to(torch.float32))),
+        event_drop_transform: Optional[Callable] = None,
     ) -> None:
         """
         TODO: Think about what to do with device here.
@@ -90,6 +92,11 @@ class Synapse(Projection):  # pylint: disable=abstract-method
             surrogate function which is used as a replacement for the clamp
             function. If `weight_bounds` is set to `None`, no clamping is
             performed.
+        :param event_drop_transform: A function to mock pre-synaptic event
+            drops. Needs to take a `torch.Tensor` of shape
+            (timesteps, batch size, pre-synaptic population size) that includes
+            the spike events recieved by the synapse layer and return a
+            `torch.Tensor` of the same shape.
         """
         super().__init__(
             in_features,
@@ -115,6 +122,7 @@ class Synapse(Projection):  # pylint: disable=abstract-method
                 self.weight_bounds.lower / self.weight_scale)
             self.weight_bounds.upper = (
                 self.weight_bounds.upper / self.weight_scale)
+        self.event_drop_transform = event_drop_transform
 
         self.reset_parameters()
 
@@ -158,12 +166,17 @@ class Synapse(Projection):  # pylint: disable=abstract-method
 
     # pylint: disable=redefined-builtin, arguments-differ
     def forward_func(self, input: LIFObservables) -> SynapseHandle:
+        if self.event_drop_transform is not None:
+            input_spikes = self.event_drop_transform(input.spikes)
+        else:
+            input_spikes = input.spikes
+
         if self.mock:
             graded_spikes = F.linear_mock(
                 input.spikes, self.weight, None, self.weight_step,
                 self.weight_bounds)
         else:
-            graded_spikes = F.linear(input.spikes, self.weight, None)
+            graded_spikes = F.linear(input_spikes, self.weight, None)
         return SynapseHandle(graded_spikes=graded_spikes)
 
 

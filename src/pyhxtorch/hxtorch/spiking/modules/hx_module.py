@@ -82,11 +82,14 @@ class HXTorchFunctionMixin:
 
         return func
 
+    # pylint: disable=unused-argument
+    def post_simulation_processing(self, output) -> None:
+        """
+        Further processing of result data after the simulation is done.
+        """
+
 
 class HXTorchBaseModule(HXTorchFunctionMixin, torch.nn.Module):
-
-    def post_simulation_processing(self, output) -> None:
-        pass
 
     # pylint: disable=abstract-method
     def __init__(self) -> None:
