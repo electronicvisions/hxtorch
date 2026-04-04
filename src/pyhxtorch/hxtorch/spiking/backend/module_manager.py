@@ -56,7 +56,7 @@ class AbstractModuleManager(ABC):
         wrapper -> node mapping
         """
         self.prev_graph = self.graph.copy()
-        self.graph = nx.DiGraph()
+        self.graph.clear()
 
     @abstractmethod
     def add_node(
