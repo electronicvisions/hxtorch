@@ -37,6 +37,13 @@ class Handle(ABC):
 
         handle_name = cls.__name__ + "_" \
             + "_".join([str(attr[0]) for attr in attributes])
+
+        # Check if handle class is already existing
+        if handle_name in handle_register:
+            if args:
+                return handle_register[handle_name](*((None,) * len(args)))
+            return handle_register[handle_name](**kwargs)
+
         doc = "Handle for " + ", ".join([str(attr[0]) for attr in attributes])
 
         def __eq__(this, other):
@@ -75,18 +82,14 @@ class Handle(ABC):
         HandleClass = make_dataclass(
             handle_name, attributes, eq=True, namespace={
                 "__eq__": __eq__, "holds": holds, "clone": clone})
+        HandleClass.__module__ = __name__
         HandleClass.__doc__ = doc
         HandleClass.__str__ = lambda self: HandleClass.__name__ + ": \n\t" \
             + "\n\t".join([str(key) + " = " + str(value)
                           for (key, value) in kwargs.items()])
 
-        # Check if handle class is already existing
-        if handle_name in handle_register and args:
-            return handle_register[handle_name](*((None,) * len(args)))
-        if handle_name in handle_register and kwargs:
-            return handle_register[handle_name](**kwargs)
-        if handle_name not in handle_register:
-            handle_register[handle_name] = HandleClass
+        handle_register[handle_name] = HandleClass
+        globals()[handle_name] = HandleClass
 
         if args and not kwargs:
             return HandleClass(*((None,) * len(args)))
