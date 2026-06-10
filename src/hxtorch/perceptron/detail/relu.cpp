@@ -4,7 +4,6 @@
 #include "grenade/vx/compute/relu.h"
 #include "hxtorch/core/detail/connection.h"
 #include "hxtorch/perceptron/detail/conversion.h"
-#include "hxtorch/perceptron/detail/inference_tracer.h"
 #include "hxtorch/perceptron/detail/util.h"
 #include "lola/vx/v3/chip.h"
 
@@ -20,8 +19,6 @@ namespace {
 std::tuple<std::vector<std::vector<grenade::vx::signal_flow::Int8>>, std::vector<int64_t>>
 convert_relu_input(torch::Tensor const& input)
 {
-	detail::tracer_check_input(input);
-
 	auto const sizes = input.sizes();
 
 	auto const input_2d =
@@ -48,7 +45,6 @@ torch::Tensor convert_relu_output(
 		}
 	}
 	ret = ret.reshape(sizes);
-	detail::tracer_update_output(ret);
 	return ret;
 }
 
@@ -65,7 +61,6 @@ torch::Tensor relu_forward(torch::Tensor const& input)
 	}
 	auto const results = relu.run(
 	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
-	tracer_add("relu", std::move(relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }
 
@@ -97,7 +92,6 @@ torch::Tensor converting_relu_forward(torch::Tensor const& input, int64_t const 
 	}
 	auto const results = converting_relu.run(
 	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
-	tracer_add("converting_relu", std::move(converting_relu));
 	return convert_relu_output(results, sizes_2d, input.sizes());
 }
 

@@ -3,7 +3,6 @@
 #include "grenade/vx/compute/addition.h"
 #include "hxtorch/core/detail/connection.h"
 #include "hxtorch/perceptron/detail/conversion.h"
-#include "hxtorch/perceptron/detail/inference_tracer.h"
 #include "lola/vx/v3/chip.h"
 
 namespace hxtorch::perceptron::detail {
@@ -32,8 +31,6 @@ std::vector<grenade::vx::signal_flow::Int8> convert_add_other(torch::Tensor cons
 std::tuple<std::vector<std::vector<grenade::vx::signal_flow::Int8>>, std::vector<int64_t>>
 convert_add_input(torch::Tensor const& input, int64_t const other_size)
 {
-	detail::tracer_check_input(input);
-
 	auto const sizes = input.sizes().vec();
 
 	auto const input_2d = input.reshape({-1, other_size}).floor().clamp(-128., 127.);
@@ -64,7 +61,6 @@ torch::Tensor convert_add_output(
 		}
 	}
 	ret = ret.reshape(sizes);
-	detail::tracer_update_output(ret);
 	return ret;
 }
 
@@ -87,7 +83,6 @@ torch::Tensor add_forward(torch::Tensor const& input, torch::Tensor const& other
 	}
 	auto const results = add.run(
 	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
-	tracer_add("add", std::move(add));
 	return convert_add_output(results, sizes_2d, input.sizes());
 }
 

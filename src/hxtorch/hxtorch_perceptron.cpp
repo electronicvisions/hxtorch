@@ -16,7 +16,6 @@
 #include "hxtorch/perceptron/detail/conv.h"
 #include "hxtorch/perceptron/detail/mock.h"
 #include "hxtorch/perceptron/docstrings.h"
-#include "hxtorch/perceptron/inference_tracer.h"
 #include "hxtorch/perceptron/mac.h"
 #include "hxtorch/perceptron/matmul.h"
 #include "hxtorch/perceptron/mock.h"
@@ -47,9 +46,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	m.def(
 	    "converting_relu", &hxtorch::perceptron::converting_relu, __doc_hxtorch_converting_relu,
 	    pybind11::arg("input"), pybind11::arg("shift") = 2, pybind11::arg("mock") = false);
-	m.def(
-	    "inference_trace", &hxtorch::perceptron::inference_trace, __doc_hxtorch_inference_trace,
-	    pybind11::arg("input"), pybind11::arg("filename"));
 	m.def(
 	    "argmax", &hxtorch::perceptron::argmax, __doc_hxtorch_argmax, pybind11::arg("input"),
 	    pybind11::arg("dim") = c10::optional<int64_t>(), pybind11::arg("keepdim") = false,
@@ -149,17 +145,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 	                     const hxtorch::perceptron::MockParameter& p2) {
 		        return (p1.gain == p2.gain) && (p1.noise_std == p2.noise_std);
 	        });
-
-	pybind11::class_<hxtorch::perceptron::InferenceTracer>(
-	    m, "InferenceTracer", __doc_hxtorch_InferenceTracer)
-	    .def(
-	        pybind11::init<std::string const&>(), __doc_hxtorch_InferenceTracer_InferenceTracer,
-	        pybind11::arg("filename"))
-	    .def(
-	        "stop", &hxtorch::perceptron::InferenceTracer::stop, __doc_hxtorch_InferenceTracer_stop)
-	    .def(
-	        "start", &hxtorch::perceptron::InferenceTracer::start,
-	        __doc_hxtorch_InferenceTracer_start);
 
 	auto constants_module = m.def_submodule("constants", "");
 	constants_module.attr("synaptic_weight_min") =

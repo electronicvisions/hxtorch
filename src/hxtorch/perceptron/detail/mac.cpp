@@ -6,7 +6,6 @@
 #include "hxtorch/core/detail/connection.h"
 #include "hxtorch/perceptron/constants.h"
 #include "hxtorch/perceptron/detail/conversion.h"
-#include "hxtorch/perceptron/detail/inference_tracer.h"
 #include "hxtorch/perceptron/detail/mock.h"
 #include "lola/vx/v3/chip.h"
 
@@ -91,8 +90,6 @@ torch::Tensor mac_forward(
     int64_t madc_recording_neuron_id,
     std::string madc_recording_path)
 {
-	detail::tracer_check_input(x);
-
 	if (weights.dim() != 2) {
 		throw std::runtime_error("HICperceptron-X only supports 2D weight matrices");
 	}
@@ -154,7 +151,6 @@ torch::Tensor mac_forward(
 	auto ret_a = ret.accessor<float, 2>();
 	auto const results =
 	    mac.run(xin, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
-	tracer_add("mac", std::move(mac));
 	for (size_t input = 0; input < num_inputs; ++input) {
 		for (size_t i = 0; i < results.at(0).size(); i++) {
 			ret_a[input][i] = convert_membrane(results[input][i]);
@@ -163,7 +159,6 @@ torch::Tensor mac_forward(
 	if (x_initial_dim == 1) {
 		ret.squeeze_(0);
 	}
-	detail::tracer_update_output(ret);
 	return ret;
 }
 

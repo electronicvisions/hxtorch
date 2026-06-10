@@ -3,30 +3,6 @@
  * FIXME: the docstrings have to be manually syncronized with the corresponding headers
  */
 
-static const char* __doc_hxtorch_InferenceTracer =
-    R"doc(Inference tracer for a linear sequence of operations.
-The traced operations' state is saved as a grenade::compute::Sequence,
-which can be executed as a single operation without transformation to and
-from PyTorch tensors.
-It is ensured, that no untraced modifications are made in-between traced
-operations by comparing the last traced operation's output with the
-currently traced operation's input value.
-
-@note
-Not final API or implementation, see Issue #3694)doc";
-
-static const char* __doc_hxtorch_InferenceTracer_InferenceTracer =
-    R"doc(Construct inference tracer with filename to store traced operations to.)doc";
-
-static const char* __doc_hxtorch_InferenceTracer_start =
-    R"doc(Start tracing operations by registering tracer.)doc";
-
-static const char* __doc_hxtorch_InferenceTracer_stop =
-    R"doc(Stop tracing operations by deregistering tracer and save traced
-operations to given file.
-
-@return List of traced operation names)doc";
-
 static const char* __doc_hxtorch_MockParameter = R"doc(Parameter of hardware mock.)doc";
 
 static const char* __doc_hxtorch_MockParameter_MockParameter =
@@ -95,12 +71,6 @@ static const char* __doc_hxtorch_expanded_conv1d_2 = R"doc()doc";
 
 static const char* __doc_hxtorch_get_mock_parameter =
     R"doc(Returns the current mock parameters.)doc";
-
-static const char* __doc_hxtorch_inference_trace =
-    R"doc(Execute inference of stored trace.
-
-@param input Input data to use
-@param filename Filename to serialized operation trace)doc";
 
 static const char* __doc_hxtorch_mac =
     R"doc(The bare mutliply-accumulate operation of BrainScaleS-2. A 1D input @p x

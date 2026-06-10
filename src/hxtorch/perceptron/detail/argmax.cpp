@@ -3,7 +3,6 @@
 #include "grenade/vx/compute/argmax.h"
 #include "hxtorch/core/detail/connection.h"
 #include "hxtorch/perceptron/detail/conversion.h"
-#include "hxtorch/perceptron/detail/inference_tracer.h"
 #include "lola/vx/v3/chip.h"
 
 namespace hxtorch::perceptron::detail {
@@ -83,12 +82,6 @@ torch::Tensor convert_argmax_output(
 
 torch::Tensor argmax(torch::Tensor const& input, c10::optional<int64_t> const dim, bool keepdim)
 {
-	if (has_tracer() && !(input.dim() == 2 && dim && *dim == 1 && keepdim)) {
-		throw std::runtime_error(
-		    "Tracing argmax operation only supported for 2d input with dim=1 and keepdim enabled.");
-	}
-
-	tracer_check_input(input);
 	auto const [input_in, sizes_2d] = convert_argmax_input(input, dim);
 
 	grenade::vx::compute::ArgMax kernel(sizes_2d.at(1));
@@ -97,9 +90,7 @@ torch::Tensor argmax(torch::Tensor const& input, c10::optional<int64_t> const di
 	}
 	auto const results = kernel.run(
 	    input_in, hxtorch::core::detail::getChip(), hxtorch::core::detail::getExecutor()->get());
-	tracer_add("argmax", std::move(kernel));
 	auto const ret = convert_argmax_output(results, sizes_2d, input.sizes(), dim, keepdim);
-	tracer_update_output(ret);
 	return ret;
 }
 
