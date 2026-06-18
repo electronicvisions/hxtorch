@@ -76,9 +76,9 @@ def _map_nir_to_hxtorch(
                     "CubaLI parameters must be homogeneous across neurons"
                     "in a layer.")
 
-        tau_mem = node.tau_mem[0] * 1e-3  # convert ms to s
-        tau_syn = node.tau_syn[0] * 1e-3  # convert ms to s
-        leak = node.v_leak[0]
+        tau_mem = float(node.tau_mem[0]) * 1e-3  # convert ms to s
+        tau_syn = float(node.tau_syn[0]) * 1e-3  # convert ms to s
+        leak = float(node.v_leak[0])
 
         module = LI(
             size=size,
@@ -100,12 +100,12 @@ def _map_nir_to_hxtorch(
                     "CubaLIF parameters must be homogeneous across neurons"
                     "in a layer.")
 
-        tau_mem = node.tau_mem[0] * 1e-3  # convert ms to s
-        tau_syn = node.tau_syn[0] * 1e-3  # convert ms to s
-        leak = node.v_leak[0]
-        reset = node.v_reset[0]
-        threshold = node.v_threshold[0]
-        r = node.r[0]  # pylint: disable=invalid-name
+        tau_mem = float(node.tau_mem[0]) * 1e-3  # convert ms to s
+        tau_syn = float(node.tau_syn[0]) * 1e-3  # convert ms to s
+        leak = float(node.v_leak[0])
+        reset = float(node.v_reset[0])
+        threshold = float(node.v_threshold[0])
+        r = float(node.r[0])  # pylint: disable=invalid-name
 
         module = LIF(
             size,
@@ -140,7 +140,7 @@ def _map_nir_to_hxtorch(
 
 def from_nir(
     graph: nir.NIRGraph,
-    cfg: ConversionConfig = None
+    cfg: ConversionConfig
 ) -> torch.nn.Module:
     """
     Converts a NIRGraph to an hxtorch module.
@@ -218,9 +218,5 @@ def from_nir(
             return {key: value.spikes
                     for key, value in self.output.items()
                     if hasattr(value, 'spikes')}
-
-    if cfg is None:
-        # Standard ConversionConfig is generated
-        cfg = ConversionConfig()
 
     return SNN(cfg)

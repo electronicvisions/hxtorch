@@ -216,7 +216,8 @@ class TestNIRDataConversion(unittest.TestCase):
         self.assertEqual(hxtorch_dict["lif"].shape, (100, 3, 10))
 
     def test_stable_conversion(self):
-        hxtorch_model = hxsnn.from_nir(self.nir_graph)
+        cfg = ConversionConfig(dt=0.001)
+        hxtorch_model = hxsnn.from_nir(self.nir_graph, cfg)
 
         original_spikes = {
             "lif": torch.randint(0, 2, (4, 10, 10), dtype=torch.float32)
