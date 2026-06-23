@@ -121,6 +121,7 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
         # We expect the same number of outputs as we have modules
         # TODO: Allow for multiple outputs per module
         assert len(returned_handles) == len(self.modules)
+        assert len(output) == len(self.modules)
         # Assign output tensors
         for returned_handle, output_handle in zip(returned_handles, output):
             output_handle.clone(returned_handle)

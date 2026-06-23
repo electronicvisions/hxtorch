@@ -90,12 +90,14 @@ class HXTorchFunctionMixin:
 
 
 class HXTorchBaseModule(HXTorchFunctionMixin, torch.nn.Module):
+    output_type: Type = TensorHandle
 
     # pylint: disable=abstract-method
     def __init__(self) -> None:
         torch.nn.Module.__init__(self)
         HXTorchFunctionMixin.__init__(self)
         self.hw_observables = HXTorchObservables()
+        self._output_handle = None
 
     # Allow redefinition of builtin in order to be consistent with PyTorch
     # pylint: disable=redefined-builtin
@@ -112,9 +114,10 @@ class HXTorchBaseModule(HXTorchFunctionMixin, torch.nn.Module):
         :returns: Returns a Reference to TensorHandle holding result data
             associated with this layer after 'hxtorch.run' is executed.
         """
-        handle = self.output_type()
-        self.experiment.connect(self, input, handle)
-        return handle
+        if self._output_handle is None:
+            self._output_handle = self.output_type()
+        self.experiment.connect(self, input, self._output_handle)
+        return self._output_handle
 
     # Allow redefinition of builtin in order to be consistent with PyTorch
     # pylint: disable=redefined-builtin
@@ -169,7 +172,6 @@ class HXModule(HXTorchBaseModule, HXBaseModule):
     have a representation on hardware
     """
     # pylint: disable=abstract-method
-    output_type: Type = TensorHandle
 
     def __init__(
         self,
@@ -199,8 +201,6 @@ class HXFunctionalModule(HXTorchBaseModule, HXBaseModule):
     not have a direct hardware representation
     """
     # pylint: disable=abstract-method
-    output_type: Type = TensorHandle
-
     def __init__(self, experiment: Experiment) -> None:
         """
         :param experiment: Experiment to append layer to.
