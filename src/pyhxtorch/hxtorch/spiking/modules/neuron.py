@@ -427,7 +427,9 @@ class AELIF(Population):
         self.logger = logger.get("hxtorch.spiking.modules.AELIF")
 
         # Specify output type
-        attr_list = ['membrane_cadc', 'membrane_madc', 'current']
+        attr_list = ['membrane_cadc', 'membrane_madc', 'current_sim',
+                     'current_exc_cadc', 'current_exc_madc',
+                     'current_inh_cadc', 'current_inh_madc']
         if self.fire:
             attr_list.append('spikes')
         if self.adaptation:
@@ -651,10 +653,16 @@ class AELIF(Population):
 
         voltage = AnalogObservable()
         adaptation = AnalogObservable()
+        current_exc = AnalogObservable()
+        current_inh = AnalogObservable()
         if self._cadc_readout_source == ReadoutSource.VOLTAGE:
             voltage.cadc = cadc
         elif self._cadc_readout_source == ReadoutSource.ADAPTATION:
             adaptation.cadc = cadc
+        elif self._cadc_readout_source == ReadoutSource.CURRENT_EXC:
+            current_exc.cadc = cadc
+        elif self._cadc_readout_source == ReadoutSource.CURRENT_INH:
+            current_inh.cadc = cadc
         else:
             self.logger.ERROR(
                 "Post processing for CADC readout source "
@@ -670,12 +678,15 @@ class AELIF(Population):
                 + f"{self._madc_readout_source} is not implemented yet.",
             )
 
-        return Handle(voltage=voltage, adaptation=adaptation, spikes=spikes)
+        return Handle(voltage=voltage, current_exc=current_exc,
+                      current_inh=current_inh, adaptation=adaptation,
+                      spikes=spikes)
 
     # pylint: disable=redefined-builtin, invalid-name
     def forward_func(self, *input: SynapseHandle,
                      hw_data: Optional[type(Handle(
-                         'voltage', 'adaptation', 'spikes'))] = None):
+                         'voltage', 'current_exc', 'current_inh', 'adaptation',
+                         'spikes'))] = None):
         """
         Execute forward function of the neuron layer according to the dynamics
         specified upon construction.
@@ -730,8 +741,10 @@ class AELIF(Population):
             finite_dynamic_ranges=self.finite_dynamic_ranges).generate()
         assert all(synapse_handle.graded_spikes is not None for
                    synapse_handle in input)
-        (membrane_cadc, membrane_madc, current, adaptation_cadc,
-            adaptation_madc, spikes) = F.cuba_aelif_integration(
+        (membrane_cadc, membrane_madc, current_sim, current_exc_cadc,
+            current_exc_madc, current_inh_cadc, current_inh_madc,
+            adaptation_cadc, adaptation_madc,
+            spikes) = F.cuba_aelif_integration(
                 tuple(
                     synapse_handle.graded_spikes for synapse_handle in input),
                 leak=self.leak.model_value,
@@ -777,7 +790,11 @@ class AELIF(Population):
                 integration_step_code=integration_step_code)
         results_dict = {"membrane_cadc": membrane_cadc,
                         "membrane_madc": membrane_madc,
-                        "current": current}
+                        "current_sim": current_sim,
+                        "current_exc_cadc": current_exc_cadc,
+                        "current_exc_madc": current_exc_madc,
+                        "current_inh_cadc": current_inh_cadc,
+                        "current_inh_madc": current_inh_madc}
         if self.fire:
             results_dict["spikes"] = spikes
         if self.adaptation:
@@ -1011,7 +1028,9 @@ class EventPropLIF(LIF):
             hw_data,
             self.experiment.dt)
         return Handle(membrane_cadc=results[1], membrane_madc=None,
-                      current=results[2], spikes=results[0])
+                      current_sim=results[2], current_exc_cadc=None,
+                      current_exc_madc=None, current_inh_cadc=None,
+                      current_inh_madc=None, spikes=results[0])
 
 
 # WARNING: THIS CLASS IS DEPRECATED

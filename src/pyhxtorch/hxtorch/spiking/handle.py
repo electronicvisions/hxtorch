@@ -97,8 +97,11 @@ class Handle(ABC):
 
 
 TensorHandle: Type = type(Handle('tensor'))
-LIFObservables: Type = type(Handle('spikes', 'membrane_cadc', 'current',
-                                   'membrane_madc'))
-LIObservables: Type = type(Handle('membrane_cadc', 'current',
-                                  'membrane_madc'))
+LIFObservables: Type = type(
+    Handle('membrane_cadc', 'membrane_madc', 'current_sim', 'current_exc_cadc',
+           'current_exc_madc', 'current_inh_cadc', 'current_inh_madc',
+           'spikes'))
+LIObservables: Type = type(
+    Handle('membrane_cadc', 'membrane_madc', 'current_sim', 'current_exc_cadc',
+           'current_exc_madc', 'current_inh_cadc', 'current_inh_madc'))
 SynapseHandle: Type = type(Handle('graded_spikes'))

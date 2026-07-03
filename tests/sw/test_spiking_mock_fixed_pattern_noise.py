@@ -99,8 +99,8 @@ class TestMockParameter(unittest.TestCase):
             hw_voltage_trace_available=False,
             hw_adaptation_trace_available=False, hw_spikes_available=False).\
             generate()
-        (membrane_cadc_clean_sim, _, _, adaptation_cadc_clean_sim, _,
-            spikes_clean_sim) = hxsnn.functional.cuba_aelif_integration(
+        (membrane_cadc_clean_sim, _, _, _, _, _, _, adaptation_cadc_clean_sim,
+            _, spikes_clean_sim) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=tau_mem_clean_sim,
                 g_l=self.g_l, tau_syn=tau_syn_clean_sim,
@@ -127,8 +127,8 @@ class TestMockParameter(unittest.TestCase):
         tau_adap_mock = MockParameter(mean=100e-6, std=20e-6)
         tau_adap_mock.sample(self.size)
 
-        membrane_cadc_mock, _, _, adaptation_cadc_mock, _, spikes_mock = \
-            hxsnn.functional.cuba_aelif_integration(
+        (membrane_cadc_mock, _, _, _, _, _, _, adaptation_cadc_mock, _,
+            spikes_mock) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=tau_mem_mock.model_value,
                 g_l=self.g_l, tau_syn=tau_syn_mock.model_value,

@@ -73,7 +73,7 @@ class TestSNNRun(unittest.TestCase):
         # Input handle
         input_handle = LIFObservables(
             spikes=torch.zeros(10, 1, 5),
-            current=None,
+            current_sim=None,
             membrane_cadc=None,
             membrane_madc=None,
         )

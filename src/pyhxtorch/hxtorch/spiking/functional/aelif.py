@@ -32,8 +32,8 @@ def cuba_aelif_integration(
         subthreshold_adaptation_strength: Union[torch.Tensor, float, int],
         spike_triggered_adaptation_increment: Union[torch.Tensor, float, int],
         tau_adap: Union[torch.Tensor, float, int],
-        hw_data: Optional[type(Handle(
-            'voltage', 'adaptation', 'spikes'))] = None,
+        hw_data: Optional[type(Handle('voltage', 'current_exc', 'current_inh',
+                                      'adaptation', 'spikes'))] = None,
         dt: float = 1e-6,
         trace_noise_current: Optional[RandomNoise] = None,
         trace_noise_voltage: Optional[RandomNoise] = None,
@@ -186,6 +186,10 @@ def cuba_aelif_integration(
     v = torch.empty(bs, ps, device=dev)
     membrane_cadc_hw = None
     membrane_madc_hw = None
+    current_exc_cadc_hw = None
+    current_exc_madc_hw = None
+    current_inh_cadc_hw = None
+    current_inh_madc_hw = None
     adaptation_cadc_hw = None
     adaptation_madc_hw = None
     spikes_hw = None
@@ -195,6 +199,14 @@ def cuba_aelif_integration(
             if hw_data.voltage.cadc is not None else None
         membrane_madc_hw = hw_data.voltage.madc.to(dev) \
             if hw_data.voltage.madc is not None else None
+        current_exc_cadc_hw = hw_data.current_exc.cadc.to(dev) \
+            if hw_data.current_exc.cadc is not None else None
+        current_exc_madc_hw = hw_data.current_exc.madc.to(dev) \
+            if hw_data.current_exc.madc is not None else None
+        current_inh_cadc_hw = hw_data.current_inh.cadc.to(dev) \
+            if hw_data.current_inh.cadc is not None else None
+        current_inh_madc_hw = hw_data.current_inh.madc.to(dev) \
+            if hw_data.current_inh.madc is not None else None
         adaptation_cadc_hw = hw_data.adaptation.cadc.to(dev) \
             if hw_data.adaptation.cadc is not None else None
         adaptation_madc_hw = hw_data.adaptation.madc.to(dev) \
@@ -343,5 +355,6 @@ def cuba_aelif_integration(
         adaptation_storage = saturate(
             adaptation_storage, cadc_readout_bounds_adaptation)
 
-    return (membrane, membrane_madc_hw, current, adaptation_storage,
-            adaptation_madc_hw, spikes)
+    return (membrane, membrane_madc_hw, current, current_exc_cadc_hw,
+            current_exc_madc_hw, current_inh_cadc_hw, current_inh_madc_hw,
+            adaptation_storage, adaptation_madc_hw, spikes)

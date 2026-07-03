@@ -99,7 +99,7 @@ class TestBounds(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
 
         # Generate traces without dynamic range bounds
-        (membrane_cadc_clean_sim, _, current_cadc_clean_sim,
+        (membrane_cadc_clean_sim, _, current_cadc_clean_sim, _, _, _, _,
          adaptation_cadc_clean_sim, _, spikes_clean_sim) = \
             hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
@@ -124,9 +124,9 @@ class TestBounds(unittest.TestCase):
             -torch.inf, torch.inf, surrogate=surrogate)
         dynamic_range_voltage = Bounds(-0.5, 1.2, surrogate=surrogate)
         dynamic_range_adaptation = Bounds(-0.3, 0.6, surrogate=surrogate)
-        (membrane_cadc_saturated_traces, _, current_cadc_saturated_traces,
-         adaptation_cadc_saturated_traces, _, spikes_saturated_traces) = \
-            hxsnn.functional.cuba_aelif_integration(
+        (membrane_cadc_saturated_traces, _, current_cadc_saturated_traces, _,
+            _, _, _, adaptation_cadc_saturated_traces, _,
+            spikes_saturated_traces) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
@@ -169,7 +169,7 @@ class TestBounds(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
 
         # Generate traces without readout range bounds
-        (membrane_cadc_clean_sim, _, current_cadc_clean_sim,
+        (membrane_cadc_clean_sim, _, current_cadc_clean_sim, _, _, _, _,
          adaptation_cadc_clean_sim, _, spikes_clean_sim) = \
             hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
@@ -192,9 +192,9 @@ class TestBounds(unittest.TestCase):
         cadc_readout_bounds_voltage = Bounds(-0.5, 0.6, hardware_aware=False)
         cadc_readout_bounds_adaptation = Bounds(
             -0.3, 0.5, hardware_aware=False)
-        (membrane_cadc_saturated_traces, _, current_cadc_saturated_traces,
-         adaptation_cadc_saturated_traces, _, spikes_saturated_traces) = \
-            hxsnn.functional.cuba_aelif_integration(
+        (membrane_cadc_saturated_traces, _, current_cadc_saturated_traces, _,
+            _, _, _, adaptation_cadc_saturated_traces, _,
+            spikes_saturated_traces) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
                 g_l=self.g_l, tau_syn=self.tau_syn,
@@ -237,7 +237,7 @@ class TestBounds(unittest.TestCase):
         weights = torch.nn.parameter.Parameter(torch.ones(self.size, 10))
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
         cadc_readout_bounds_voltage = Bounds(-0.5, 0.6, hardware_aware=True)
-        membrane_cadc_hardware_aware, _, _, _, _, _ = \
+        membrane_cadc_hardware_aware, _, _, _, _, _, _, _, _, _ = \
             hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,
@@ -265,7 +265,7 @@ class TestBounds(unittest.TestCase):
         weights = torch.nn.parameter.Parameter(torch.ones(self.size, 10))
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
         cadc_readout_bounds_voltage = Bounds(-0.5, 0.6, hardware_aware=False)
-        membrane_cadc_hardware_unaware, _, _, _, _, _ = \
+        membrane_cadc_hardware_unaware, _, _, _, _, _, _, _, _, _ = \
             hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, c_mem=self.tau_mem,

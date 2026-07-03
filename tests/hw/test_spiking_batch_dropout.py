@@ -40,7 +40,11 @@ class TestBatchDropout(HWTestCase):
             dropout(hxsnn.LIFObservables(spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(dropout_handle, hxsnn.LIFObservables))
         self.assertIsNone(dropout_handle.spikes)
-        self.assertIsNone(dropout_handle.current)
+        self.assertIsNone(dropout_handle.current_sim)
+        self.assertIsNone(dropout_handle.current_exc_cadc)
+        self.assertIsNone(dropout_handle.current_exc_madc)
+        self.assertIsNone(dropout_handle.current_inh_madc)
+        self.assertIsNone(dropout_handle.current_inh_cadc)
         self.assertIsNone(dropout_handle.membrane_cadc)
         self.assertIsNone(dropout_handle.membrane_madc)
 

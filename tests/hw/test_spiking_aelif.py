@@ -47,14 +47,20 @@ class TestAELIF(HWTestCase):
         neuron_handle = neuron(
             hxsnn.SynapseHandle(graded_spikes=torch.zeros(10, 44)))
         self.assertTrue(isinstance(neuron_handle, type(hxsnn.Handle(
-            'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
-            'adaptation_madc', 'spikes'))))
-        self.assertIsNone(neuron_handle.spikes)
-        self.assertIsNone(neuron_handle.current)
-        self.assertIsNone(neuron_handle.adaptation_cadc)
-        self.assertIsNone(neuron_handle.adaptation_madc)
+            'membrane_cadc', 'membrane_madc', 'current_sim',
+            'current_exc_cadc', 'current_exc_madc', 'current_inh_cadc',
+            'current_inh_madc', 'adaptation_cadc', 'adaptation_madc',
+            'spikes'))))
         self.assertIsNone(neuron_handle.membrane_cadc)
         self.assertIsNone(neuron_handle.membrane_madc)
+        self.assertIsNone(neuron_handle.current_sim)
+        self.assertIsNone(neuron_handle.current_exc_cadc)
+        self.assertIsNone(neuron_handle.current_exc_madc)
+        self.assertIsNone(neuron_handle.current_inh_cadc)
+        self.assertIsNone(neuron_handle.current_inh_madc)
+        self.assertIsNone(neuron_handle.adaptation_cadc)
+        self.assertIsNone(neuron_handle.adaptation_madc)
+        self.assertIsNone(neuron_handle.spikes)
 
     def test_print(self):
         """ Test module printing """
@@ -90,27 +96,35 @@ class TestAELIF(HWTestCase):
         i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = neuron(i_handle)
 
-        self.assertIsNone(s_handle.spikes)
-        self.assertIsNone(s_handle.current)
-        self.assertIsNone(s_handle.adaptation_cadc)
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertIsNone(s_handle.membrane_cadc)
         self.assertIsNone(s_handle.membrane_madc)
+        self.assertIsNone(s_handle.current_sim)
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertIsNone(s_handle.adaptation_cadc)
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsNone(s_handle.spikes)
 
         # Execute
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
+        self.assertTrue(s_handle.membrane_cadc is not None)
+        self.assertIsNone(s_handle.membrane_madc)
+        self.assertTrue(s_handle.current_sim is not None)
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertTrue(s_handle.adaptation_cadc is not None)
+        self.assertIsNone(s_handle.adaptation_madc)
         self.assertIsInstance(s_handle.spikes, torch.Tensor)
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.spikes.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(s_handle.current is not None)
-        self.assertTrue(s_handle.adaptation_cadc is not None)
-        self.assertIsNone(s_handle.adaptation_madc)
-        self.assertTrue(s_handle.membrane_cadc is not None)
-        self.assertIsNone(s_handle.membrane_madc)
 
         # Assert data
         spike_times = torch.nonzero(s_handle.spikes)
@@ -156,36 +170,44 @@ class TestAELIF(HWTestCase):
         i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = neuron(i_handle)
 
-        self.assertIsNone(s_handle.spikes)
-        self.assertIsNone(s_handle.current)
-        self.assertIsNone(s_handle.adaptation_cadc)
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertIsNone(s_handle.membrane_cadc)
         self.assertIsNone(s_handle.membrane_madc)
+        self.assertIsNone(s_handle.current_sim)
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertIsNone(s_handle.adaptation_cadc)
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsNone(s_handle.spikes)
 
         # Execute
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.current.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.adaptation_cadc.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertIsNone(s_handle.membrane_madc)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.current_sim.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.adaptation_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
 
         # Set to adaptation readout source
         neuron.cadc_readout_source = ReadoutSource.ADAPTATION
@@ -198,25 +220,29 @@ class TestAELIF(HWTestCase):
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.current.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.adaptation_cadc.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
         self.assertIsNone(s_handle.membrane_madc)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.current_sim.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.adaptation_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
 
     def test_record_madc(self):
         """
@@ -238,30 +264,20 @@ class TestAELIF(HWTestCase):
         i_handle = linear(hxsnn.LIFObservables(spikes=spikes))
         s_handle = neuron(i_handle)
 
-        self.assertIsNone(s_handle.spikes)
-        self.assertIsNone(s_handle.current)
-        self.assertIsNone(s_handle.adaptation_cadc)
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertIsNone(s_handle.membrane_cadc)
         self.assertIsNone(s_handle.membrane_madc)
+        self.assertIsNone(s_handle.current_sim)
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertIsNone(s_handle.adaptation_cadc)
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsNone(s_handle.spikes)
 
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.spikes.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.current.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.adaptation_cadc.shape),
-                torch.tensor([110, 10, 10])))
-        self.assertIsNone(s_handle.adaptation_madc)
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.membrane_cadc.shape),
@@ -270,6 +286,24 @@ class TestAELIF(HWTestCase):
             torch.all(torch.isclose(
                 torch.tensor(s_handle.membrane_madc.shape),
                 torch.tensor([2, 3235, 10]), rtol=2. / 3235)))
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.current_sim.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.adaptation_cadc.shape),
+                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.adaptation_madc)
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
 
         # Switch readout source to adaptation
         neuron.madc_readout_source = ReadoutSource.ADAPTATION
@@ -280,15 +314,19 @@ class TestAELIF(HWTestCase):
         hxsnn.run(experiment, 110)
 
         # Assert types and shapes
-        self.assertIsInstance(s_handle.spikes, torch.Tensor)
+        self.assertTrue(
+            torch.all(torch.isclose(
+                torch.tensor(s_handle.adaptation_madc.shape),
+                torch.tensor([2, 3235, 10]), rtol=2. / 3235)))
+        self.assertIsNone(s_handle.membrane_madc)
         self.assertTrue(
             torch.equal(
-                torch.tensor(s_handle.spikes.shape),
+                torch.tensor(s_handle.current_sim.shape),
                 torch.tensor([110, 10, 10])))
-        self.assertTrue(
-            torch.equal(
-                torch.tensor(s_handle.current.shape),
-                torch.tensor([110, 10, 10])))
+        self.assertIsNone(s_handle.current_exc_cadc)
+        self.assertIsNone(s_handle.current_exc_madc)
+        self.assertIsNone(s_handle.current_inh_cadc)
+        self.assertIsNone(s_handle.current_inh_madc)
         self.assertTrue(
             torch.equal(
                 torch.tensor(s_handle.adaptation_cadc.shape),
@@ -297,11 +335,11 @@ class TestAELIF(HWTestCase):
             torch.equal(
                 torch.tensor(s_handle.membrane_cadc.shape),
                 torch.tensor([110, 10, 10])))
+        self.assertIsInstance(s_handle.spikes, torch.Tensor)
         self.assertTrue(
-            torch.all(torch.isclose(
-                torch.tensor(s_handle.adaptation_madc.shape),
-                torch.tensor([2, 3235, 10]), rtol=2. / 3235)))
-        self.assertIsNone(s_handle.membrane_madc)
+            torch.equal(
+                torch.tensor(s_handle.spikes.shape),
+                torch.tensor([110, 10, 10])))
 
         # Only one module can record
         experiment = hxsnn.Experiment(dt=self.dt)

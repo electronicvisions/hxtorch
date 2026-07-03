@@ -102,7 +102,7 @@ class TestRandomNoise(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
 
         # Generate traces without temporal noise
-        (membrane_cadc_clean_sim, _, current_cadc_clean_sim,
+        (membrane_cadc_clean_sim, _, current_cadc_clean_sim, _, _, _, _,
             adaptation_cadc_clean_sim, _,
             spikes_clean_sim) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
@@ -124,7 +124,7 @@ class TestRandomNoise(unittest.TestCase):
         trace_noise_current = RandomNoise(0.)
         trace_noise_voltage = RandomNoise(torch.full([self.size], 0.01))
         trace_noise_adaptation = RandomNoise(0.02)
-        (membrane_cadc_noisy_traces, _, current_cadc_noisy_traces,
+        (membrane_cadc_noisy_traces, _, current_cadc_noisy_traces, _, _, _, _,
             adaptation_cadc_noisy_traces, _,
             spikes_noisy_traces) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
@@ -169,7 +169,7 @@ class TestRandomNoise(unittest.TestCase):
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
 
         # Generate traces without temporal noise
-        (membrane_cadc_clean_sim, _, current_cadc_clean_sim,
+        (membrane_cadc_clean_sim, _, current_cadc_clean_sim, _, _, _, _,
             adaptation_cadc_clean_sim, _,
             spikes_clean_sim) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,
@@ -190,7 +190,7 @@ class TestRandomNoise(unittest.TestCase):
         cadc_readout_noise_voltage = RandomNoise(
             torch.linspace(0., 0.1, self.size))
         cadc_readout_noise_adaptation = RandomNoise(None)
-        (membrane_cadc_noisy_traces, _, current_cadc_noisy_traces,
+        (membrane_cadc_noisy_traces, _, current_cadc_noisy_traces, _, _, _, _,
             adaptation_cadc_noisy_traces, _,
             spikes_noisy_traces) = hxsnn.functional.cuba_aelif_integration(
                 graded_spikes, leak=self.leak, reset=self.reset,

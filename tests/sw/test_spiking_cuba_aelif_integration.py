@@ -76,8 +76,8 @@ class TestAELIFIntegration(unittest.TestCase):
             hw_adaptation_trace_available=False, hw_spikes_available=False).\
             generate()
         self.assertTrue(type(integration_step_code) == str)
-        (membrane_cadc, membrane_madc, current, adaptation_cadc,
-            adaptation_madc, spikes) = cuba_aelif_integration(
+        (membrane_cadc, membrane_madc, current_sim, _, _, _, _,
+            adaptation_cadc, adaptation_madc, spikes) = cuba_aelif_integration(
                 self.graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, tau_syn=self.tau_syn,
                 c_mem=self.c_mem, g_l=self.g_l,
@@ -103,7 +103,7 @@ class TestAELIFIntegration(unittest.TestCase):
             torch.equal(
                 torch.tensor([self.time_steps, self.batch_size,
                               self.population_size]),
-                torch.tensor(current.shape)))
+                torch.tensor(current_sim.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor([self.time_steps, self.batch_size,
@@ -129,13 +129,13 @@ class TestAELIFIntegration(unittest.TestCase):
             label='membrane')
         ax.plot(
             np.arange(0., self.dt * self.time_steps, self.dt),
-            current[:, 0, 0].detach().numpy(), label='current')
+            current_sim[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., self.dt * self.time_steps, self.dt),
             adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
-        ax.axhline(self.exp_threshold[0], label='exp_threshold', linestyle='--',
-                   color='red')
+        ax.axhline(self.exp_threshold[0], label='exp_threshold',
+                   linestyle='--', color='red')
         ax.legend()
 
         plt.savefig(self.plot_path.joinpath("./cuba_aelif_dynamics_mock.png"))
@@ -152,8 +152,9 @@ class TestAELIFIntegration(unittest.TestCase):
             subthreshold_adaptation=True, spike_triggered_adaptation=True,
             hw_voltage_trace_available=False, hw_spikes_available=False).\
             generate()
-        (membrane_cadc_hw, membrane_madc_hw, current_hw, adaptation_cadc_hw,
-            adaptation_madc_hw, spikes_hw) = cuba_aelif_integration(
+        (membrane_cadc_hw, membrane_madc_hw, current_hw, _, _, _, _,
+         adaptation_cadc_hw, adaptation_madc_hw, spikes_hw) = \
+            cuba_aelif_integration(
                 self.graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, tau_syn=self.tau_syn,
                 c_mem=self.c_mem, g_l=self.g_l,
@@ -178,10 +179,13 @@ class TestAELIFIntegration(unittest.TestCase):
             torch.rand(adaptation_cadc_hw.shape) * 0.05
         hw_spikes = spikes_hw
         hw_spikes[
-            torch.randint(self.time_steps, (1,)), torch.randint(self.batch_size, (1,)),
+            torch.randint(self.time_steps, (1,)),
+            torch.randint(self.batch_size, (1,)),
             torch.randint(self.population_size, (1,))] = 1
         injected_hw_data = Handle(
             voltage=AnalogObservable(cadc=hw_voltage, madc=hw_adaptation),
+            current_exc=AnalogObservable(),
+            current_inh=AnalogObservable(),
             adaptation=AnalogObservable(cadc=hw_adaptation, madc=None),
             spikes=hw_spikes)
 
@@ -192,8 +196,8 @@ class TestAELIFIntegration(unittest.TestCase):
             hw_voltage_trace_available=True,
             hw_adaptation_trace_available=True, hw_spikes_available=True).\
             generate()
-        (membrane_cadc, membrane_madc, current, adaptation_cadc,
-            adaptation_madc, spikes) = cuba_aelif_integration(
+        (membrane_cadc, membrane_madc, current_sim, _, _, _, _,
+            adaptation_cadc, adaptation_madc, spikes) = cuba_aelif_integration(
                 self.graded_spikes, leak=self.leak, reset=self.reset,
                 threshold=self.threshold, tau_syn=self.tau_syn,
                 c_mem=self.c_mem, g_l=self.g_l,
@@ -222,7 +226,7 @@ class TestAELIFIntegration(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 torch.tensor(hw_voltage.shape),
-                torch.tensor(current.shape)))
+                torch.tensor(current_sim.shape)))
         self.assertTrue(
             torch.equal(
                 torch.tensor(hw_voltage.shape),
@@ -240,13 +244,13 @@ class TestAELIFIntegration(unittest.TestCase):
             label='membrane')
         ax.plot(
             np.arange(0., self.dt * self.time_steps, self.dt),
-            current[:, 0, 0].detach().numpy(), label='current')
+            current_sim[:, 0, 0].detach().numpy(), label='current')
         ax.plot(
             np.arange(0., self.dt * self.time_steps, self.dt),
             adaptation_cadc[:, 0, 0].detach().numpy(),
             label='adaptation')
-        ax.axhline(self.exp_threshold[0], label='exp_threshold', linestyle='--',
-                   color='red')
+        ax.axhline(self.exp_threshold[0], label='exp_threshold',
+                   linestyle='--', color='red')
         ax.legend()
 
         plt.savefig(self.plot_path.joinpath("./cuba_aelif_dynamics_hw.png"))

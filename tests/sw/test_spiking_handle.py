@@ -18,15 +18,15 @@ class TestHXHandle(unittest.TestCase):
         # artificial data
         spikes = torch.randint(0, 2, size=(20, 10, 2), dtype=bool)
         membrane_cadc = torch.rand(size=(20, 10, 2))
-        current = torch.rand(size=(20, 10, 2))
+        current_sim = torch.rand(size=(20, 10, 2))
         membrane_madc = torch.rand(size=(20, 10, 2))
         adaptation = torch.rand(size=(20, 10, 2))
 
         # test class and object construction
         handle = Handle(spikes=spikes, membrane_cadc=membrane_cadc,
-            current=current, membrane_madc=membrane_madc,
+            current_sim=current_sim, membrane_madc=membrane_madc,
             adaptation=adaptation)
-        empty_handle = Handle('spikes', 'membrane_cadc', 'current',
+        empty_handle = Handle('spikes', 'membrane_cadc', 'current_sim',
             'membrane_madc', 'adaptation')
         self.assertTrue(isinstance(empty_handle, type(handle)))
 
@@ -37,8 +37,8 @@ class TestHXHandle(unittest.TestCase):
         self.assertFalse(handle.holds("wrong_key"))
 
         # test clone
-        handle_wrong = Handle('adaptation', 'membrane_madc', 'current',)
-        handle_right = Handle('adaptation', 'membrane_madc', 'current',
+        handle_wrong = Handle('adaptation', 'membrane_madc', 'current_sim',)
+        handle_right = Handle('adaptation', 'membrane_madc', 'current_sim',
             'membrane_cadc', 'spikes')
         self.assertRaises(AssertionError, handle_wrong.clone, handle)
         handle_right.clone(handle)
@@ -50,10 +50,14 @@ class TestHXHandle(unittest.TestCase):
         hxtorch.spiking.LIObservables, hxtorch.spiking.SynapseHandle and
         hxtorch.spiking.TensorHandle.
         """
-        self.assertEqual(LIFObservables, type(Handle('spikes', 'membrane_cadc',
-            'current', 'membrane_madc')))
-        self.assertEqual(LIObservables, type(Handle('membrane_cadc', 'current',
-            'membrane_madc')))
+        self.assertEqual(LIFObservables, type(Handle(
+            'membrane_cadc', 'membrane_madc', 'current_sim',
+            'current_exc_cadc', 'current_exc_madc', 'current_inh_cadc',
+            'current_inh_madc', 'spikes')))
+        self.assertEqual(LIObservables, type(Handle(
+            'membrane_cadc', 'membrane_madc', 'current_sim',
+            'current_exc_cadc', 'current_exc_madc', 'current_inh_cadc',
+            'current_inh_madc')))
         self.assertEqual(SynapseHandle, type(Handle('graded_spikes')))
         self.assertEqual(TensorHandle, type(Handle('tensor')))
 
