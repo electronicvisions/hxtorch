@@ -427,20 +427,13 @@ class AELIF(Population):
         self.logger = logger.get("hxtorch.spiking.modules.AELIF")
 
         # Specify output type
-        if not self.fire and not self.adaptation:
-            self.output_type = type(Handle(
-                'membrane_cadc', 'membrane_madc', 'current'))
-        elif not self.fire:
-            self.output_type = type(Handle(
-                'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
-                'adaptation_madc'))
-        elif not self.adaptation:
-            self.output_type = type(Handle(
-                'membrane_cadc', 'membrane_madc', 'current', 'spikes'))
-        else:
-            self.output_type = type(Handle(
-                'membrane_cadc', 'membrane_madc', 'current', 'adaptation_cadc',
-                'adaptation_madc', 'spikes'))
+        attr_list = ['membrane_cadc', 'membrane_madc', 'current']
+        if self.fire:
+            attr_list.append('spikes')
+        if self.adaptation:
+            attr_list.append('adaptation_cadc')
+            attr_list.append('adaptation_madc')
+        self.output_type = type(Handle(*attr_list))
 
         # Mock properties
         self.trace_noise_current = trace_noise_current
@@ -782,23 +775,15 @@ class AELIF(Population):
                 subthreshold_adaptation=self.subthreshold_adaptation,
                 spike_triggered_adaptation=self.spike_triggered_adaptation,
                 integration_step_code=integration_step_code)
-        if not self.fire and not self.adaptation:
-            return Handle(
-                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
-                current=current)
-        if not self.fire:
-            return Handle(
-                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
-                current=current, adaptation_cadc=adaptation_cadc,
-                adaptation_madc=adaptation_madc)
-        if not self.adaptation:
-            return Handle(
-                membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
-                current=current, spikes=spikes)
-        return Handle(
-            membrane_cadc=membrane_cadc, membrane_madc=membrane_madc,
-            current=current, adaptation_cadc=adaptation_cadc,
-            adaptation_madc=adaptation_madc, spikes=spikes)
+        results_dict = {"membrane_cadc": membrane_cadc,
+                        "membrane_madc": membrane_madc,
+                        "current": current}
+        if self.fire:
+            results_dict["spikes"] = spikes
+        if self.adaptation:
+            results_dict["adaptation_cadc"] = adaptation_cadc
+            results_dict["adaptation_madc"] = adaptation_madc
+        return Handle(**results_dict)
 
     def post_simulation_processing(self, output) -> None:
         """
