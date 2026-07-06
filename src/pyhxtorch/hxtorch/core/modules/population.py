@@ -901,10 +901,14 @@ class Population(BasePopulation):
                         )
 
         # readout source defaulting to membrane
+        ans = self._neuron_structure.logical_neuron.collapse_neuron()
+        # only one compartment is supported
+        assert len(ans) == 1
+        n_ans = len(ans[CompartmentOnLogicalNeuron()])
         readout_sources = [
             {
                 grenade.common.CompartmentOnNeuron():
-                [self._cadc_readout_source]
+                [self._cadc_readout_source] * n_ans
             }
             for i in range(self.size)
         ]
