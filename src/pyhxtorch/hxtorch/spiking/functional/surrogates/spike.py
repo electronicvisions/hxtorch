@@ -17,19 +17,26 @@ class SuperSpike(torch.autograd.Function):
     # Allow redefining builtin for PyTorch consistency
     # pylint: disable=redefined-builtin, arguments-differ
     @staticmethod
-    def forward(ctx, input: torch.Tensor, alpha: float) -> torch.Tensor:
+    def forward(ctx, input: torch.Tensor, alpha: float,
+                input_mean: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Forward function, generating spikes at positions > 0.
 
         :param input: Tensor holding `v_mem - v_th`, of > 0 a spike at the
-            corresponding entry is generated. Saved for backward.
+            corresponding entry is generated. Saved for backward, if
+            `input_mean` is not None.
         :param alpha: Parameter controlling the slope of the surrogate
             derivative. Saved for backward.
+        :param input_mean: Tensor holding `v_mem - v_th_mean`. Saved for
+            backward, if is not None.
 
         :returns: A boolean tensor holding True at the entries for neurons
             emitting a spike.
         """
-        ctx.save_for_backward(input)
+        if input_mean is None:
+            ctx.save_for_backward(input)
+        else:
+            ctx.save_for_backward(input_mean)
         # Alpha for backward
         ctx.alpha = alpha
 
@@ -51,9 +58,10 @@ class SuperSpike(torch.autograd.Function):
         grad = grad_output.clone()
         grad_input = grad / (ctx.alpha * torch.abs(input) + 1.0).pow(2)
 
-        return grad_input, None
+        return grad_input, None, None
 
 
 # pylint: disable=redefined-builtin, arguments-differ
-def superspike(input: torch.Tensor, alpha: float) -> torch.Tensor:
-    return SuperSpike.apply(input, alpha)
+def superspike(input: torch.Tensor, alpha: float,
+               input_mean: Optional[torch.Tensor] = None) -> torch.Tensor:
+    return SuperSpike.apply(input, alpha, input_mean)

@@ -65,7 +65,7 @@ class TestMockParameter(unittest.TestCase):
         # Test shaping of model_value
         noisy_tau_mem.sample(self.size)
         shaped_tau_mem_sample = noisy_tau_mem.model_value
-        self.assertEqual(torch.Size((10,)), shaped_tau_mem_sample.shape)
+        self.assertEqual(torch.Size((self.size,)), shaped_tau_mem_sample.shape)
 
         # Shaping with other size than mean or std not possible:
         faulty_tau_mem = MockParameter(mean=torch.ones(4)*10e-6,
@@ -84,7 +84,8 @@ class TestMockParameter(unittest.TestCase):
         parameters. Plot membrane and adaptation traces of population with
         noisy parameters, as well as from a neuron with non-varying parameters.
         """
-        weights = torch.nn.parameter.Parameter(torch.ones(self.size, 10))
+        weights = torch.nn.parameter.Parameter(
+            torch.ones(self.size, self.inputs.shape[2]))
         graded_spikes = torch.nn.functional.linear(self.inputs, weights)
 
         # Set non-noisy parameters to simulate ideal equations:
@@ -148,6 +149,73 @@ class TestMockParameter(unittest.TestCase):
         self.plot("fixed_pattern_noise.png", membrane_cadc_clean_sim,
                   adaptation_cadc_clean_sim, spikes_clean_sim,
                   membrane_cadc_mock, adaptation_cadc_mock, spikes_mock)
+
+    # pylint: disable=too-many-locals
+    def test_hardware_unawareness(self):
+        """
+        Test, whether the backward pass is performed hardware-unawarely, i.e.
+        takes the mean value of the fixed pattern noise for all neurons in a
+        population in the backward pass, instead of the actual parameter values
+        used in the forward pass.
+        This is checked by comparin the gradients resulting from a backward
+        pass once using the MockParameter and once with the same parameter
+        values but through a regular ModelParameter.
+        """
+        # Run first experiment, with MockParameter (hardware-unaware)
+        exp_unaware = hxsnn.Experiment(mock=True)
+        weights = torch.nn.parameter.Parameter(
+            torch.ones(self.size, self.inputs.shape[2]))
+        tau_mem_unaware = MockParameter(mean=10e-6, std=1e-6)
+
+        # Layers
+        syn = hxsnn.modules.Synapse(
+            self.inputs.shape[2], self.size, experiment=exp_unaware)
+        syn.weight.data = weights
+        lif = hxsnn.modules.LIF(
+            self.size, tau_mem=tau_mem_unaware, dt=2e-6,
+            experiment=exp_unaware)
+
+        # Forward
+        syn_handle = syn(hxsnn.LIFObservables(spikes=self.inputs))
+        lif_handle = lif(syn_handle)
+        hxsnn.run(exp_unaware, self.inputs.shape[0])
+
+        # Save spike tensors of neuron modules
+        membrane_unaware = lif_handle.membrane_cadc.detach().clone()
+        score_unaware = lif_handle.membrane_cadc.sum()
+        score_unaware.backward()
+        gradients_unaware = syn.weight.grad.detach().clone()
+
+        # Run second experiment, with torch.Tensor (hardware-aware)
+        exp_aware = hxsnn.Experiment(mock=True)
+        weights = torch.nn.parameter.Parameter(
+            torch.ones(self.size, self.inputs.shape[2]))
+        tau_mem_aware = tau_mem_unaware.model_value
+
+        # Layers
+        syn = hxsnn.modules.Synapse(
+            self.inputs.shape[2], self.size, experiment=exp_aware)
+        syn.weight.data = weights
+        lif = hxsnn.modules.LIF(
+            self.size, tau_mem=tau_mem_aware, dt=2e-6,
+            experiment=exp_aware)
+
+        # Forward
+        syn_handle = syn(hxsnn.LIFObservables(spikes=self.inputs))
+        lif_handle = lif(syn_handle)
+        hxsnn.run(exp_aware, self.inputs.shape[0])
+
+        # Save spike tensors of neuron modules
+        membrane_aware = lif_handle.membrane_cadc.detach().clone()
+        score_aware = lif_handle.membrane_cadc.sum()
+        score_aware.backward()
+        gradients_aware = syn.weight.grad.detach().clone()
+
+        # Evaluate inequality of gradients
+        self.assertFalse(
+            torch.allclose(gradients_unaware, gradients_aware),
+            "Gradients must differ between hardware-unaware and hardware-aware"
+            + " backpropagation.")
 
     # pylint: disable=too-many-locals, too-many-arguments
     def plot(self, path, membrane_clean_sim, adaptation_clean_sim,

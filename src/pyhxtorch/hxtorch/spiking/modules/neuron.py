@@ -727,67 +727,164 @@ class AELIF(Population):
             hw_adaptation_cadc_trace_available = \
                 hw_data.adaptation.cadc is not None
             hw_spikes_available = hw_data.spikes is not None
-        integration_step_code = F.CuBaStepCode(
-            leaky=self.leaky,
-            fire=self.fire,
-            refractory=refractory,
-            exponential=self.exponential,
-            subthreshold_adaptation=self.subthreshold_adaptation,
-            spike_triggered_adaptation=self.spike_triggered_adaptation,
-            hw_voltage_trace_available=hw_voltage_cadc_trace_available,
-            hw_adaptation_trace_available=hw_adaptation_cadc_trace_available,
-            hw_spikes_available=hw_spikes_available,
-            noisy_traces=self.noisy_traces,
-            finite_dynamic_ranges=self.finite_dynamic_ranges).generate()
-        assert all(synapse_handle.graded_spikes is not None for
-                   synapse_handle in input)
-        (membrane_cadc, membrane_madc, current_sim, current_exc_cadc,
-            current_exc_madc, current_inh_cadc, current_inh_madc,
-            adaptation_cadc, adaptation_madc,
-            spikes) = F.cuba_aelif_integration(
-                tuple(
-                    synapse_handle.graded_spikes for synapse_handle in input),
-                leak=self.leak.model_value,
-                reset=self.reset.model_value,
-                threshold=self.threshold.model_value,
-                tau_syn=self.tau_syn.model_value,
-                c_mem=self.membrane_capacitance.model_value,
-                g_l=(self.leak_conductance.model_value
-                     if self.leak_conductance.model_value is not None
-                     else self.membrane_capacitance.model_value_detach()
-                     / self.tau_mem.model_value_detach()),
-                refractory_time=self.refractory_time.model_value,
-                spike_surrogate=self.spike_surrogate,
-                exp_slope=self.exponential_slope.model_value,
-                exp_threshold=self.exponential_threshold.model_value,
-                subthreshold_adaptation_strength=(
-                    self.subthreshold_adaptation_strength.model_value),
-                spike_triggered_adaptation_increment=(
-                    self.spike_triggered_adaptation_increment.model_value),
-                tau_adap=self.tau_adap.model_value,
-                hw_data=hw_data,
-                dt=self.experiment.dt,
-                trace_noise_current=self.trace_noise_current,
-                trace_noise_voltage=self.trace_noise_voltage,
-                trace_noise_adaptation=self.trace_noise_adaptation,
-                cadc_readout_noise_current=self.cadc_readout_noise_current,
-                cadc_readout_noise_voltage=self.cadc_readout_noise_voltage,
-                cadc_readout_noise_adaptation=(
-                    self.cadc_readout_noise_adaptation),
-                cadc_readout_bounds_current=self.cadc_readout_bounds_current,
-                cadc_readout_bounds_voltage=self.cadc_readout_bounds_voltage,
-                cadc_readout_bounds_adaptation=(
-                    self.cadc_readout_bounds_adaptation),
-                dynamic_range_current=self.dynamic_range_current,
-                dynamic_range_voltage=self.dynamic_range_voltage,
-                dynamic_range_adaptation=self.dynamic_range_adaptation,
+        fixed_pattern_noise = False
+        for param in (self.leak, self.reset, self.threshold, self.tau_mem,
+                      self.membrane_capacitance, self.leak_conductance,
+                      self.exponential_slope, self.exponential_threshold,
+                      self.subthreshold_adaptation_strength,
+                      self.spike_triggered_adaptation_increment,
+                      self.tau_adap):
+            if isinstance(param, MockParameter):
+                fixed_pattern_noise = True
+
+        if fixed_pattern_noise:
+            integration_step_code = F.CuBaStepCodeFPN(
                 leaky=self.leaky,
                 fire=self.fire,
                 refractory=refractory,
                 exponential=self.exponential,
                 subthreshold_adaptation=self.subthreshold_adaptation,
                 spike_triggered_adaptation=self.spike_triggered_adaptation,
-                integration_step_code=integration_step_code)
+                hw_voltage_trace_available=hw_voltage_cadc_trace_available,
+                hw_adaptation_trace_available=(
+                    hw_adaptation_cadc_trace_available),
+                hw_spikes_available=hw_spikes_available,
+                noisy_traces=self.noisy_traces,
+                finite_dynamic_ranges=self.finite_dynamic_ranges).generate()
+            if (self.leak_conductance is None and (isinstance(
+                    self.tau_mem, MockParameter)
+                    or isinstance(self.membrane_capacitance, MockParameter))):
+                if not isinstance(self.membrane_capacitance, MockParameter):
+                    mean = self.membrane_capacitance.model_value_detach() \
+                        / self.tau_mem.mean
+                    std = self.membrane_capacitance.model_value_detach() \
+                        / self.tau_mem.mean**2 * self.tau_mem.std
+                if not isinstance(self.tau_mem, MockParameter):
+                    mean = self.membrane_capacitance.mean \
+                        / self.tau_mem.model_value_detach()
+                    std = self.membrane_capacitance.std \
+                        / self.tau_mem.model_value_detach()
+                g_l = MockParameter(mean=mean, std=std)
+                g_l.model_value = self.membrane_capacitance.\
+                    model_value_detach() / self.tau_mem.model_value_detach()
+            elif self.leak_conductance is None:
+                g_l = self.membrane_capacitance.model_value_detach() \
+                    / self.tau_mem.model_value_detach()
+            else:
+                g_l = self.leak_conductance
+            assert all(synapse_handle.graded_spikes is not None for
+                       synapse_handle in input)
+            (membrane_cadc, membrane_madc, current_sim, current_exc_cadc,
+                current_exc_madc, current_inh_cadc, current_inh_madc,
+                adaptation_cadc, adaptation_madc,
+                spikes) = F.cuba_aelif_integration_fpn(
+                    tuple(synapse_handle.graded_spikes
+                          for synapse_handle in input),
+                    leak=self.leak,
+                    reset=self.reset,
+                    threshold=self.threshold,
+                    tau_syn=self.tau_syn,
+                    c_mem=self.membrane_capacitance,
+                    g_l=g_l,
+                    refractory_time=self.refractory_time.model_value,
+                    spike_surrogate=self.spike_surrogate,
+                    exp_slope=self.exponential_slope,
+                    exp_threshold=self.exponential_threshold,
+                    subthreshold_adaptation_strength=(
+                        self.subthreshold_adaptation_strength),
+                    spike_triggered_adaptation_increment=(
+                        self.spike_triggered_adaptation_increment),
+                    tau_adap=self.tau_adap,
+                    hw_data=hw_data,
+                    dt=self.experiment.dt,
+                    trace_noise_current=self.trace_noise_current,
+                    trace_noise_voltage=self.trace_noise_voltage,
+                    trace_noise_adaptation=self.trace_noise_adaptation,
+                    cadc_readout_noise_current=self.cadc_readout_noise_current,
+                    cadc_readout_noise_voltage=self.cadc_readout_noise_voltage,
+                    cadc_readout_noise_adaptation=(
+                        self.cadc_readout_noise_adaptation),
+                    cadc_readout_bounds_current=(
+                        self.cadc_readout_bounds_current),
+                    cadc_readout_bounds_voltage=(
+                        self.cadc_readout_bounds_voltage),
+                    cadc_readout_bounds_adaptation=(
+                        self.cadc_readout_bounds_adaptation),
+                    dynamic_range_current=self.dynamic_range_current,
+                    dynamic_range_voltage=self.dynamic_range_voltage,
+                    dynamic_range_adaptation=self.dynamic_range_adaptation,
+                    leaky=self.leaky,
+                    fire=self.fire,
+                    refractory=refractory,
+                    exponential=self.exponential,
+                    subthreshold_adaptation=self.subthreshold_adaptation,
+                    spike_triggered_adaptation=self.spike_triggered_adaptation,
+                    integration_step_code=integration_step_code)
+        else:
+            integration_step_code = F.CuBaStepCode(
+                leaky=self.leaky,
+                fire=self.fire,
+                refractory=refractory,
+                exponential=self.exponential,
+                subthreshold_adaptation=self.subthreshold_adaptation,
+                spike_triggered_adaptation=self.spike_triggered_adaptation,
+                hw_voltage_trace_available=hw_voltage_cadc_trace_available,
+                hw_adaptation_trace_available=(
+                    hw_adaptation_cadc_trace_available),
+                hw_spikes_available=hw_spikes_available,
+                noisy_traces=self.noisy_traces,
+                finite_dynamic_ranges=self.finite_dynamic_ranges).generate()
+            assert all(synapse_handle.graded_spikes is not None for
+                       synapse_handle in input)
+            (membrane_cadc, membrane_madc, current_sim, current_exc_cadc,
+                current_exc_madc, current_inh_cadc, current_inh_madc,
+                adaptation_cadc, adaptation_madc,
+                spikes) = F.cuba_aelif_integration(
+                    tuple(synapse_handle.graded_spikes
+                          for synapse_handle in input),
+                    leak=self.leak.model_value,
+                    reset=self.reset.model_value,
+                    threshold=self.threshold.model_value,
+                    tau_syn=self.tau_syn.model_value,
+                    c_mem=self.membrane_capacitance.model_value,
+                    g_l=(self.leak_conductance.model_value
+                         if self.leak_conductance.model_value is not None
+                         else self.membrane_capacitance.model_value_detach()
+                         / self.tau_mem.model_value_detach()),
+                    refractory_time=self.refractory_time.model_value,
+                    spike_surrogate=self.spike_surrogate,
+                    exp_slope=self.exponential_slope.model_value,
+                    exp_threshold=self.exponential_threshold.model_value,
+                    subthreshold_adaptation_strength=(
+                        self.subthreshold_adaptation_strength.model_value),
+                    spike_triggered_adaptation_increment=(
+                        self.spike_triggered_adaptation_increment.model_value),
+                    tau_adap=self.tau_adap.model_value,
+                    hw_data=hw_data,
+                    dt=self.experiment.dt,
+                    trace_noise_current=self.trace_noise_current,
+                    trace_noise_voltage=self.trace_noise_voltage,
+                    trace_noise_adaptation=self.trace_noise_adaptation,
+                    cadc_readout_noise_current=self.cadc_readout_noise_current,
+                    cadc_readout_noise_voltage=self.cadc_readout_noise_voltage,
+                    cadc_readout_noise_adaptation=(
+                        self.cadc_readout_noise_adaptation),
+                    cadc_readout_bounds_current=(
+                        self.cadc_readout_bounds_current),
+                    cadc_readout_bounds_voltage=(
+                        self.cadc_readout_bounds_voltage),
+                    cadc_readout_bounds_adaptation=(
+                        self.cadc_readout_bounds_adaptation),
+                    dynamic_range_current=self.dynamic_range_current,
+                    dynamic_range_voltage=self.dynamic_range_voltage,
+                    dynamic_range_adaptation=self.dynamic_range_adaptation,
+                    leaky=self.leaky,
+                    fire=self.fire,
+                    refractory=refractory,
+                    exponential=self.exponential,
+                    subthreshold_adaptation=self.subthreshold_adaptation,
+                    spike_triggered_adaptation=self.spike_triggered_adaptation,
+                    integration_step_code=integration_step_code)
         results_dict = {"membrane_cadc": membrane_cadc,
                         "membrane_madc": membrane_madc,
                         "current_sim": current_sim,
