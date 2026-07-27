@@ -387,6 +387,15 @@ class ModuleManager(AbstractModuleManager):
         # Get existing node or create new node
         if wrapper_id is None:
             wrapper_id = self.get_wrapper_id()
+
+            for other_wrapper in self.wrappers:
+                if not other_wrapper.isdisjoint(wrapper):
+                    raise ValueError(
+                        "You tried to register a wrapper with a group of "
+                        + "modules that are partially registered in "
+                        + "another group."
+                    )
+
         self.wrappers.update({wrapper: wrapper_id})
 
     def _handle_dropout_mask(self):

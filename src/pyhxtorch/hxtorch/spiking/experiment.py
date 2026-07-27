@@ -94,14 +94,6 @@ class Experiment(BaseExperiment):
         """
         # Unique modules
         assert len(set(wrapper.modules)) == len(wrapper.modules)
-
-        # Check if modules are already existent
-        for other_wrapper in self.modules.wrappers:
-            if other_wrapper.contains(wrapper.modules):
-                raise ValueError(
-                    "You tried to register a wrapper with a group of modules "
-                    + "that are partially registered in another group.")
-
         self.modules.add_wrapper(wrapper)
 
     def post_mapping_hook(self):

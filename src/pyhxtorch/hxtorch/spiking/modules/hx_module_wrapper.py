@@ -76,6 +76,9 @@ class HXModuleWrapper(HXFunctionalModule):  # pylint: disable=abstract-method
                 return False
         return True
 
+    def isdisjoint(self, wrapper: HXModuleWrapper):
+        return set(wrapper.modules.values()).isdisjoint(self.modules.values())
+
     def update(self, **modules: HXModule):
         """
         Update the modules and the function in the wrapper.
