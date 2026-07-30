@@ -8,7 +8,7 @@ from functools import partial
 import numpy as np
 
 import pyccalix  # noqa: F401 # needed to register ccalix::TimeInS type
-from pyccalix import TimeInS
+from pyccalix import TimeInS, CapacitanceInFarad
 
 from dlens_vx_v3 import hal, lola, halco
 import pygrenade_vx as grenade
@@ -17,6 +17,7 @@ from pygrenade_vx.network.abstract.frontend import (
     ExperimentSnippet,
 )
 import pygrenade_vx.network.abstract as gabstract
+import pygrenade_vx as grenade_vx
 
 
 from hxtorch import logger
@@ -673,6 +674,21 @@ class Population(BasePopulation):
         # only one compartment is supported
         assert len(ans) == 1
         n_ans = len(ans[CompartmentOnLogicalNeuron()])
+
+        calibration_targets = self.generate_calibration_targets()
+
+        membrane_capacitances = [{
+            grenade.common.CompartmentOnNeuron():
+            CapacitanceInFarad(
+                grenade_vx.ideal_capacitance_per_neuron * partial(
+                    self.resize_parameter_value, i, self.size)(
+                    self.membrane_capacitance)
+                / hal.NeuronConfig.MembraneCapacitorSize.max)}
+            for i in range(self.size)]
+
+        parameter_space = gabstract.CalibratedNeuron.ParameterSpace(
+            calibration_targets, membrane_capacitances)
+
         return grenade.common.Population(
             gabstract.CalibratedNeuron(
                 {grenade.common.CompartmentOnNeuron():
@@ -688,8 +704,7 @@ class Population(BasePopulation):
             grenade.common.CuboidMultiIndexSequence(
                 [self.size],
                 [grenade.common.CellOnPopulationDimensionUnit()]),
-            gabstract.CalibratedNeuron.ParameterSpace(
-                self.generate_calibration_targets()),
+            parameter_space,
             grenade.common.TimeDomainOnTopology())
 
     @staticmethod
@@ -733,10 +748,11 @@ class Population(BasePopulation):
                 self.size,
             )
 
-            calibration_target.membrane_capacitance = \
-                lola.AtomicNeuron.MembraneCapacitance.CapacitorSize(
-                    get_val(self.membrane_capacitance)
-                )
+            calibration_target.membrane_capacitance_during_calibration = \
+                CapacitanceInFarad(
+                    grenade_vx.ideal_capacitance_per_neuron * get_val(
+                        self.membrane_capacitance)
+                    / hal.NeuronConfig.MembraneCapacitorSize.max)
             calibration_target.v_leak = int(get_val(self.v_leak))
             calibration_target.tau_membrane = TimeInS(
                 float(get_val(self.tau_mem))
@@ -913,9 +929,21 @@ class Population(BasePopulation):
             for i in range(self.size)
         ]
 
+        calibration_targets = self.generate_calibration_targets()
+
+        membrane_capacitances = [{
+            grenade.common.CompartmentOnNeuron():
+            CapacitanceInFarad(
+                grenade_vx.ideal_capacitance_per_neuron * partial(
+                    self.resize_parameter_value, i, self.size)(
+                    self.membrane_capacitance)
+                / hal.NeuronConfig.MembraneCapacitorSize.max)}
+            for i in range(self.size)]
+
         return {
             1: gabstract.CalibratedNeuron.ParameterSpace.Parameterization(
-                self.generate_calibration_targets(),
+                calibration_targets,
+                membrane_capacitances,
                 readout_sources,
             )
         }
