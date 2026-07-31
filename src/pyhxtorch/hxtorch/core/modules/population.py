@@ -151,11 +151,11 @@ class InputPopulation(BasePopulation):
             spike_recording_ids = grenade.common.ListMultiIndexSequence(
                 [grenade.common.MultiIndex([pop_neuron_id, 0])
                  for pop_neuron_id in range(self.size)],
-                [grenade.common.NeuronOnPopulationDimensionUnit(),
+                [grenade.common.CellOnPopulationDimensionUnit(),
                  grenade.common.CompartmentOnNeuronDimensionUnit()],
             )
             spike_recorder = gabstract.SpikeRecorder(
-                spike_recording_ids.size(),
+                grenade.common.CuboidMultiIndexSequence([spike_recording_ids.size()]),
                 grenade.common.TimeDomainOnTopology())
             self._add_recorder_to_experiment(
                 spike_recorder, "_grenade_spike_loopback_descriptor",
@@ -219,7 +219,7 @@ class InputPopulation(BasePopulation):
         spikes = None
         if self.enable_spike_loopback:
             spikes = snippets[0].output_data.ports.get(
-                self._grenade_spike_loopback_descriptor).spikes
+                (self._grenade_spike_loopback_descriptor, 0)).spikes
             self.log.TRACE("Extracted spikes for InputPopulation: ", self)
         self.hw_observables.set_data(spikes=spikes)
 
