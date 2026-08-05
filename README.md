@@ -55,8 +55,8 @@ c ./waf build -j1
 c ./waf install
 
 # 9) If you run programs outside waf, you'll need to add ./lib and ./bin to your path specifications
-export SINGULARITYENV_PREPEND_PATH=`pwd`/bin:$SINGULARITYENV_PREPEND_PATH
-export SINGULARITYENV_LD_LIBRARY_PATH=`pwd`/lib:$SINGULARITYENV_LD_LIBRARY_PATH
+export APPTAINERENV_PREPEND_PATH=`pwd`/bin:$APPTAINERENV_PREPEND_PATH
+export APPTAINERENV_PREPEND_LD_LIBRARY_PATH=`pwd`/lib:$APPTAINERENV_PREPEND_LD_LIBRARY_PATH
 export PYTHONPATH=`pwd`/lib:$PYTHONPATH
 ```
 
