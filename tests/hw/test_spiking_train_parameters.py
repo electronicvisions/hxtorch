@@ -1,3 +1,13 @@
+"""
+Test for training neuron parameters on hardware. A target neuron trace is
+recorded using a calibration. When the target trace is recorded the calibration
+is altered by setting the membrane capacitance to an arbitrary value.
+Starting from values that are different from the calibration target values,
+the model is trained to replicate the target neuron trace.
+For the mapping of these neuron parameters translation function
+is used.
+"""
+
 from typing import Optional
 from pathlib import Path
 from dataclasses import dataclass
@@ -17,6 +27,7 @@ from hxtorch.spiking.parameter import (
 )
 from hxtorch.core.utils import calib_helper
 
+from dlens_vx_v3 import halco
 from dlens_vx_v3.hal import CapMemCell, NeuronConfig
 
 
@@ -42,8 +53,12 @@ class Model(torch.nn.Module):
         super().__init__()
         self.dt = 1e-6
         self.experiment = Experiment(mock=mock, dt=self.dt)
-        self.experiment.calibration = calib_helper.fixture_calibration_from_file(
-            calib_helper.nightly_calib_path()
+        nightly_calib = calib_helper.chip_from_calibration_file(
+            calib_helper.nightly_calib_path())
+        self._change_capacitance(nightly_calib, 32)
+
+        self.experiment.calibration = (
+                calib_helper.fixture_calibration_from_chip(nightly_calib)
         )
 
         self.synapse = hxtorch.snn.Synapse(
@@ -56,7 +71,7 @@ class Model(torch.nn.Module):
 
         capacitance = MixedHXModelParameter(
             torch.tensor(test_parameters.target_cap),
-            32 if test_parameters.start_cap else 63
+            63
         )
 
         g_l = ModelParameter(
@@ -91,7 +106,6 @@ class Model(torch.nn.Module):
         return ret
 
     def set_start(self, test_parameters):
-
         if test_parameters.start_cap:
             def cap_transformer(cap):
                 return torch.clamp(
@@ -112,15 +126,14 @@ class Model(torch.nn.Module):
             ).make_trainable(SynTranslation.set_tau_syn)
             self.neuron.tau_syn = tau_syn
 
+    def _change_capacitance(self, chip, capacitance):
+        for coord in halco.iter_all(halco.AtomicNeuronOnDLS):
+            cap = chip.neuron_block.atomic_neurons[coord].membrane_capacitance
+            cap.capacitance = NeuronConfig.MembraneCapacitorSize(capacitance)
+
 
 class TestTrainingParameters(unittest.TestCase):
-    """
-    Test class for training parameters. A target neuron trace is recorded using
-    a calibration.
-    Starting from values that are different from the calibration target values,
-    the model is trained to replicate the target neuron trace.
-    """
-
+    """ Test training neuron parameters on hardware """
     plot_path = Path(__file__).parent.joinpath("plots")
 
     def setUp(self):
@@ -136,13 +149,13 @@ class TestTrainingParameters(unittest.TestCase):
             target_cap=5e-6,
             target_gl=1.,
             target_tau_syn=10e-6,
-            start_cap=10e-6,
+            start_cap=9e-6,
             start_tau_syn=6e-6,
             weight_scale=60.,
             use_conductance=False,
             max_allowed_loss=0.003,
             plot_path=self.plot_path.joinpath("./train_neuron_cap.png"))
-        self.run_li_training(test_parameters, epochs=50, lr=1e-6)
+        self.run_li_training(test_parameters, epochs=60, lr=1e-6)
 
     def run_li_training(self, test_parameters, epochs, lr):
         """ Test if parameters of an LI neuron can be trained """
@@ -168,7 +181,7 @@ class TestTrainingParameters(unittest.TestCase):
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         num_epochs = epochs
         scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=num_epochs//3, gamma=0.9)
+            optimizer, step_size=num_epochs//4, gamma=0.6)
         model.train()
 
         fig, (trace_plot, param_plot) = plt.subplots(2, 1)
@@ -247,8 +260,8 @@ class TimeConstantClipper(object):
 
 @dataclass
 class CapConfig:
-    offset: float = 0.80
-    divisor: float = 0.13
+    offset: float = 0.627
+    divisor: float = 0.14
     min_capacitance = 0
     max_capacitance = 63
 
@@ -274,28 +287,37 @@ def set_capacitance(capacitance, neuron_configs, neuron_coordinates):
                     )
 
 
-@dataclass
+@dataclass(frozen=True)
 class SynConfig:
-    coefficent_inh: float = 1 / 979
-    coefficent_exc: float = 1 / 998
-    exponent_inh: float = -1 / 0.968
-    exponent_exc: float = -1 / 0.953
-    min_cap_mem = 10
-    max_cap_mem = 1020
+    a: float
+    b: float
+    c: float
+    min_cap_mem: int = 10
+    max_cap_mem: int = 1020
+
+
+SynConfigExc = SynConfig(a=147.464, b=-0.315, c=-0.087)
+SynConfigInh = SynConfig(a=218.27, b=-0.2676, c=-0.0905)
+
+
+def calculate_synin_bias(tau_syn, config):
+    return torch.exp(
+        (-config.b - torch.sqrt(
+            config.b**2 + 4 * config.c * torch.log(tau_syn * 1e6 / config.a))
+         ) /
+        (2 * config.c))
 
 
 class SynTranslation:
     @staticmethod
     def get_i_bias(tau_syn):
         i_bias_exc = torch.clamp(
-            (tau_syn * 1e6 * SynConfig.coefficent_exc)
-            ** SynConfig.exponent_exc,
+            calculate_synin_bias(tau_syn, SynConfigExc),
             SynConfig.min_cap_mem,
             SynConfig.max_cap_mem
         )
         i_bias_inh = torch.clamp(
-            (tau_syn * 1e6 * SynConfig.coefficent_inh)
-            ** SynConfig.exponent_inh,
+            calculate_synin_bias(tau_syn, SynConfigInh),
             SynConfig.min_cap_mem,
             SynConfig.max_cap_mem
         )

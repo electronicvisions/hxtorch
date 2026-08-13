@@ -529,8 +529,9 @@ class Population(BasePopulation):
     def _trainable_parameters(self) -> List[HXBaseParameter]:
         params = {}
         for param_key in self._parameters_defaults.keys():
-            if hasattr(getattr(self, param_key), "set_hw_config"):
-                params[param_key] = getattr(self, param_key)
+            param_key_mapped = self._param_name_mapping.get(param_key)
+            if hasattr(getattr(self, param_key_mapped), "set_hw_config"):
+                params[param_key_mapped] = getattr(self, param_key_mapped)
         return params
 
     def add_to_topology(
