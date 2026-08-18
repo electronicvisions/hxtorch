@@ -44,7 +44,8 @@ def calib_from_calix_native(path: Union[str, Path]) -> dict:
     """
     with open(path, "rb") as calibfile:
         result = pickle.load(calibfile)
-    return result
+        chip = result.to_chip()
+    return chip
 
 
 def chip_from_calibration_file(path: Union[str, Path]):
