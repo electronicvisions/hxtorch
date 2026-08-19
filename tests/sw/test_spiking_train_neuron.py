@@ -16,7 +16,7 @@ from hxtorch.spiking.parameter import TrainableModelParameter
 
 
 @dataclass
-class TestParameters:
+class ParameterSet:
     target_cap: float
     target_tau_syn: float
     plot_path: Path
@@ -30,13 +30,21 @@ class Model(torch.nn.Module):
         dt = 1e-6
         self.experiment = Experiment(mock=True, dt=dt)
 
-        tau_mem = TrainableModelParameter(torch.tensor(test_parameters.target_cap))
-        tau_syn = TrainableModelParameter(torch.tensor(test_parameters.target_tau_syn))
+        tau_mem = TrainableModelParameter(
+            torch.tensor(test_parameters.target_cap)
+        )
+        tau_syn = TrainableModelParameter(
+            torch.tensor(test_parameters.target_tau_syn)
+        )
 
         if test_parameters.start_cap and not is_target:
-            tau_mem = TrainableModelParameter(torch.tensor(test_parameters.start_cap))
+            tau_mem = TrainableModelParameter(
+                torch.tensor(test_parameters.start_cap)
+            )
         if test_parameters.start_tau_syn and not is_target:
-            tau_syn = TrainableModelParameter(torch.tensor(test_parameters.start_tau_syn))
+            tau_syn = TrainableModelParameter(
+                torch.tensor(test_parameters.start_tau_syn)
+            )
 
         self.synapse = hxtorch.snn.Synapse(
             1, 1, self.experiment, transform=partial(
@@ -64,7 +72,7 @@ class TestTranslationCapacitance(unittest.TestCase):
         self.plot_path.mkdir(exist_ok=True)
 
     def test_li_single(self):
-        test_parameters = TestParameters(
+        test_parameters = ParameterSet(
             target_cap=15e-6,
             target_tau_syn=10e-6,
             start_cap=4e-6,
