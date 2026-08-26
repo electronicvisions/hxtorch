@@ -514,6 +514,8 @@ class Population(BasePopulation):
                 param_value = HXParameter(param_value)
             if param_key is not None:
                 setattr(self, param_key, param_value)
+        # FIXME: Mapped population attributes are insensitive to user-changes
+        # -> Don't apply mapping here, apply it when dispatching to grenade
         for param_key, param_value in \
                 self._parameters_defaults.items():
             param_key_mapped = self._param_name_mapping.get(param_key)

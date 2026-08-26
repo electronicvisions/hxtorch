@@ -349,8 +349,10 @@ class AELIF(Population):
 
     def extra_repr(self) -> str:
         """ Add additional information """
-        reprs = f"alpha={self.alpha}, " \
-            + f"method={self.method}, "
+        reprs = ""
+        if self.fire:
+            reprs += f"alpha={self.alpha}, " \
+                + f"method={self.method}, "
         if not self.experiment.mock:
             reprs += f"spike_recording={self._enable_spike_recording}, " \
                 + f"cadc_recording={self._enable_cadc_recording}, " \
